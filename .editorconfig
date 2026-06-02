@@ -1,0 +1,20 @@
+root = true
+
+## Common across all files
+[*]
+charset = utf-8
+indent_style = tab
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+
+## YAML files
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+
+## Markdown files
+[*.md]
+indent_style = space
+indent_size = 2
