@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- Project -->
+	<PropertyGroup Label="project">
+		<TargetFrameworks>net10.0</TargetFrameworks>
+		<LangVersion>14</LangVersion>
+		<Nullable>enable</Nullable>
+
+		<AssemblyName>OwlDomain.ParsingTools</AssemblyName>
+		<RootNamespace>OwlDomain.ParsingTools</RootNamespace>
+		<Version>1.0.0</Version>
+
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<Deterministic>true</Deterministic>
+
+		<EnableNETAnalyzers>true</EnableNETAnalyzers>
+		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+		<IsAotCompatible Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net7.0'))">true</IsAotCompatible>
+		<IsTrimmable Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0'))">true</IsTrimmable>
+	</PropertyGroup>
+
+	<!-- Project references -->
+	<ItemGroup Label="projects">
+	</ItemGroup>
+
+	<!-- Package references -->
+	<ItemGroup Label="packages">
+		<PackageReference Include="CommunityToolkit.Diagnostics" Version="8.4.2" />
+	</ItemGroup>
+
+</Project>

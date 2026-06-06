@@ -1,3 +1,8 @@
 <Solution>
+  <Folder Name="/common/" />
+  <Folder Name="/common/parsing_tools/">
+    <Project Path="common/parsing_tools/ParsingTools.Tests/ParsingTools.Tests.csproj" />
+    <Project Path="common/parsing_tools/ParsingTools/ParsingTools.csproj" />
+  </Folder>
   <Project Path="cli/cli.csproj" />
 </Solution>
