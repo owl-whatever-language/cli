@@ -20,6 +20,11 @@
 
 	<!-- Project references -->
 	<ItemGroup Label="projects">
+		<ProjectReference Include="../common/parsing_tools/ParsingTools/ParsingTools.csproj" />
+	</ItemGroup>
+
+	<!-- Package references -->
+	<ItemGroup Label="packages">
 		<PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
 	</ItemGroup>
 

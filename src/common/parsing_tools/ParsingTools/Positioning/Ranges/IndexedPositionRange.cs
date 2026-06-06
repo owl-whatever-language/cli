@@ -25,6 +25,9 @@ public readonly struct IndexedPositionRange :
 
 	/// <summary>The length between the start and end positions.</summary>
 	public int Length => checked(End.Index - Start.Index);
+
+	/// <summary>Gets the range without the index information.</summary>
+	public PositionRange WithoutIndex => new(Start.Position, End.Position);
 	#endregion
 
 	#region Constructors

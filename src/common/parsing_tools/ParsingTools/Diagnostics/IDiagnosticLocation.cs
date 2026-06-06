@@ -15,7 +15,7 @@ public sealed class DiagnosticSourceLocation : IDiagnosticLocation
 {
 	#region Fields
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	private readonly LinePosition? _basicPosition;
+	private readonly PositionRange? _basicPosition;
 	#endregion
 
 	#region Properties
@@ -23,10 +23,10 @@ public sealed class DiagnosticSourceLocation : IDiagnosticLocation
 	public ISourceFile Source { get; }
 
 	/// <summary>The indexed position in the source file that the diagnostic is related to.</summary>
-	public IndexedLinePosition? IndexedPosition { get; }
+	public IndexedPositionRange? IndexedPosition { get; }
 
 	/// <summary>The position in the source file that the diagnostic is related to.</summary>
-	public LinePosition? Position => IndexedPosition?.Position ?? _basicPosition;
+	public PositionRange? Position => IndexedPosition?.WithoutIndex ?? _basicPosition;
 	#endregion
 
 	#region Constructors
@@ -37,17 +37,17 @@ public sealed class DiagnosticSourceLocation : IDiagnosticLocation
 	/// <summary>Creates a new diagnostic source location.</summary>
 	/// <param name="source">The source file that the diagnostic is for.</param>
 	/// <param name="position">The position in the source file that the diagnostic is related to.</param>
-	public DiagnosticSourceLocation(ISourceFile source, IndexedLinePosition position)
+	public DiagnosticSourceLocation(ISourceFile source, IndexedPositionRange position)
 	{
 		Source = source;
 		IndexedPosition = position;
-		_basicPosition = position.Position;
+		_basicPosition = position.WithoutIndex;
 	}
 
 	/// <summary>Creates a new diagnostic source location.</summary>
 	/// <param name="source">The source file that the diagnostic is for.</param>
 	/// <param name="position">The position in the source file that the diagnostic is related to.</param>
-	public DiagnosticSourceLocation(ISourceFile source, LinePosition position)
+	public DiagnosticSourceLocation(ISourceFile source, PositionRange position)
 	{
 		Source = source;
 		_basicPosition = position;

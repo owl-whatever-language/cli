@@ -48,7 +48,11 @@ public abstract class BaseLexer : ILexer
 
 		/// <summary>A reusable builder that can be used for accumulating lexed text.</summary>
 		/// <remarks>Make sure to clear the builder <b>after</b> using it.</remarks>
-		protected StringBuilder Builder { get; } = new();
+		protected StringBuilder LexemeBuilder { get; } = new();
+
+		/// <summary>A reusable builder that can be used for accumulating lexed text for the purpose of converting it to a token/trivia value.</summary>
+		/// <remarks>Make sure to clear the builder <b>after</b> using it.</remarks>
+		protected StringBuilder ValueBuilder { get; } = new();
 		#endregion
 
 		#region Constructors
@@ -71,7 +75,8 @@ public abstract class BaseLexer : ILexer
 		{
 			while (Text.HasRemaining)
 			{
-				ThrowIfBuilderNotCleared();
+				ThrowIfLexemeBuilderNotCleared();
+				ThrowIfValueBuilderNotCleared();
 
 				IndexedLinePosition start = Text.Position;
 
@@ -161,10 +166,11 @@ public abstract class BaseLexer : ILexer
 
 		/// <summary>Fixes the bad character tokens by grouping them up and turning them into trivia nodes.</summary>
 		/// <returns>A list of the fixed up tokens to use as the final lexing result.</returns>
-		/// <exception cref="InvalidOperationException">Thrown if the <see cref="Builder"/> was not cleared before calling the method.</exception>
+		/// <exception cref="InvalidOperationException">Thrown if the <see cref="LexemeBuilder"/> or the <see cref="ValueBuilder"/> was not cleared before calling the method.</exception>
 		protected virtual IReadOnlyList<ITokenNode> FixTokens()
 		{
-			ThrowIfBuilderNotCleared();
+			ThrowIfLexemeBuilderNotCleared();
+			ThrowIfValueBuilderNotCleared();
 
 			List<ITokenNode> tokens = [];
 			Queue<ITokenNode> badTokens = [];
@@ -198,10 +204,9 @@ public abstract class BaseLexer : ILexer
 					index += badLeading.Count;
 
 					foreach (ITokenNode current in touching)
-						Builder.Append(current.Lexeme);
+						LexemeBuilder.Append(current.Lexeme);
 
-					string badLexeme = Builder.ToString();
-					Builder.Clear();
+					string badLexeme = GetLexeme();
 
 					ITriviaNode badGroup = new FabricatedTriviaNode(
 						SyntaxKind.BadCharactersTrivia,
@@ -251,6 +256,24 @@ public abstract class BaseLexer : ILexer
 		/// <summary>Creates a diagnostic for the bad character group.</summary>
 		/// <param name="badCharacterGroup">The trivia holding the bad characters.</param>
 		protected abstract void ReportBadCharacterGroup(ITriviaNode badCharacterGroup);
+
+		/// <summary>Tries to lex a simple token that consists of the given <paramref name="sequence"/>.</summary>
+		/// <param name="sequence">The sequence to try and lex.</param>
+		/// <param name="kind">The kind of the token that is being lexed.</param>
+		/// <returns><see langword="true"/> if a token was lexed and added to <see cref="Tokens"/>, <see langword="false"/> otherwise.</returns>
+		protected bool TryLexSimpleToken(string sequence, SyntaxKind kind)
+		{
+			IndexedLinePosition start = Text.Position;
+
+			if (Text.MatchSequence(sequence) is false)
+				return false;
+
+			FinishFullToken(out TriviaList leading, out TriviaList trailing);
+			TokenNode token = new(kind, new(start, Text.Position), sequence, leading, trailing);
+			Tokens.Add(token);
+
+			return true;
+		}
 		#endregion
 
 		#region Trivia methods
@@ -289,7 +312,7 @@ public abstract class BaseLexer : ILexer
 		/// <returns>The lexed trivia node, or <see langword="null"/> if no more trivia nodes could be lexed.</returns>
 		protected virtual ITriviaNode? LexTrivia()
 		{
-			Debug.Assert(Builder.Length is 0);
+			ThrowIfLexemeBuilderNotCleared();
 
 			IndexedLinePosition start = Text.Position;
 
@@ -316,10 +339,9 @@ public abstract class BaseLexer : ILexer
 			IndexedLinePosition start = Text.Position;
 
 			while (Text.Match(character))
-				Builder.Append(character);
+				LexemeBuilder.Append(character);
 
-			string lexeme = Builder.ToString();
-			Builder.Clear();
+			string lexeme = GetLexeme();
 
 			return new TriviaNode(SyntaxKind.Indentation, new(start, Text.Position), lexeme);
 		}
@@ -327,28 +349,53 @@ public abstract class BaseLexer : ILexer
 		{
 			IndexedLinePosition start = Text.Position;
 
-			TextElement current = Text.Current;
-
-			while (current.IsWhiteSpace)
+			while (Text.Current.IsWhiteSpace)
 			{
-				Builder.Append(current);
+				LexemeBuilder.Append(Text.Current);
 				Text.Advance();
 			}
 
-			string lexeme = Builder.ToString();
-			Builder.Clear();
+			string lexeme = GetLexeme();
 
 			return new TriviaNode(SyntaxKind.WhiteSpace, new(start, Text.Position), lexeme);
 		}
 		#endregion
 
 		#region Helpers
-		/// <summary>Checks if the <see cref="Builder"/> was cleared.</summary>
-		/// <exception cref="InvalidOperationException">Thrown if the <see cref="Builder"/> was not cleared.</exception>
-		protected void ThrowIfBuilderNotCleared()
+		/// <summary>Checks if the <see cref="LexemeBuilder"/> was cleared.</summary>
+		/// <exception cref="InvalidOperationException">Thrown if the <see cref="LexemeBuilder"/> was not cleared.</exception>
+		protected void ThrowIfLexemeBuilderNotCleared()
 		{
-			if (Builder.Length > 0)
-				ThrowHelper.ThrowInvalidOperationException("The builder was not cleared after being used.");
+			if (LexemeBuilder.Length > 0)
+				ThrowHelper.ThrowInvalidOperationException("The lexeme builder was not cleared after being used.");
+		}
+
+		/// <summary>Checks if the <see cref="ValueBuilder"/> was cleared.</summary>
+		/// <exception cref="InvalidOperationException">Thrown if the <see cref="ValueBuilder"/> was not cleared.</exception>
+		protected void ThrowIfValueBuilderNotCleared()
+		{
+			if (ValueBuilder.Length > 0)
+				ThrowHelper.ThrowInvalidOperationException("The value builder was not cleared after being used.");
+		}
+
+		/// <summary>Gets the value from the <see cref="LexemeBuilder"/> and then clears it.</summary>
+		/// <returns>The text that was accumulated in the <see cref="LexemeBuilder"/>.</returns>
+		protected string GetLexeme()
+		{
+			string lexeme = LexemeBuilder.ToString();
+			LexemeBuilder.Clear();
+
+			return lexeme;
+		}
+
+		/// <summary>Gets the value from the <see cref="ValueBuilder"/> and then clears it.</summary>
+		/// <returns>The text that was accumulated in the <see cref="ValueBuilder"/>.</returns>
+		protected string GetValue()
+		{
+			string lexeme = ValueBuilder.ToString();
+			ValueBuilder.Clear();
+
+			return lexeme;
 		}
 		#endregion
 	}

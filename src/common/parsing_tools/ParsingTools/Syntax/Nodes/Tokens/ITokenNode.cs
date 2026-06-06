@@ -19,6 +19,9 @@ public interface ITokenNode : IConcreteSyntaxNode
 	/// <summary>The exact input that was parsed for this token.</summary>
 	/// <remarks>Fabricated tokens will not have a lexeme.</remarks>
 	string? Lexeme { get; }
+
+	/// <summary>The untyped value of the token.</summary>
+	object? Value { get; }
 	#endregion
 
 	#region Methods
@@ -37,7 +40,8 @@ public interface ITokenNode<out T> : ITokenNode
 {
 	#region Properties
 	/// <summary>The value that the token contains.</summary>
-	T Value { get; }
+	new T Value { get; }
+	object? ITokenNode.Value => Value;
 	#endregion
 }
 
@@ -76,6 +80,7 @@ public abstract class BaseTokenNode : ITokenNode
 
 	/// <inheritdoc/>
 	public IndexedPositionRange Position { get; }
+	object? ITokenNode.Value => null;
 	#endregion
 
 	#region Constructors
@@ -119,6 +124,7 @@ public abstract class BaseTokenNode<T> : BaseTokenNode, ITokenNode<T>
 	#region Properties
 	/// <inheritdoc/>
 	public T Value { get; }
+	object? ITokenNode.Value => Value;
 	#endregion
 
 	#region Constructors

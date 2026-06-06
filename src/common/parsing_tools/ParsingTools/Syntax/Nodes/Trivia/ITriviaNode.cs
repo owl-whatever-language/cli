@@ -14,6 +14,9 @@ public interface ITriviaNode : IConcreteSyntaxNode
 	/// <remarks>Fabricated trivia nodes might not have a lexeme.</remarks>
 	string? Lexeme { get; }
 
+	/// <summary>The untyped value of the trivia node.</summary>
+	object? Value { get; }
+
 	IndexedPositionRange IConcreteSyntaxNode.FullPosition => Position;
 	#endregion
 }
@@ -27,7 +30,8 @@ public interface ITriviaNode<T> : ITriviaNode
 {
 	#region Properties
 	/// <summary>The value that the token contains.</summary>
-	T Value { get; }
+	new T Value { get; }
+	object? ITriviaNode.Value => Value;
 	#endregion
 }
 
@@ -48,6 +52,7 @@ public abstract class BaseTriviaNode : ITriviaNode
 
 	/// <inheritdoc/>
 	public abstract string? Lexeme { get; }
+	object? ITriviaNode.Value => null;
 	#endregion
 
 	#region Constructors
@@ -81,6 +86,7 @@ public abstract class BaseTriviaNode<T> : BaseTriviaNode, ITriviaNode<T>
 	#region Properties
 	/// <inheritdoc/>
 	public T Value { get; }
+	object? ITriviaNode.Value => Value;
 	#endregion
 
 	#region Constructors

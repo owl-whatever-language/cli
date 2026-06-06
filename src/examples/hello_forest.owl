@@ -1,0 +1,8 @@
+// "Hello Forest" examples (an OWL equivalent to "Hello World").
+
+// Direct (print will most definitely be removed later).
+print("Hello Forest!");
+
+// From variable
+text output = "Hello Forest (from variable)!";
+print(output);

@@ -1,8 +1,14 @@
 <Solution>
-  <Folder Name="/common/" />
-  <Folder Name="/common/parsing_tools/">
-    <Project Path="common/parsing_tools/ParsingTools.Tests/ParsingTools.Tests.csproj" />
-    <Project Path="common/parsing_tools/ParsingTools/ParsingTools.csproj" />
-  </Folder>
-  <Project Path="cli/cli.csproj" />
+	<Folder Name="/common/" />
+	<Folder Name="/common/parsing_tools/">
+		<Project Path="common/parsing_tools/ParsingTools.Tests/ParsingTools.Tests.csproj" />
+		<Project Path="common/parsing_tools/ParsingTools/ParsingTools.csproj" />
+	</Folder>
+	<Folder Name="/examples/">
+		<File Path="examples/hello_forest.owl" />
+	</Folder>
+	<Folder Name="/local/">
+		<Project Path="local/Playground/Playground.csproj" />
+	</Folder>
+	<Project Path="cli/cli.csproj" />
 </Solution>

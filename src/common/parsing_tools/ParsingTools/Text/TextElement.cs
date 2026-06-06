@@ -23,6 +23,24 @@ public readonly struct TextElement :
 	#region Properties
 	/// <summary>The value of the text element.</summary>
 	public string Value => _value ?? "\0";
+
+	/// <summary>The value of the text element as a <see cref="char"/> value.</summary>
+	/// <remarks>This will return <c>\0</c> if the <see cref="Value"/> contains more than just a single <see langword="char"/> value.</remarks>
+	public char AsChar => Value.Length is 1 ? Value[0] : '\0';
+
+	/// <summary>The value of the text element as a <see cref="Rune"/> value.</summary>
+	/// <remarks>This will return <c>\0</c> if the <see cref="Value"/> contains more than just a single <see cref="Rune"/> value.</remarks>
+	public Rune AsRune
+	{
+		get
+		{
+			Rune rune = Rune.GetRuneAt(Value, 0);
+			if (rune.Utf16SequenceLength == Value.Length)
+				return rune;
+
+			return new('\0');
+		}
+	}
 	#endregion
 
 	#region Constructors
@@ -154,6 +172,16 @@ public static class TextElementExtensions
 		/// <summary>Whether the line break is considered a line break.</summary>
 		/// <remarks>A line break is one of: <c>\r</c>, <c>\n</c> or <c>\r\n</c>.</remarks>
 		public bool IsLineBreak => element.Value == "\r" || element.Value == "\n" || element.Value == "\r\n";
+		#endregion
+	}
+
+	extension(StringBuilder builder)
+	{
+		#region Methods
+		/// <summary>Appends the given text <paramref name="element"/> to the <see langword="string"/> builder.</summary>
+		/// <param name="element">The text element to append.</param>
+		/// <returns>A reference to the used <see cref="StringBuilder"/>.</returns>
+		public StringBuilder Append(TextElement element) => builder.Append(element.Value);
 		#endregion
 	}
 }

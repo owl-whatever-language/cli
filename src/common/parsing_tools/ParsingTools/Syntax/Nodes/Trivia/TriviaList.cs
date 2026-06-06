@@ -51,7 +51,7 @@ public sealed class TriviaList : IConcreteSyntaxNode, IReadOnlyList<ITriviaNode>
 	{
 		Guard.IsOrdered(nodes);
 
-		_nodes = nodes;
+		_nodes = [.. nodes];
 	}
 	#endregion
 
