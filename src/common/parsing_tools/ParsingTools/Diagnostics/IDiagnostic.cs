@@ -18,9 +18,6 @@ public interface IDiagnostic
 	/// <summary>The location that the diagnostic is for.</summary>
 	IDiagnosticLocation Location { get; }
 
-	/// <summary>The code fixes that are available to deal with this diagnostic.</summary>
-	IReadOnlyCollection<ICodeFix> CodeFixes { get; }
-
 	/// <summary>The diagnostic message.</summary>
 	string Message { get; }
 	#endregion
@@ -43,9 +40,6 @@ public sealed class Diagnostic : IDiagnostic
 
 	/// <inheritdoc/>
 	public required IDiagnosticLocation Location { get; init; }
-
-	/// <inheritdoc/>
-	public IReadOnlyCollection<ICodeFix> CodeFixes { get; init; } = [];
 
 	/// <inheritdoc/>
 	public required string Message { get; init; }

@@ -9,9 +9,6 @@ public interface IDiagnosticBag : IReadOnlyCollection<IDiagnostic>
 	/// <summary>Whether any errors are present.</summary>
 	/// <remarks>This checks for <see cref="DiagnosticKind.Error"/>.</remarks>
 	bool HasErrors { get; }
-
-	/// <summary>Whether there are any code fixes available.</summary>
-	bool HasCodeFixes { get; }
 	#endregion
 }
 
@@ -33,9 +30,6 @@ public sealed class DiagnosticBag : IDiagnosticBag, ICollection<IDiagnostic>
 
 	/// <inheritdoc/>
 	public bool HasErrors => _diagnostics.Any(d => d.Kind == DiagnosticKind.Error);
-
-	/// <inheritdoc/>
-	public bool HasCodeFixes => _diagnostics.Any(d => d.CodeFixes.Any());
 	#endregion
 
 	#region Methods
