@@ -24,6 +24,12 @@ public abstract class BaseLexer : ILexer
 	/// </summary>
 	protected abstract class LexerInstance
 	{
+		#region Constants
+		// Todo(Nightowl): Analyse these once there's actual code to analyse;
+		private const int InitialLeadingTriviaCapacity = 4;
+		private const int InitialTrailingTriviaCapacity = 4;
+		#endregion
+
 		#region Properties
 		/// <summary>The lexer that created this instance.</summary>
 		protected ILexer Lexer { get; }
@@ -41,10 +47,10 @@ public abstract class BaseLexer : ILexer
 		protected List<ITokenNode> Tokens { get; } = [];
 
 		/// <summary>The currently accumulated leading trivia nodes.</summary>
-		protected List<ITriviaNode> LeadingTrivia { get; private set; } = [];
+		protected List<ITriviaNode> LeadingTrivia { get; private set; } = new(InitialLeadingTriviaCapacity);
 
 		/// <summary>The currently accumulated trailing trivia nodes.</summary>
-		protected List<ITriviaNode> TrailingTrivia { get; private set; } = [];
+		protected List<ITriviaNode> TrailingTrivia { get; private set; } = new(InitialTrailingTriviaCapacity);
 
 		/// <summary>A reusable builder that can be used for accumulating lexed text.</summary>
 		/// <remarks>Make sure to clear the builder <b>after</b> using it.</remarks>
@@ -148,8 +154,8 @@ public abstract class BaseLexer : ILexer
 			leadingTrivia = new(LeadingTrivia);
 			trailingTrivia = new(TrailingTrivia);
 
-			LeadingTrivia = [];
-			TrailingTrivia = [];
+			LeadingTrivia = new(InitialLeadingTriviaCapacity);
+			TrailingTrivia = new(InitialTrailingTriviaCapacity);
 		}
 
 		/// <summary>Performs the necessary steps to finish an infix token.</summary>
@@ -161,7 +167,7 @@ public abstract class BaseLexer : ILexer
 				ThrowHelper.ThrowInvalidOperationException("Some trailing trivia has already been accumulated.");
 
 			leadingTrivia = new(LeadingTrivia);
-			LeadingTrivia = [];
+			LeadingTrivia = new(InitialLeadingTriviaCapacity);
 		}
 
 		/// <summary>Lexes the next tokens.</summary>
