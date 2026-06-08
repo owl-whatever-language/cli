@@ -73,7 +73,10 @@ public abstract class BaseTriviaNode : ITriviaNode
 
 	#region Methods
 	/// <inheritdoc/>
-	public virtual IEnumerable<ISyntaxNode> GetChildren() => [];
+	public virtual IEnumerable<IConcreteSyntaxNode> GetChildren() => [];
+
+	/// <inheritdoc/>
+	public override string ToString() => DebugPrinter.ToString(this);
 	#endregion
 }
 
@@ -102,6 +105,17 @@ public abstract class BaseTriviaNode<T> : BaseTriviaNode, ITriviaNode<T>
 		: base(kind, position)
 	{
 		Value = value;
+	}
+	#endregion
+
+	#region Methods
+	/// <inheritdoc/>
+	public override IEnumerable<IConcreteSyntaxNode> GetChildren()
+	{
+		if (Value is IConcreteSyntaxNode node)
+			return [node];
+
+		return [];
 	}
 	#endregion
 }

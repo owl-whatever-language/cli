@@ -47,7 +47,7 @@ public sealed class TokenNode<T> : BaseTokenNode<T>
 {
 	#region Properties
 	/// <inheritdoc/>
-	public override bool IsFabricated => true;
+	public override bool IsFabricated => false;
 
 	/// <inheritdoc/>
 	public override string Lexeme { get; }

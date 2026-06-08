@@ -111,7 +111,10 @@ public abstract class BaseTokenNode : ITokenNode
 	public abstract ITokenNode ReplaceLeadingTrivia(TriviaList newLeadingTrivia);
 
 	/// <inheritdoc/>
-	public IEnumerable<ISyntaxNode> GetChildren() => LeadingTrivia.Concat(TrailingTrivia);
+	public IEnumerable<IConcreteSyntaxNode> GetChildren() => LeadingTrivia.Concat(TrailingTrivia);
+
+	/// <inheritdoc/>
+	public override string ToString() => DebugPrinter.ToString(this);
 	#endregion
 }
 

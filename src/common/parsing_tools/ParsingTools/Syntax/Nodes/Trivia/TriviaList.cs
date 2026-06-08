@@ -57,7 +57,7 @@ public sealed class TriviaList : IConcreteSyntaxNode, IReadOnlyList<ITriviaNode>
 
 	#region Methods
 	/// <inheritdoc/>
-	public IEnumerable<ISyntaxNode> GetChildren() => _nodes;
+	public IEnumerable<IConcreteSyntaxNode> GetChildren() => _nodes;
 
 	/// <inheritdoc/>
 	public IEnumerator<ITriviaNode> GetEnumerator() => _nodes.GetEnumerator();

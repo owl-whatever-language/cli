@@ -25,5 +25,8 @@ partial struct SyntaxKind
 
 	/// <summary>Represents a syntax kind for the trivia list node.</summary>
 	public static SyntaxKind TriviaList { get; } = new("list", SyntaxCategory.Trivia);
+
+	/// <summary>Represents a syntax kind for the root document.</summary>
+	public static SyntaxKind Document { get; } = new("document", SyntaxCategory.Document);
 	#endregion
 }

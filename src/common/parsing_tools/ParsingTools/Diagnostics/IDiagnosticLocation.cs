@@ -53,4 +53,9 @@ public sealed class DiagnosticSourceLocation : IDiagnosticLocation
 		_basicPosition = position;
 	}
 	#endregion
+
+	#region Methods
+	/// <inheritdoc/>
+	public override string ToString() => $"{Source.SimpleName}, {Position}";
+	#endregion
 }
