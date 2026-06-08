@@ -353,7 +353,7 @@ public abstract class BaseLexer : ILexer
 
 			while (Text.Current.IsWhiteSpace)
 			{
-				LexemeBuilder.Append(Text.Current);
+				LexemeBuilder.Append(Text.Current.Value);
 				Text.Advance();
 			}
 

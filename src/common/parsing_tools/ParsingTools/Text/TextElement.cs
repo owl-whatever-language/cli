@@ -178,6 +178,7 @@ public static class TextElementExtensions
 	extension(StringBuilder builder)
 	{
 		#region Methods
+		// Todo(Nightowl): I don't know why, but the C# compiler just doesn't wanna pick this overload for some reason;
 		/// <summary>Appends the given text <paramref name="element"/> to the <see langword="string"/> builder.</summary>
 		/// <param name="element">The text element to append.</param>
 		/// <returns>A reference to the used <see cref="StringBuilder"/>.</returns>

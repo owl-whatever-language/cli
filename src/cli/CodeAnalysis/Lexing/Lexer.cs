@@ -52,8 +52,8 @@ public sealed class Lexer : BaseLexer
 					break;
 				}
 
-				LexemeBuilder.Append(Text.Current);
-				ValueBuilder.Append(Text.Current);
+				LexemeBuilder.Append(Text.Current.Value);
+				ValueBuilder.Append(Text.Current.Value);
 
 				Text.Advance();
 			}
@@ -80,14 +80,14 @@ public sealed class Lexer : BaseLexer
 
 			IndexedLinePosition start = Text.Position;
 
-			LexemeBuilder.Append(Text.Current);
-			ValueBuilder.Append(Text.Current);
+			LexemeBuilder.Append(Text.Current.Value);
+			ValueBuilder.Append(Text.Current.Value);
 			Text.Advance();
 
 			while (Text.HasRemaining && (Text.Current == '_' || char.IsAsciiLetterOrDigit(Text.Current.AsChar)))
 			{
-				LexemeBuilder.Append(Text.Current);
-				ValueBuilder.Append(Text.Current);
+				LexemeBuilder.Append(Text.Current.Value);
+				ValueBuilder.Append(Text.Current.Value);
 				Text.Advance();
 			}
 
@@ -122,8 +122,8 @@ public sealed class Lexer : BaseLexer
 
 			while (Text.HasRemaining && (Text.Current.IsLineBreak is false))
 			{
-				LexemeBuilder.Append(Text.Current);
-				ValueBuilder.Append(Text.Current);
+				LexemeBuilder.Append(Text.Current.Value);
+				ValueBuilder.Append(Text.Current.Value);
 				Text.Advance();
 			}
 
