@@ -41,10 +41,10 @@ public abstract class BaseLexer : ILexer
 		protected List<ITokenNode> Tokens { get; } = [];
 
 		/// <summary>The currently accumulated leading trivia nodes.</summary>
-		protected List<ITriviaNode> LeadingTrivia { get; } = [];
+		protected List<ITriviaNode> LeadingTrivia { get; private set; } = [];
 
 		/// <summary>The currently accumulated trailing trivia nodes.</summary>
-		protected List<ITriviaNode> TrailingTrivia { get; } = [];
+		protected List<ITriviaNode> TrailingTrivia { get; private set; } = [];
 
 		/// <summary>A reusable builder that can be used for accumulating lexed text.</summary>
 		/// <remarks>Make sure to clear the builder <b>after</b> using it.</remarks>
@@ -145,21 +145,11 @@ public abstract class BaseLexer : ILexer
 		{
 			LexTrailingTrivia();
 
-			if (LeadingTrivia.Count is 0)
-				leadingTrivia = [];
-			else
-			{
-				leadingTrivia = new(LeadingTrivia);
-				LeadingTrivia.Clear();
-			}
+			leadingTrivia = new(LeadingTrivia);
+			trailingTrivia = new(TrailingTrivia);
 
-			if (TrailingTrivia.Count is 0)
-				trailingTrivia = [];
-			else
-			{
-				trailingTrivia = new(TrailingTrivia);
-				TrailingTrivia.Clear();
-			}
+			LeadingTrivia = [];
+			TrailingTrivia = [];
 		}
 
 		/// <summary>Performs the necessary steps to finish an infix token.</summary>
@@ -170,14 +160,8 @@ public abstract class BaseLexer : ILexer
 			if (TrailingTrivia.Any())
 				ThrowHelper.ThrowInvalidOperationException("Some trailing trivia has already been accumulated.");
 
-			if (LeadingTrivia.Count is 0)
-			{
-				leadingTrivia = [];
-				return;
-			}
-
 			leadingTrivia = new(LeadingTrivia);
-			LeadingTrivia.Clear();
+			LeadingTrivia = [];
 		}
 
 		/// <summary>Lexes the next tokens.</summary>
@@ -284,12 +268,18 @@ public abstract class BaseLexer : ILexer
 		/// <param name="sequence">The sequence to try and lex.</param>
 		/// <param name="kind">The kind of the token that is being lexed.</param>
 		/// <returns><see langword="true"/> if a token was lexed and added to <see cref="Tokens"/>, <see langword="false"/> otherwise.</returns>
+		/// <remarks>This method assumes that the <paramref name="sequence"/> only consists of <see cref="char"/> characters.</remarks>
 		protected bool TryLexSimpleToken(string sequence, SyntaxKind kind)
 		{
 			IndexedLinePosition start = Text.Position;
 
-			if (Text.MatchSequence(sequence) is false)
-				return false;
+			for (int i = 0; i < sequence.Length; i++)
+			{
+				if (Text.Peek(i) != sequence[i])
+					return false;
+			}
+
+			Text.Advance(sequence.Length);
 
 			FinishFullToken(out TriviaList leading, out TriviaList trailing);
 			TokenNode token = new(kind, new(start, Text.Position), sequence, leading, trailing);

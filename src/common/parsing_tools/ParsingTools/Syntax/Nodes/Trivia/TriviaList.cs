@@ -47,14 +47,17 @@ public sealed class TriviaList : IConcreteSyntaxNode, IReadOnlyList<ITriviaNode>
 	#endregion
 
 	#region Constructors
+	/// <summary>Creates a new, empty trivia list.</summary>
+	public TriviaList() { _nodes = []; }
+
 	/// <summary>Creates a new trivia list.</summary>
 	/// <param name="nodes">The nodes that are a part of the trivia list.</param>
 	/// <exception cref="ArgumentException">Thrown if the given list of trivia <paramref name="nodes"/> is not ordered.</exception>
-	public TriviaList(params IReadOnlyList<ITriviaNode> nodes)
+	public TriviaList(IReadOnlyList<ITriviaNode> nodes)
 	{
 		Guard.IsOrdered(nodes);
 
-		_nodes = [.. nodes];
+		_nodes = nodes;
 	}
 	#endregion
 

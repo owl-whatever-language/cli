@@ -112,7 +112,7 @@ public sealed class Lexer : BaseLexer
 		private ITriviaNode? TryLexComment()
 		{
 			IndexedLinePosition start = Text.Position;
-			if (Text.MatchSequence("//") is false)
+			if (Text.MatchSequence('/', '/') is false)
 				return null;
 
 			ThrowIfLexemeBuilderNotCleared();
