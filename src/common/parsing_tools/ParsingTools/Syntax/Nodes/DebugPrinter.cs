@@ -11,39 +11,37 @@ public static class DebugPrinter
 	#region Functions
 	/// <summary>Gets the full lexeme of the given syntax <paramref name="node"/>.</summary>
 	/// <param name="node">The syntax node to print.</param>
-	/// <param name="includeTrivia">Whether trivia should be included in the trivia node.</param>
+	/// <param name="includeEndTrivia">Whether the very first and very last trivia should be printed.</param>
 	/// <returns>A <see langword="string"/> representation of the given syntax <paramref name="node"/>.</returns>
-	/// <remarks>If trivia is excluded then some of the output might not make sense since tokens could look merged.</remarks>
-	public static string ToString(IConcreteSyntaxNode node, bool includeTrivia = true)
+	/// <remarks>Not all trivia can be excluded as some is significant when printing to not make it look like the tokens are merged.</remarks>
+	public static string ToString(IConcreteSyntaxNode node, bool includeEndTrivia = false)
 	{
 		StringWriter stringWriter = new();
 		IndentedTextWriter writer = new(stringWriter);
 
-		Write(writer, node, includeTrivia);
+		Write(writer, node, includeEndTrivia);
 		return stringWriter.ToString();
 	}
 
-	private static void Write(IndentedTextWriter writer, IConcreteSyntaxNode node, bool includeTrivia)
+	private static void Write(IndentedTextWriter writer, IConcreteSyntaxNode node, bool includeEndTrivia)
 	{
-		if (node is ITokenNode token)
+		ITokenNode? last = null;
+
+		foreach (ITokenNode token in FlattenTokens(node))
 		{
-			if (includeTrivia)
+			if (last is not null)
+				Write(writer, last.TrailingTrivia);
+
+			if (includeEndTrivia && last == null)
 				Write(writer, token.LeadingTrivia);
 
 			writer.Write(token.Lexeme);
 
-			if (includeTrivia)
-				Write(writer, token.TrailingTrivia);
+			last = token;
 		}
-		else if (node is TriviaList triviaList)
-			Write(writer, triviaList);
-		else if (node is ITriviaNode trivia)
-			Write(writer, trivia);
-		else
-		{
-			foreach (IConcreteSyntaxNode child in node.GetChildren())
-				Write(writer, child, includeTrivia);
-		}
+
+		if (includeEndTrivia && last is not null)
+			Write(writer, last.TrailingTrivia);
 	}
 	#endregion
 
@@ -51,14 +49,41 @@ public static class DebugPrinter
 	private static void Write(IndentedTextWriter writer, TriviaList list)
 	{
 		foreach (ITriviaNode trivia in list)
-			Write(writer, trivia);
-	}
-	private static void Write(IndentedTextWriter writer, ITriviaNode trivia)
-	{
-		if (trivia.Value is IConcreteSyntaxNode node)
-			Write(writer, node, true);
-		else
 			writer.Write(trivia.Lexeme);
+	}
+	#endregion
+
+	#region Helpers
+	private static IEnumerable<ITokenNode> FlattenTokens(ISyntaxNode node)
+	{
+		List<ISyntaxNode> store = [];
+		GetAllChildren(node, store);
+
+		return store.OfType<ITokenNode>();
+	}
+	private static void GetAllChildren(ISyntaxNode node, List<ISyntaxNode> store)
+	{
+		if (node is ITriviaNode trivia)
+		{
+			if (trivia.Value is ISyntaxNode value)
+				GetAllChildren(value, store);
+		}
+		else if (node is TriviaList triviaList)
+		{
+			foreach (ITriviaNode current in triviaList)
+				GetAllChildren(current, store);
+		}
+		else if (node is ITokenNode token)
+		{
+			GetAllChildren(token.LeadingTrivia, store);
+			store.Add(token);
+			GetAllChildren(token.TrailingTrivia, store);
+		}
+		else
+		{
+			foreach (ISyntaxNode child in node.GetChildren())
+				GetAllChildren(child, store);
+		}
 	}
 	#endregion
 }
