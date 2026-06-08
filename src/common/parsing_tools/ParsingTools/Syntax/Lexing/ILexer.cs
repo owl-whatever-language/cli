@@ -145,11 +145,21 @@ public abstract class BaseLexer : ILexer
 		{
 			LexTrailingTrivia();
 
-			leadingTrivia = new(LeadingTrivia);
-			trailingTrivia = new(TrailingTrivia);
+			if (LeadingTrivia.Count is 0)
+				leadingTrivia = [];
+			else
+			{
+				leadingTrivia = new(LeadingTrivia);
+				LeadingTrivia.Clear();
+			}
 
-			LeadingTrivia.Clear();
-			TrailingTrivia.Clear();
+			if (TrailingTrivia.Count is 0)
+				trailingTrivia = [];
+			else
+			{
+				trailingTrivia = new(TrailingTrivia);
+				TrailingTrivia.Clear();
+			}
 		}
 
 		/// <summary>Performs the necessary steps to finish an infix token.</summary>
@@ -159,6 +169,12 @@ public abstract class BaseLexer : ILexer
 		{
 			if (TrailingTrivia.Any())
 				ThrowHelper.ThrowInvalidOperationException("Some trailing trivia has already been accumulated.");
+
+			if (LeadingTrivia.Count is 0)
+			{
+				leadingTrivia = [];
+				return;
+			}
 
 			leadingTrivia = new(LeadingTrivia);
 			LeadingTrivia.Clear();

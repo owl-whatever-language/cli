@@ -27,9 +27,6 @@ public sealed class StringTextParser : BaseTextParser
 	{
 		_input = input;
 		_indices = StringInfo.ParseCombiningCharacters(input);
-
-		_cache0 = PeekNoCache(0);
-		_cache1 = PeekNoCache(1);
 	}
 	#endregion
 
@@ -39,40 +36,29 @@ public sealed class StringTextParser : BaseTextParser
 	{
 		Guard.IsGreaterThanOrEqualTo(offset, 0);
 
-		if (offset is 0)
-		{
-			_cache0 ??= PeekNoCache(0);
-			return _cache0 is null ? default : new(_cache0);
-		}
-
-		if (offset is 1)
-		{
-			_cache1 ??= PeekNoCache(1);
-			return _cache1 is null ? default : new(_cache1);
-		}
-
-		string? value = PeekNoCache(offset);
-		return value is null ? default : new(value);
-	}
-	private string? PeekNoCache(int offset)
-	{
-		Guard.IsGreaterThanOrEqualTo(offset, 0);
-
 		if (IsAtEnd)
-			return null;
+			return default;
 
 		int lookupIndex = _index + offset;
 		if (lookupIndex >= _indices.Length)
-			return null;
+			return default;
 
-		return PeekNoGuard(lookupIndex);
+		if (offset is 0)
+			return new(_cache0 ??= PeekNoGuard(lookupIndex), false);
+
+		if (offset is 1)
+			return new(_cache1 ??= PeekNoGuard(lookupIndex), false);
+
+		string value = PeekNoGuard(offset);
+		return new(value, false);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private string PeekNoGuard(int lookupIndex)
 	{
 		int index = _indices[lookupIndex];
-		string str = StringInfo.GetNextTextElement(_input, index);
+		int nextIndex = lookupIndex + 1 == _indices.Length ? _input.Length : _indices[lookupIndex + 1];
+		string str = _input[index..nextIndex];
 
 		return str;
 	}

@@ -50,9 +50,13 @@ public readonly struct TextElement :
 	/// <summary>Creates a new text element with the given <paramref name="value"/>.</summary>
 	/// <param name="value">The value of the text element (grapheme cluster).</param>
 	/// <exception cref="ArgumentException">Thrown if the given <paramref name="value"/> doesn't contain exactly one text element.</exception>
-	public TextElement(string value)
+	public TextElement(string value) : this(value, true)
 	{
-		if (value.Length is 0 || StringInfo.GetNextTextElementLength(value) != value.Length)
+	}
+
+	internal TextElement(string value, bool validate)
+	{
+		if (validate && (value.Length is 0 || StringInfo.GetNextTextElementLength(value) != value.Length))
 			ThrowHelper.ThrowArgumentException(nameof(value), "The value was supposed to contain exactly one text element (grapheme cluster).");
 
 		_value = value;
