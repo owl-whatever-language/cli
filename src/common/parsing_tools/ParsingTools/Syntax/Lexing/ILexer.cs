@@ -53,6 +53,7 @@ public abstract class BaseLexer : ILexer
 		/// <summary>A reusable builder that can be used for accumulating lexed text for the purpose of converting it to a token/trivia value.</summary>
 		/// <remarks>Make sure to clear the builder <b>after</b> using it.</remarks>
 		protected StringBuilder ValueBuilder { get; } = new();
+		private bool EncounteredBadCharacter { get; set; } = false;
 		#endregion
 
 		#region Constructors
@@ -125,6 +126,7 @@ public abstract class BaseLexer : ILexer
 		/// <returns>The lexed bad character.</returns>
 		protected virtual void LexBadCharacter()
 		{
+			EncounteredBadCharacter = true;
 			IndexedLinePosition start = Text.Position;
 			string lexeme = Text.Current.Value;
 			Text.Advance();
@@ -173,6 +175,9 @@ public abstract class BaseLexer : ILexer
 		{
 			ThrowIfLexemeBuilderNotCleared();
 			ThrowIfValueBuilderNotCleared();
+
+			if (EncounteredBadCharacter is false)
+				return Tokens;
 
 			List<ITokenNode> tokens = [];
 			Queue<ITokenNode> badTokens = [];
