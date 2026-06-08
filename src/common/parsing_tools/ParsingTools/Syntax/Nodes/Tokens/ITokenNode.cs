@@ -8,7 +8,7 @@ public interface ITokenNode : IConcreteSyntaxNode
 	#region Properties
 	/// <summary>Whether the token was fabricated during compilation as an error recovery measure.</summary>
 	[MemberNotNullWhen(false, nameof(Lexeme))]
-	bool IsFabricated { get; }
+	new bool IsFabricated { get; }
 
 	/// <summary>The list of the leading trivia nodes.</summary>
 	TriviaList LeadingTrivia { get; }

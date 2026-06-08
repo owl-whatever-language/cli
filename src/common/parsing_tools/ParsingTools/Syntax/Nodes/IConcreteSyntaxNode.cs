@@ -9,6 +9,9 @@ public interface IConcreteSyntaxNode : ISyntaxNode
 	/// <summary>The full position that the syntax node takes up in the source.</summary>
 	/// <remarks>The full position includes the leading and trailing trivia.</remarks>
 	IndexedPositionRange FullPosition { get; }
+
+	/// <summary>Whether the full syntax node is fabricated.</summary>
+	bool IsFabricated { get; }
 	#endregion
 
 	#region Methods
@@ -68,6 +71,9 @@ public abstract class BaseConcreteSyntaxNode : IConcreteSyntaxNode
 			return new(first.Position.Start, last.Position.End);
 		}
 	}
+
+	/// <inheritdoc/>
+	public bool IsFabricated => GetChildren().All(c => c.IsFabricated);
 	#endregion
 
 	#region Methods

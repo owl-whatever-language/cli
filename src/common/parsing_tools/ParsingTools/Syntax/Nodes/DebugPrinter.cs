@@ -30,8 +30,7 @@ public static class DebugPrinter
 			if (includeTrivia)
 				Write(writer, token.LeadingTrivia);
 
-			if (token.Kind != SyntaxKind.EndOfInput)
-				writer.Write(token.Lexeme ?? "???");
+			writer.Write(token.Lexeme);
 
 			if (includeTrivia)
 				Write(writer, token.TrailingTrivia);
@@ -59,7 +58,7 @@ public static class DebugPrinter
 		if (trivia.Value is IConcreteSyntaxNode node)
 			Write(writer, node, true);
 		else
-			writer.Write(trivia.Lexeme ?? "???");
+			writer.Write(trivia.Lexeme);
 	}
 	#endregion
 }

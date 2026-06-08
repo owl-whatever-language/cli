@@ -36,6 +36,9 @@ public sealed class TriviaList : IConcreteSyntaxNode, IReadOnlyList<ITriviaNode>
 
 	/// <summary>Whether the trivia list is empty.</summary>
 	public bool IsEmpty => Count is 0;
+
+	/// <inheritdoc/>
+	public bool IsFabricated => GetChildren().All(n => n.IsFabricated);
 	#endregion
 
 	#region Indexers

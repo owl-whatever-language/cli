@@ -32,13 +32,13 @@ public sealed class Parser : BaseParser<ConcreteDocumentSyntax>
 		{
 			List<IConcreteStatement> statements = [];
 
-			while (HasRemaining && Current.Kind != SyntaxKind.EndOfInput)
+			LoopGuard(() => RealisticHasRemaining, () =>
 			{
 				IConcreteStatement statement = ParseStatement();
-				// Todo(Nightowl): Add check to ensure we parsed at least some tokens so we don't get stuck;
 
-				statements.Add(statement);
-			}
+				if (statement.IsFabricated is false)
+					statements.Add(statement);
+			});
 
 			return statements;
 		}
@@ -72,20 +72,21 @@ public sealed class Parser : BaseParser<ConcreteDocumentSyntax>
 		#region Expression methods
 		private IConcreteExpression ParseExpression(ExpressionPower precedence = default)
 		{
-			IConcreteExpression value = ParseLiteral();
+			IConcreteExpression expression = ParseLiteral();
 
-			while (HasRemaining)
+			while (RealisticHasRemaining)
 			{
 				ExpressionPower power = ExpressionPower.PowerOf(Current.Kind);
 				if (precedence.Value >= power.Value)
 					break;
 
 				if (Current.Kind == SyntaxKind.OpenBracket)
-					value = ParseCallExpression(value, power);
+					expression = ParseCallExpression(expression, power);
 			}
 
-			return value;
+			return expression;
 		}
+
 		private IConcreteExpression ParseLiteral()
 		{
 			if (Match(SyntaxKind.StringLiteral, out ITokenNode? stringLiteral))
@@ -100,7 +101,6 @@ public sealed class Parser : BaseParser<ConcreteDocumentSyntax>
 		private IConcreteExpression ParseCallExpression(IConcreteExpression expression, ExpressionPower power)
 		{
 			ITokenNode open = Expect(SyntaxKind.OpenBracket, "Expected a function call to use an opening bracket '(' before the arguments.");
-
 			IConcreteExpression value = ParseExpression(power);
 			ITokenNode close = Expect(SyntaxKind.CloseBracket, "Expected a closing bracket ')' to end a function call.");
 
@@ -118,6 +118,17 @@ public sealed class Parser : BaseParser<ConcreteDocumentSyntax>
 				Provider = Parser,
 				Location = new DiagnosticSourceLocation(Source, position),
 				Message = "Expected a statement."
+			});
+		}
+		protected override void ReportInfiniteLoop(IndexedPositionRange position)
+		{
+			Diagnostics.Add(new Diagnostic()
+			{
+				Id = "infinite_parsing_loop",
+				Kind = DiagnosticKind.Error,
+				Provider = Parser,
+				Location = new DiagnosticSourceLocation(Source, position),
+				Message = "An unaccounted for infinite loop occured during parsing, this is likely an error with the OWL parser."
 			});
 		}
 		#endregion

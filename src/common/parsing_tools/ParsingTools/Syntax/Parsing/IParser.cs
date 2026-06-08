@@ -42,6 +42,41 @@ public abstract class BaseParser<T> : IParser<T>
 	/// </summary>
 	protected abstract class ParserInstance
 	{
+		#region Nested types
+		/// <summary>
+		/// 	Represents a scope that's used for guarding against infinite loops that can occur from fabricating tokens.
+		/// </summary>
+		/// <param name="parser">The parser instance.</param>
+		/// <param name="token">The token that the parser is on at the start of the loop iteration.</param>
+		/// <param name="reportInfiniteLoop">
+		/// 	An action that will report a diagnostic for an infinite loop, this will only be used if no diagnostics were reported.
+		/// 	Should be treated as an error in your parser if this is ever called.
+		/// </param>
+		protected readonly struct LoopGuardScope(ParserInstance parser, ITokenNode token, Action<IndexedPositionRange> reportInfiniteLoop) : IDisposable
+		{
+			#region Properties
+			private ParserInstance Parser { get; } = parser;
+			private ITokenNode Token { get; } = token;
+			private int OldDiagnosticCount { get; } = parser.Diagnostics.Count;
+			private Action<IndexedPositionRange> ReportInfiniteLoop { get; } = reportInfiniteLoop;
+			#endregion
+
+			#region Methods
+			/// <inheritdoc/>
+			public void Dispose()
+			{
+				if (Parser.Current == Token)
+				{
+					if (OldDiagnosticCount >= Parser.Diagnostics.Count)
+						ReportInfiniteLoop.Invoke(Token.Position);
+
+					Parser.SkipCurrent();
+				}
+			}
+			#endregion
+		}
+		#endregion
+
 		#region Fields
 		private int _index;
 		private readonly List<ITokenNode> _tokens;
@@ -71,9 +106,17 @@ public abstract class BaseParser<T> : IParser<T>
 		[MemberNotNullWhen(false, nameof(Current))]
 		protected bool IsAtEnd => _index >= Tokens.Count;
 
+		/// <summary>Whether the parser went past the last token, or the current token is the end of input token.</summary>
+		[MemberNotNullWhen(false, nameof(Current))]
+		protected bool RealisticIsAtEnd => IsAtEnd || Current.Kind == SyntaxKind.EndOfInput;
+
 		/// <summary>Whether the parser has tokens remaining to be parsed.</summary>
 		[MemberNotNullWhen(true, nameof(Current))]
 		protected bool HasRemaining => _index < Tokens.Count;
+
+		/// <summary>Whether the parser has tokens remaining to be parsed, and the current token is not the end of input token.</summary>
+		[MemberNotNullWhen(true, nameof(Current))]
+		protected bool RealisticHasRemaining => HasRemaining && Current.Kind != SyntaxKind.EndOfInput;
 		#endregion
 
 		#region Constructors
@@ -232,9 +275,38 @@ public abstract class BaseParser<T> : IParser<T>
 			_tokens[_index + 1] = next.ReplaceLeadingTrivia(newTriviaList);
 			_index++;
 		}
+
+		/// <summary>Enters a scope for guarding against infinite loops that can occur during parsing from fabricating tokens.</summary>
+		/// <returns>A scope to use for the loop guard.</returns>
+		protected LoopGuardScope LoopGuard()
+		{
+			if (Current is null)
+				ThrowHelper.ThrowInvalidDataException("Expected the current token to be available.");
+
+			return new(this, Current, ReportInfiniteLoop);
+		}
+
+		/// <summary>Wraps a <paramref name="body"/> where each iteration is inside a loop guard scope.</summary>
+		/// <param name="condition">The condition for each iteration.</param>
+		/// <param name="body">The body of the iteration.</param>
+		protected void LoopGuard(Func<bool> condition, Action body)
+		{
+			while (condition.Invoke())
+			{
+				using (LoopGuard())
+					body.Invoke();
+			}
+		}
 		#endregion
 
 		#region Diagnostic methods
+		/// <summary>Reports that an unaccounted for infinite loop has occured as a result of fabricating tokens during parsing.</summary>
+		/// <param name="position">The position where the infinite loop occured.</param>
+		/// <remarks>
+		/// 	This happening means you have an error somewhere in your parser where you do node checks, but don't report any errors in some situation.
+		/// </remarks>
+		protected abstract void ReportInfiniteLoop(IndexedPositionRange position);
+
 		/// <summary>Reports a diagnostic about a token that was expected at the given <paramref name="position"/>.</summary>
 		/// <param name="position">The position where the token was expected.</param>
 		/// <param name="kind">The kind of the token that was expected.</param>

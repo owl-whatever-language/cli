@@ -8,7 +8,7 @@ public interface ITriviaNode : IConcreteSyntaxNode
 	#region Properties
 	/// <summary>Whether the trivia node was fabricated during compilation as an error recovery measure.</summary>
 	[MemberNotNullWhen(false, nameof(Lexeme))]
-	bool IsFabricated { get; }
+	new bool IsFabricated { get; }
 
 	/// <summary>The exact input that was parsed for this trivia node.</summary>
 	/// <remarks>Fabricated trivia nodes might not have a lexeme.</remarks>
