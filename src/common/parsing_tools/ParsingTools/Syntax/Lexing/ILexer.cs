@@ -73,6 +73,8 @@ public abstract class BaseLexer : ILexer
 		/// <returns>The result of the lexing operation.</returns>
 		public ILexerResult Lex()
 		{
+			Stopwatch watch = Stopwatch.StartNew();
+
 			while (Text.HasRemaining)
 			{
 				ThrowIfLexemeBuilderNotCleared();
@@ -106,7 +108,7 @@ public abstract class BaseLexer : ILexer
 			LexEndOfInput(leading);
 			IReadOnlyList<ITokenNode> finalTokens = FixTokens();
 
-			return new LexerResult(Source, Diagnostics, finalTokens);
+			return new LexerResult(Source, finalTokens, Diagnostics, watch.Elapsed);
 		}
 		#endregion
 

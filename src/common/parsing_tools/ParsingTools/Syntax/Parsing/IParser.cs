@@ -137,7 +137,17 @@ public abstract class BaseParser<T> : IParser<T>
 		#region Methods
 		/// <summary>Parses the lexed tokens.</summary>
 		/// <returns>The result of the parsing operation.</returns>
-		public abstract IParserResult<T> Parse();
+		public IParserResult<T> Parse()
+		{
+			Stopwatch watch = Stopwatch.StartNew();
+			T root = ParseRoot();
+
+			return new ParserResult<T>(Source, root, Diagnostics, watch.Elapsed);
+		}
+
+		/// <summary>Parses the main content of the source file.</summary>
+		/// <returns>The parsed root content.</returns>
+		protected abstract T ParseRoot();
 
 		/// <summary>Gets the token at the given <paramref name="offset"/> from the current position.</summary>
 		/// <param name="offset">The offset in terms of tokens.</param>

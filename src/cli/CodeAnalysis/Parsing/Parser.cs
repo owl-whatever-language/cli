@@ -12,7 +12,7 @@ public sealed class Parser : BaseParser<ConcreteDocumentSyntax>
 		#endregion
 
 		#region Methods
-		public override IParserResult<ConcreteDocumentSyntax> Parse()
+		protected override ConcreteDocumentSyntax ParseRoot()
 		{
 			IReadOnlyList<IConcreteStatement> statements = ParseDocumentStatements();
 
@@ -23,7 +23,7 @@ public sealed class Parser : BaseParser<ConcreteDocumentSyntax>
 			ITokenNode eoi = ExpectEndOfInput();
 			ConcreteDocumentSyntax document = new(statements, eoi);
 
-			return new ParserResult<ConcreteDocumentSyntax>(Source, Diagnostics, document);
+			return document;
 		}
 		#endregion
 

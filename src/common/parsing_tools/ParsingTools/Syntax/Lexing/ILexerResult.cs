@@ -3,14 +3,11 @@ namespace OwlDomain.ParsingTools.Syntax.Lexing;
 /// <summary>
 /// 	Represents the result of a lexing operation.
 /// </summary>
-public interface ILexerResult
+public interface ILexerResult : IStageResult
 {
 	#region Properties
 	/// <summary>The source file that was lexed.</summary>
 	ISourceFile Source { get; }
-
-	/// <summary>The diagnostics that occurred during the lexing process.</summary>
-	IDiagnosticBag Diagnostics { get; }
 
 	/// <summary>The lexed tokens.</summary>
 	IReadOnlyList<ITokenNode> Tokens { get; }
@@ -20,14 +17,14 @@ public interface ILexerResult
 /// <summary>
 /// 	Represents the result of a lexing operation.
 /// </summary>
-public sealed class LexerResult : ILexerResult
+public sealed class LexerResult : StageResult, ILexerResult
 {
 	#region Properties
 	/// <inheritdoc/>
-	public ISourceFile Source { get; }
+	public override string Name => "lexing";
 
 	/// <inheritdoc/>
-	public IDiagnosticBag Diagnostics { get; }
+	public ISourceFile Source { get; }
 
 	/// <inheritdoc/>
 	public IReadOnlyList<ITokenNode> Tokens { get; }
@@ -36,12 +33,12 @@ public sealed class LexerResult : ILexerResult
 	#region Constructors
 	/// <summary>Creates a new lexer result.</summary>
 	/// <param name="source">The source file that was lexed.</param>
-	/// <param name="diagnostics">The diagnostics that occurred during the lexing process.</param>
 	/// <param name="tokens">The lexed tokens.</param>
-	public LexerResult(ISourceFile source, IDiagnosticBag diagnostics, IReadOnlyList<ITokenNode> tokens)
+	/// <param name="diagnostics">The diagnostics that occurred during the lexing process.</param>
+	/// <param name="duration">The amount of time it took to lex the source file.</param>
+	public LexerResult(ISourceFile source, IReadOnlyList<ITokenNode> tokens, IDiagnosticBag diagnostics, TimeSpan duration) : base(diagnostics, duration)
 	{
 		Source = source;
-		Diagnostics = diagnostics;
 		Tokens = tokens;
 	}
 	#endregion
