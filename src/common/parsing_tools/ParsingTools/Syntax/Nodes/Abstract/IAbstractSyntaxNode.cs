@@ -15,7 +15,7 @@ public interface IAbstractSyntaxNode : ISyntaxNode
 /// 	Represents a syntax node in the abstract syntax tree (AST).
 /// </summary>
 /// <typeparam name="T">The type of the concrete syntax node that the abstract syntax node is modelled after.</typeparam>
-public interface IAbstractSyntaxNode<T> : IAbstractSyntaxNode
+public interface IAbstractSyntaxNode<out T> : IAbstractSyntaxNode
 	where T : notnull, IConcreteSyntaxNode
 {
 	#region Properties

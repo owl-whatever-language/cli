@@ -12,4 +12,5 @@ global using OwlDomain.ParsingTools.Syntax.Nodes.Trivia;
 global using OwlDomain.ParsingTools.Syntax.Nodes.Tokens;
 global using OwlDomain.ParsingTools.Syntax.Nodes.Concrete;
 global using OwlDomain.ParsingTools.Syntax.Nodes.Abstract;
+global using OwlDomain.ParsingTools.Syntax.Nodes.Semantic;
 global using OwlDomain.ParsingTools.Syntax.Lexing;
