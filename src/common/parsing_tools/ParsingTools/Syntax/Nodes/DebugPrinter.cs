@@ -32,7 +32,7 @@ public static class DebugPrinter
 			if (last is not null)
 				Write(writer, last.TrailingTrivia);
 
-			if (includeEndTrivia && last == null)
+			if (includeEndTrivia || last != null)
 				Write(writer, token.LeadingTrivia);
 
 			writer.Write(token.Lexeme);
