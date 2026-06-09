@@ -1,6 +1,19 @@
 namespace OwlDomain.Owl.CLI.CodeAnalysis.Parsing;
 
-public sealed class Parser : BaseParser<ConcreteDocumentSyntax>
+public sealed class ParserResult : BaseParserResult<ConcreteSyntaxTree, ConcreteDocumentSyntax>
+{
+	#region Properties
+	public ParserResult(
+		ConcreteSyntaxTree tree,
+		IDiagnosticBag diagnostics,
+		TimeSpan duration)
+		: base(tree, diagnostics, duration)
+	{
+	}
+	#endregion
+}
+
+public sealed class Parser : BaseParser<ParserResult, ConcreteSyntaxTree, ConcreteDocumentSyntax>
 {
 	#region Nested types
 	private sealed class Instance : ParserInstance
@@ -12,7 +25,7 @@ public sealed class Parser : BaseParser<ConcreteDocumentSyntax>
 		#endregion
 
 		#region Methods
-		protected override ConcreteDocumentSyntax ParseRoot()
+		protected override ConcreteSyntaxTree ParseTree()
 		{
 			IReadOnlyList<IConcreteStatement> statements = ParseDocumentStatements();
 
@@ -23,8 +36,9 @@ public sealed class Parser : BaseParser<ConcreteDocumentSyntax>
 			ITokenNode eoi = ExpectEndOfInput();
 			ConcreteDocumentSyntax document = new(statements, eoi);
 
-			return document;
+			return new(Source, document);
 		}
+		protected override ParserResult CreateResult(ConcreteSyntaxTree tree, TimeSpan duration) => new(tree, Diagnostics, duration);
 		#endregion
 
 		#region Statement methods
@@ -128,7 +142,7 @@ public sealed class Parser : BaseParser<ConcreteDocumentSyntax>
 				Kind = DiagnosticKind.Error,
 				Provider = Parser,
 				Location = new DiagnosticSourceLocation(Source, position),
-				Message = "An unaccounted for infinite loop occured during parsing, this is likely an error with the OWL parser."
+				Message = "An unaccounted for infinite loop occurred during parsing, this is likely an error with the OWL parser."
 			});
 		}
 		#endregion

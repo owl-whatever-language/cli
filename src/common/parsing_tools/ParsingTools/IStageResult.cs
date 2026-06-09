@@ -12,7 +12,7 @@ public interface IStageResult
 	/// <summary>Whether the stage can be considered successful.</summary>
 	bool IsSuccessful { get; }
 
-	/// <summary>The diagnostics that occured during the stage.</summary>
+	/// <summary>The diagnostics that occurred during the stage.</summary>
 	IDiagnosticBag Diagnostics { get; }
 
 	/// <summary>The amount of time it took for the stage to finish processing.</summary>
@@ -41,7 +41,7 @@ public class StageResult : IStageResult
 
 	#region Constructors
 	/// <summary>Creates a new <see cref="StageResult"/> instance.</summary>
-	/// <param name="diagnostics">The diagnostics that occured during the stage.</param>
+	/// <param name="diagnostics">The diagnostics that occurred during the stage.</param>
 	/// <param name="duration">The amount of time it took for the stage to finish processing.</param>
 	public StageResult(IDiagnosticBag diagnostics, TimeSpan duration)
 	{

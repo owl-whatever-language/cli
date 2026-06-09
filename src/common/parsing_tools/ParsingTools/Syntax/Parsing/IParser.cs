@@ -16,25 +16,54 @@ public interface IParser : IDiagnosticProvider
 /// <summary>
 /// 	Represents a parser.
 /// </summary>
-/// <typeparam name="T">The type of the root node in the parsed document.</typeparam>
-public interface IParser<out T> : IParser
-	where T : notnull, IConcreteSyntaxNode
+/// <typeparam name="TResult">The type of the parser result.</typeparam>
+public interface IParser<out TResult> : IParser
+	where TResult : notnull, IParserResult
 {
 	#region Methods
 	/// <summary>Parses the result of the lexing operation.</summary>
 	/// <param name="lexerResult">The result of the lexing operation.</param>
 	/// <returns>The result of the parsing operation.</returns>
-	new IParserResult<T> Parse(ILexerResult lexerResult);
+	new TResult Parse(ILexerResult lexerResult);
 	IParserResult IParser.Parse(ILexerResult lexerResult) => Parse(lexerResult);
 	#endregion
+}
+
+
+/// <summary>
+/// 	Represents a parser.
+/// </summary>
+/// <typeparam name="TResult">The type of the parser result.</typeparam>
+/// <typeparam name="TTree">The type of the concrete syntax tree (CST) that is being parsed.</typeparam>
+public interface IParser<out TResult, out TTree> : IParser<TResult>
+	where TResult : notnull, IParserResult<TTree>
+	where TTree : notnull, IConcreteSyntaxTree
+{
+}
+
+/// <summary>
+/// 	Represents a parser.
+/// </summary>
+/// <typeparam name="TResult">The type of the parser result.</typeparam>
+/// <typeparam name="TTree">The type of the concrete syntax tree (CST) that is being parsed.</typeparam>
+/// <typeparam name="TTreeRoot">The type of the root node int he concrete syntax tree (CST).</typeparam>
+public interface IParser<out TResult, out TTree, out TTreeRoot> : IParser<TResult, TTree>
+	where TResult : notnull, IParserResult<TTree, TTreeRoot>
+	where TTree : notnull, IConcreteSyntaxTree<TTreeRoot>
+	where TTreeRoot : notnull, IConcreteSyntaxNode
+{
 }
 
 /// <summary>
 ///	Represents the base implementation for a parser.
 /// </summary>
-/// <typeparam name="T">The type of the root node in the parsed document.</typeparam>
-public abstract class BaseParser<T> : IParser<T>
-	where T : notnull, IConcreteSyntaxNode
+/// <typeparam name="TResult">The type of the parser result.</typeparam>
+/// <typeparam name="TTree">The type of the concrete syntax tree (CST) in the parsed document.</typeparam>
+/// <typeparam name="TTreeRoot">The type of the root node in the concrete syntax tree (CST).</typeparam>
+public abstract class BaseParser<TResult, TTree, TTreeRoot> : IParser<TResult, TTree, TTreeRoot>
+	where TResult : notnull, IParserResult<TTree, TTreeRoot>
+	where TTree : notnull, IConcreteSyntaxTree<TTreeRoot>
+	where TTreeRoot : notnull, IConcreteSyntaxNode
 {
 	#region Nested types
 	/// <summary>
@@ -89,7 +118,7 @@ public abstract class BaseParser<T> : IParser<T>
 		/// <summary>The source file that is being parsed.</summary>
 		protected ISourceFile Source { get; }
 
-		/// <summary>The diagnostics that have occured during the parsing operation.</summary>
+		/// <summary>The diagnostics that have occurred during the parsing operation.</summary>
 		protected DiagnosticBag Diagnostics { get; } = [];
 
 		/// <summary>The tokens that should be parsed.</summary>
@@ -137,17 +166,25 @@ public abstract class BaseParser<T> : IParser<T>
 		#region Methods
 		/// <summary>Parses the lexed tokens.</summary>
 		/// <returns>The result of the parsing operation.</returns>
-		public IParserResult<T> Parse()
+		public TResult Parse()
 		{
 			Stopwatch watch = Stopwatch.StartNew();
-			T root = ParseRoot();
 
-			return new ParserResult<T>(Source, root, Diagnostics, watch.Elapsed);
+			TTree tree = ParseTree();
+			TResult result = CreateResult(tree, watch.Elapsed);
+
+			return result;
 		}
 
-		/// <summary>Parses the main content of the source file.</summary>
-		/// <returns>The parsed root content.</returns>
-		protected abstract T ParseRoot();
+		/// <summary>Creates the parser result.</summary>
+		/// <param name="tree">The concrete syntax tree (CST) that was parsed.</param>
+		/// <param name="duration">The amount of time it took to parse the concrete syntax <paramref name="tree"/> (CST).</param>
+		/// <returns>The created parser result.</returns>
+		protected abstract TResult CreateResult(TTree tree, TimeSpan duration);
+
+		/// <summary>Parses the concrete syntax tree (CST) in the source document.</summary>
+		/// <returns>The parsed concrete syntax tree (CST).</returns>
+		protected abstract TTree ParseTree();
 
 		/// <summary>Gets the token at the given <paramref name="offset"/> from the current position.</summary>
 		/// <param name="offset">The offset in terms of tokens.</param>
@@ -310,8 +347,8 @@ public abstract class BaseParser<T> : IParser<T>
 		#endregion
 
 		#region Diagnostic methods
-		/// <summary>Reports that an unaccounted for infinite loop has occured as a result of fabricating tokens during parsing.</summary>
-		/// <param name="position">The position where the infinite loop occured.</param>
+		/// <summary>Reports that an unaccounted for infinite loop has occurred as a result of fabricating tokens during parsing.</summary>
+		/// <param name="position">The position where the infinite loop occurred.</param>
 		/// <remarks>
 		/// 	This happening means you have an error somewhere in your parser where you do node checks, but don't report any errors in some situation.
 		/// </remarks>
@@ -343,7 +380,7 @@ public abstract class BaseParser<T> : IParser<T>
 
 	#region Methods
 	/// <inheritdoc/>
-	public IParserResult<T> Parse(ILexerResult lexerResult)
+	public TResult Parse(ILexerResult lexerResult)
 	{
 		ParserInstance parser = CreateParser(lexerResult);
 
