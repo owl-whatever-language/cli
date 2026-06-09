@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Syntax.Nodes;
+namespace OwlDomain.ParsingTools.Syntax.Nodes.Concrete;
 
 /// <summary>
 /// 	Represents a syntax node in the concrete syntax tree (CST).
