@@ -14,13 +14,13 @@ public interface ISemanticSyntaxNode : ISyntaxNode
 /// <summary>
 /// 	Represents a syntax node in the semantic syntax tree (SST).
 /// </summary>
-/// <typeparam name="T">The type of the abstract syntax node that the semantic syntax node is modelled after.</typeparam>
-public interface ISemanticSyntaxNode<out T> : ISemanticSyntaxNode
-	where T : notnull, IAbstractSyntaxNode
+/// <typeparam name="TAbstract">The type of the abstract syntax node that the semantic syntax node is modelled after.</typeparam>
+public interface ISemanticSyntaxNode<out TAbstract> : ISemanticSyntaxNode
+	where TAbstract : notnull, IAbstractSyntaxNode
 {
 	#region Properties
 	/// <summary>The abstract syntax node that this semantic syntax node is modelled after.</summary>
-	new T Abstract { get; }
+	new TAbstract Abstract { get; }
 	IAbstractSyntaxNode ISemanticSyntaxNode.Abstract => Abstract;
 	#endregion
 }
@@ -28,13 +28,13 @@ public interface ISemanticSyntaxNode<out T> : ISemanticSyntaxNode
 /// <summary>
 /// 	Represents the base implementation for a syntax node in the semantic syntax tree (SST).
 /// </summary>
-/// <typeparam name="T">The type of the abstract syntax node that the semantic syntax node is modelled after.</typeparam>
-public abstract class BaseSemanticSyntaxNode<T> : ISemanticSyntaxNode<T>
-	where T : notnull, IAbstractSyntaxNode
+/// <typeparam name="TAbstract">The type of the abstract syntax node that the semantic syntax node is modelled after.</typeparam>
+public abstract class BaseSemanticSyntaxNode<TAbstract> : ISemanticSyntaxNode<TAbstract>
+	where TAbstract : notnull, IAbstractSyntaxNode
 {
 	#region Properties
 	/// <inheritdoc/>
-	public T Abstract { get; }
+	public TAbstract Abstract { get; }
 
 	/// <inheritdoc/>
 	public virtual SyntaxKind Kind => Abstract.Kind;
@@ -46,7 +46,7 @@ public abstract class BaseSemanticSyntaxNode<T> : ISemanticSyntaxNode<T>
 	#region Constructors
 	/// <summary>Populates the <see cref="BaseSemanticSyntaxNode{T}"/> properties.</summary>
 	/// <param name="abstract">The abstract syntax tree that this semantic syntax node is modelled after.</param>
-	protected BaseSemanticSyntaxNode(T @abstract)
+	protected BaseSemanticSyntaxNode(TAbstract @abstract)
 	{
 		Abstract = @abstract;
 	}

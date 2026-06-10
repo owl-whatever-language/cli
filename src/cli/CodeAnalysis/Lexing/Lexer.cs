@@ -139,9 +139,10 @@ public sealed class Lexer : BaseLexer
 		{
 			Diagnostics.Add(new Diagnostic()
 			{
-				Id = "unclosed_text_literal",
+				Provider = DiagnosticProvider,
 				Kind = DiagnosticKind.Error,
-				Provider = Lexer,
+				Id = "unclosed_text_literal",
+
 				Location = new DiagnosticSourceLocation(Source, position),
 				Message = "Literal text values should be closed."
 			});
@@ -150,9 +151,10 @@ public sealed class Lexer : BaseLexer
 		{
 			Diagnostics.Add(new Diagnostic()
 			{
-				Id = "line_break_in_text_literal",
+				Provider = DiagnosticProvider,
 				Kind = DiagnosticKind.Error,
-				Provider = Lexer,
+				Id = "line_break_in_text_literal",
+
 				Location = new DiagnosticSourceLocation(Source, new IndexedPositionRange(Text.Position, Text.Position)),
 				Message = "Literal text values do not support spanning multiple lines."
 			});
@@ -161,9 +163,10 @@ public sealed class Lexer : BaseLexer
 		{
 			Diagnostics.Add(new Diagnostic()
 			{
-				Id = "bad_characters",
+				Provider = DiagnosticProvider,
 				Kind = DiagnosticKind.Error,
-				Provider = Lexer,
+				Id = "bad_characters",
+
 				Location = new DiagnosticSourceLocation(Source, badCharacterGroup.Position),
 				Message = "Unrecognised characters were used in the source code."
 			});

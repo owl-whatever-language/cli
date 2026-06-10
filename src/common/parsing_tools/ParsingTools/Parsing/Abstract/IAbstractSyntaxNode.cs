@@ -14,13 +14,13 @@ public interface IAbstractSyntaxNode : ISyntaxNode
 /// <summary>
 /// 	Represents a syntax node in the abstract syntax tree (AST).
 /// </summary>
-/// <typeparam name="T">The type of the concrete syntax node that the abstract syntax node is modelled after.</typeparam>
-public interface IAbstractSyntaxNode<out T> : IAbstractSyntaxNode
-	where T : notnull, IConcreteSyntaxNode
+/// <typeparam name="TConcrete">The type of the concrete syntax node that the abstract syntax node is modelled after.</typeparam>
+public interface IAbstractSyntaxNode<out TConcrete> : IAbstractSyntaxNode
+	where TConcrete : notnull, IConcreteSyntaxNode
 {
 	#region Properties
 	/// <summary>The concrete syntax node that this abstract syntax node is modelled after.</summary>
-	new T Concrete { get; }
+	new TConcrete Concrete { get; }
 	IConcreteSyntaxNode IAbstractSyntaxNode.Concrete => Concrete;
 	#endregion
 }
@@ -28,13 +28,13 @@ public interface IAbstractSyntaxNode<out T> : IAbstractSyntaxNode
 /// <summary>
 /// 	Represents the base implementation for a syntax node in the abstract syntax tree (AST).
 /// </summary>
-/// <typeparam name="T">The type of the concrete syntax node that the abstract syntax node is modelled after.</typeparam>
-public abstract class BaseAbstractSyntaxNode<T> : IAbstractSyntaxNode<T>
-	where T : notnull, IConcreteSyntaxNode
+/// <typeparam name="TConcrete">The type of the concrete syntax node that the abstract syntax node is modelled after.</typeparam>
+public abstract class BaseAbstractSyntaxNode<TConcrete> : IAbstractSyntaxNode<TConcrete>
+	where TConcrete : notnull, IConcreteSyntaxNode
 {
 	#region Properties
 	/// <inheritdoc/>
-	public T Concrete { get; }
+	public TConcrete Concrete { get; }
 
 	/// <inheritdoc/>
 	public virtual SyntaxKind Kind => Concrete.Kind;
@@ -46,7 +46,7 @@ public abstract class BaseAbstractSyntaxNode<T> : IAbstractSyntaxNode<T>
 	#region Constructors
 	/// <summary>Populates the <see cref="BaseAbstractSyntaxNode{T}"/> properties.</summary>
 	/// <param name="concrete">The concrete syntax tree that this abstract syntax node is modelled after.</param>
-	protected BaseAbstractSyntaxNode(T concrete)
+	protected BaseAbstractSyntaxNode(TConcrete concrete)
 	{
 		Concrete = concrete;
 	}

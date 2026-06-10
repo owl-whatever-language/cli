@@ -32,11 +32,11 @@ public sealed class LexerResult : StageResult, ILexerResult
 
 	#region Constructors
 	/// <summary>Creates a new lexer result.</summary>
-	/// <param name="source">The source file that was lexed.</param>
-	/// <param name="tokens">The lexed tokens.</param>
 	/// <param name="diagnostics">The diagnostics that occurred during the lexing process.</param>
 	/// <param name="duration">The amount of time it took to lex the source file.</param>
-	public LexerResult(ISourceFile source, IReadOnlyList<ITokenNode> tokens, IDiagnosticBag diagnostics, TimeSpan duration) : base(diagnostics, duration)
+	/// <param name="source">The source file that was lexed.</param>
+	/// <param name="tokens">The lexed tokens.</param>
+	public LexerResult(IDiagnosticBag diagnostics, TimeSpan duration, ISourceFile source, IReadOnlyList<ITokenNode> tokens) : base(diagnostics, duration)
 	{
 		Source = source;
 		Tokens = tokens;

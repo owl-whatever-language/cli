@@ -1,19 +1,16 @@
-namespace OwlDomain.Owl.CLI.CodeAnalysis.Parsing;
+namespace OwlDomain.Owl.CLI.CodeAnalysis.Parsing.Concrete;
 
-public sealed class ParserResult : BaseParserResult<ConcreteSyntaxTree, ConcreteDocumentSyntax>
+public sealed class ParserResult : BaseParserResult<ConcreteSyntaxTree>
 {
 	#region Properties
-	public ParserResult(
-		ConcreteSyntaxTree tree,
-		IDiagnosticBag diagnostics,
-		TimeSpan duration)
-		: base(tree, diagnostics, duration)
+	public ParserResult(IDiagnosticBag diagnostics, TimeSpan duration, ConcreteSyntaxTree tree)
+		: base(diagnostics, duration, tree)
 	{
 	}
 	#endregion
 }
 
-public sealed class Parser : BaseParser<ParserResult, ConcreteSyntaxTree, ConcreteDocumentSyntax>
+public sealed class Parser : BaseParser<ParserResult, ConcreteSyntaxTree>
 {
 	#region Nested types
 	private sealed class Instance : ParserInstance
@@ -38,7 +35,7 @@ public sealed class Parser : BaseParser<ParserResult, ConcreteSyntaxTree, Concre
 
 			return new(Source, document);
 		}
-		protected override ParserResult CreateResult(ConcreteSyntaxTree tree, TimeSpan duration) => new(tree, Diagnostics, duration);
+		protected override ParserResult CreateResult(TimeSpan duration, ConcreteSyntaxTree tree) => new(Diagnostics, duration, tree);
 		#endregion
 
 		#region Statement methods
@@ -127,9 +124,10 @@ public sealed class Parser : BaseParser<ParserResult, ConcreteSyntaxTree, Concre
 		{
 			Diagnostics.Add(new Diagnostic()
 			{
-				Id = "expected_statement",
+				Provider = DiagnosticProvider,
 				Kind = DiagnosticKind.Error,
-				Provider = Parser,
+				Id = "expected_statement",
+
 				Location = new DiagnosticSourceLocation(Source, position),
 				Message = "Expected a statement."
 			});
@@ -138,9 +136,10 @@ public sealed class Parser : BaseParser<ParserResult, ConcreteSyntaxTree, Concre
 		{
 			Diagnostics.Add(new Diagnostic()
 			{
-				Id = "infinite_parsing_loop",
+				Provider = DiagnosticProvider,
 				Kind = DiagnosticKind.Error,
-				Provider = Parser,
+				Id = "infinite_parsing_loop",
+
 				Location = new DiagnosticSourceLocation(Source, position),
 				Message = "An unaccounted for infinite loop occurred during parsing, this is likely an error with the OWL parser."
 			});

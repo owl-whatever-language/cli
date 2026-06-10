@@ -22,7 +22,7 @@ public abstract class BaseLexer : ILexer
 	/// <summary>
 	///	Represents the lexer instance that can be used for a single lexing operation.
 	/// </summary>
-	protected abstract class LexerInstance
+	protected abstract class LexerInstance : StageInstance
 	{
 		#region Constants
 		// Todo(Nightowl): Analyse these once there's actual code to analyse;
@@ -31,17 +31,11 @@ public abstract class BaseLexer : ILexer
 		#endregion
 
 		#region Properties
-		/// <summary>The lexer that created this instance.</summary>
-		protected ILexer Lexer { get; }
-
 		/// <summary>The source file that is being lexed.</summary>
 		protected ISourceFile Source { get; }
 
 		/// <summary>The text parser for the source file that is being lexed.</summary>
 		protected ITextParser Text { get; }
-
-		/// <summary>The diagnostics that have occurred during the lexing operation.</summary>
-		protected DiagnosticBag Diagnostics { get; } = [];
 
 		/// <summary>The lexed tokens.</summary>
 		protected List<ITokenNode> Tokens { get; } = [];
@@ -67,9 +61,8 @@ public abstract class BaseLexer : ILexer
 		/// <param name="lexer">The lexer that created this instance.</param>
 		/// <param name="source">The source file that is being lexed.</param>
 		/// <param name="text">The text parser for the <paramref name="source"/> file that is being lexed.</param>
-		protected LexerInstance(ILexer lexer, ISourceFile source, ITextParser text)
+		protected LexerInstance(ILexer lexer, ISourceFile source, ITextParser text) : base(lexer)
 		{
-			Lexer = lexer;
 			Source = source;
 			Text = text;
 		}
@@ -115,7 +108,7 @@ public abstract class BaseLexer : ILexer
 			LexEndOfInput(leading);
 			IReadOnlyList<ITokenNode> finalTokens = FixTokens();
 
-			return new LexerResult(Source, finalTokens, Diagnostics, watch.Elapsed);
+			return new LexerResult(Diagnostics, watch.Elapsed, Source, finalTokens);
 		}
 		#endregion
 

@@ -1,30 +1,30 @@
 namespace OwlDomain.Owl.CLI.CodeAnalysis.Parsing.Abstract;
 
-public sealed class AstConversionResult : BaseAstConversionResult<AbstractSyntaxTree, AbstractDocumentSyntax, ConcreteSyntaxTree, ConcreteDocumentSyntax>
+public sealed class AstCreationResult : BaseAstCreationResult<AbstractSyntaxTree, ConcreteSyntaxTree>
 {
 	#region Constructors
-	public AstConversionResult(AbstractSyntaxTree tree, IDiagnosticBag diagnostics, TimeSpan duration) : base(tree, diagnostics, duration)
+	public AstCreationResult(IDiagnosticBag diagnostics, TimeSpan duration, AbstractSyntaxTree tree) : base(diagnostics, duration, tree)
 	{
 	}
 	#endregion
 }
 
-public sealed class AstConverter : BaseAstConverter<AstConversionResult, AbstractSyntaxTree, AbstractDocumentSyntax, ConcreteSyntaxTree, ConcreteDocumentSyntax>
+public sealed class AstCreator : BaseAstCreator<AbstractSyntaxTree, ConcreteSyntaxTree, AstCreationResult>
 {
 	#region Nested types
-	private sealed class Instance : ConverterInstance
+	private sealed class Instance : CreatorInstance
 	{
 		#region Constructors
-		public Instance(IAstConverter converter, ConcreteSyntaxTree concrete) : base(converter, concrete)
+		public Instance(IAstCreator converter, ConcreteSyntaxTree concrete) : base(converter, concrete)
 		{
 		}
 		#endregion
 
 		#region Methods
-		protected override AstConversionResult CreateResult(AbstractSyntaxTree tree, TimeSpan duration) => new(tree, Diagnostics, duration);
+		protected override AstCreationResult CreateResult(TimeSpan duration, AbstractSyntaxTree tree) => new(Diagnostics, duration, tree);
 		protected override AbstractSyntaxTree Convert(ConcreteSyntaxTree concrete)
 		{
-			AbstractDocumentSyntax root = Convert(concrete.Root);
+			AbstractDocumentSyntax root = Convert(concrete.Document);
 			return new(concrete.Source, concrete, root);
 		}
 
@@ -93,7 +93,7 @@ public sealed class AstConverter : BaseAstConverter<AstConversionResult, Abstrac
 	#endregion
 
 	#region Methods
-	protected override ConverterInstance CreateConverter(ConcreteSyntaxTree concrete) => new Instance(this, concrete);
+	protected override CreatorInstance CreateInstance(ConcreteSyntaxTree concrete) => new Instance(this, concrete);
 	#endregion
 }
 

@@ -1,6 +1,6 @@
 namespace OwlDomain.Owl.CLI.CodeAnalysis.Parsing.Abstract;
 
-public sealed class AbstractSyntaxTree : BaseAbstractSyntaxTree<AbstractDocumentSyntax, ConcreteSyntaxTree, ConcreteDocumentSyntax>
+public sealed class AbstractSyntaxTree : BaseAbstractSyntaxTree<ConcreteSyntaxTree, AbstractDocumentSyntax>
 {
 	#region Constructors
 	public AbstractSyntaxTree(
