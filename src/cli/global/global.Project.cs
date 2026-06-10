@@ -15,10 +15,15 @@ global using OwlDomain.ParsingTools.Lexing.Trivia;
 global using OwlDomain.ParsingTools.Parsing;
 global using OwlDomain.ParsingTools.Parsing.Concrete;
 global using OwlDomain.ParsingTools.Parsing.Abstract;
+global using OwlDomain.ParsingTools.Semantics;
 
 global using OwlDomain.Owl.CLI.CodeAnalysis.Lexing;
 global using OwlDomain.Owl.CLI.CodeAnalysis.Parsing.Concrete;
 global using OwlDomain.Owl.CLI.CodeAnalysis.Parsing.Concrete.Expressions;
 global using OwlDomain.Owl.CLI.CodeAnalysis.Parsing.Concrete.Statements;
+global using OwlDomain.Owl.CLI.CodeAnalysis.Parsing.Abstract;
 global using OwlDomain.Owl.CLI.CodeAnalysis.Parsing.Abstract.Expressions;
 global using OwlDomain.Owl.CLI.CodeAnalysis.Parsing.Abstract.Statements;
+global using OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Types;
+global using OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Functions;
+global using OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Symbols;

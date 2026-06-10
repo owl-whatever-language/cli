@@ -1,0 +1,33 @@
+namespace OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Types;
+
+public interface ITypeInfo
+{
+	#region Properties
+	string? Name { get; }
+	#endregion
+}
+
+public sealed class ImmutableTypeInfo : ITypeInfo
+{
+	#region Properties
+	public string? Name { get; }
+	#endregion
+
+	#region Constructors
+	public ImmutableTypeInfo(string? name)
+	{
+		Name = name;
+	}
+	#endregion
+}
+
+public sealed class MutableTypeInfo : ITypeInfo
+{
+	#region Properties
+	public string? Name { get; set; }
+	#endregion
+
+	#region Methods
+	public ImmutableTypeInfo ToImmutable() => new(Name);
+	#endregion
+}
