@@ -65,7 +65,16 @@ public readonly partial struct SyntaxKind :
 	public override int GetHashCode() => HashCode.Combine(Name, Category);
 
 	/// <inheritdoc/>
-	public override string ToString() => $"{Name}_{Category}";
+	public override string ToString()
+	{
+		string category = Category.ToString();
+		string name = Name;
+
+		if (name == category)
+			return name;
+
+		return $"{name}_{category}";
+	}
 	#endregion
 
 	#region Operators

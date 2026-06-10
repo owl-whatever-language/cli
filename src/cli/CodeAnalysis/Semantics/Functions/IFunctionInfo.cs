@@ -22,6 +22,10 @@ public sealed class ImmutableFunctionInfo : IFunctionInfo
 		AsType = new(this);
 	}
 	#endregion
+
+	#region Methods
+	public override string ToString() => Name ?? "???";
+	#endregion
 }
 
 public sealed class MutableFunctionInfo : IFunctionInfo
@@ -40,5 +44,6 @@ public sealed class MutableFunctionInfo : IFunctionInfo
 
 	#region Methods
 	public ImmutableFunctionInfo ToMutable() => new(Name);
+	public override string ToString() => Name ?? "???";
 	#endregion
 }
