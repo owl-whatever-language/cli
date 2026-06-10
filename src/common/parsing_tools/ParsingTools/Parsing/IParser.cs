@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Syntax.Parsing;
+namespace OwlDomain.ParsingTools.Parsing;
 
 /// <summary>
 /// 	Represents a parser.

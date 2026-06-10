@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Syntax.AstConversion;
+namespace OwlDomain.ParsingTools.Parsing.Abstract;
 
 /// <summary>
 /// 	Represents the result of converting a concrete syntax tree (CST) into an abstract syntax tree (AST).

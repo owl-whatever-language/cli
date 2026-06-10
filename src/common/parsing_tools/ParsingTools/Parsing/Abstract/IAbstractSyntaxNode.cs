@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Syntax.Nodes.Abstract;
+namespace OwlDomain.ParsingTools.Parsing.Abstract;
 
 /// <summary>
 /// 	Represents a syntax node in the abstract syntax tree (AST).

@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Syntax.Nodes.Trivia;
+namespace OwlDomain.ParsingTools.Lexing.Trivia;
 
 /// <summary>
 /// 	Represents a trivia node that was fabricated as an error recovery measure.

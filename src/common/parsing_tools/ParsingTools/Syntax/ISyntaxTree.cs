@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Syntax.Nodes;
+namespace OwlDomain.ParsingTools.Syntax;
 
 /// <summary>
 /// 	Represents a complete syntax tree.

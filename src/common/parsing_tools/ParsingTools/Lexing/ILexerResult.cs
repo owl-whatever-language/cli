@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Syntax.Lexing;
+namespace OwlDomain.ParsingTools.Lexing;
 
 /// <summary>
 /// 	Represents the result of a lexing operation.

@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Syntax.Nodes.Semantic;
+namespace OwlDomain.ParsingTools.Semantics;
 
 /// <summary>
 /// 	Represents a syntax node in the semantic syntax tree (SST).

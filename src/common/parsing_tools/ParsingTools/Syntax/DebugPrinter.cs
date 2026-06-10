@@ -1,7 +1,7 @@
 using System.CodeDom.Compiler;
 using System.IO;
 
-namespace OwlDomain.ParsingTools.Syntax.Nodes;
+namespace OwlDomain.ParsingTools.Syntax;
 
 /// <summary>
 /// 	A debug printer for printing the full lexeme of concrete syntax nodes.

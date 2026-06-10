@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Syntax.Nodes.Tokens;
+namespace OwlDomain.ParsingTools.Lexing.Tokens;
 
 /// <summary>
 /// 	Represents a token node in the concrete syntax tree (CST).
