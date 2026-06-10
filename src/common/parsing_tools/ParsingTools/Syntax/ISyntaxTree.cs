@@ -49,6 +49,7 @@ public abstract class BaseSyntaxTree<T> : ISyntaxTree<T>
 	/// <param name="document">The root document node in the syntax tree.</param>
 	protected BaseSyntaxTree(ISourceFile source, T document)
 	{
+		// Todo(Nightowl): Having the source file actually stored on each tree ends up being redundant since each later tree references the previous one, but do I care?;
 		Source = source;
 		Document = document;
 	}

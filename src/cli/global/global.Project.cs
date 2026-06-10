@@ -16,6 +16,8 @@ global using OwlDomain.ParsingTools.Parsing;
 global using OwlDomain.ParsingTools.Parsing.Concrete;
 global using OwlDomain.ParsingTools.Parsing.Abstract;
 global using OwlDomain.ParsingTools.Semantics;
+global using OwlDomain.ParsingTools.Semantics.Discovery;
+global using OwlDomain.ParsingTools.Semantics.Resolution;
 
 global using OwlDomain.Owl.CLI.CodeAnalysis.Lexing;
 global using OwlDomain.Owl.CLI.CodeAnalysis.Parsing.Concrete;
@@ -27,3 +29,6 @@ global using OwlDomain.Owl.CLI.CodeAnalysis.Parsing.Abstract.Statements;
 global using OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Types;
 global using OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Functions;
 global using OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Symbols;
+global using OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Nodes;
+global using OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Nodes.Expressions;
+global using OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Nodes.Statements;

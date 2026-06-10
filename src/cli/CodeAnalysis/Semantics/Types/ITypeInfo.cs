@@ -19,6 +19,10 @@ public sealed class ImmutableTypeInfo : ITypeInfo
 		Name = name;
 	}
 	#endregion
+
+	#region Methods
+	public override string ToString() => Name ?? "???";
+	#endregion
 }
 
 public sealed class MutableTypeInfo : ITypeInfo
@@ -29,5 +33,9 @@ public sealed class MutableTypeInfo : ITypeInfo
 
 	#region Methods
 	public ImmutableTypeInfo ToImmutable() => new(Name);
+	#endregion
+
+	#region Methods
+	public override string ToString() => Name ?? "???";
 	#endregion
 }

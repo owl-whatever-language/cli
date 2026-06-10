@@ -9,6 +9,13 @@ public interface ISemanticSyntaxNode : ISyntaxNode
 	/// <summary>The abstract syntax node that this semantic syntax node is modelled after.</summary>
 	IAbstractSyntaxNode Abstract { get; }
 	#endregion
+
+	#region Methods
+	/// <summary>Gets the direct child syntax nodes.</summary>
+	/// <returns>An enumerable of the direct children.</returns>
+	new IEnumerable<ISemanticSyntaxNode> GetChildren();
+	IEnumerable<ISyntaxNode> ISyntaxNode.GetChildren() => GetChildren();
+	#endregion
 }
 
 /// <summary>
@@ -54,7 +61,7 @@ public abstract class BaseSemanticSyntaxNode<TAbstract> : ISemanticSyntaxNode<TA
 
 	#region Methods
 	/// <inheritdoc/>
-	public abstract IEnumerable<ISyntaxNode> GetChildren();
+	public abstract IEnumerable<ISemanticSyntaxNode> GetChildren();
 
 	/// <inheritdoc/>
 	public override string? ToString() => Abstract.ToString();

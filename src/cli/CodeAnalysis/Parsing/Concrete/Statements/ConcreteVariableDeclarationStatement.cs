@@ -3,7 +3,7 @@ namespace OwlDomain.Owl.CLI.CodeAnalysis.Parsing.Concrete.Statements;
 public sealed class ConcreteVariableDeclarationStatement : BaseConcreteSyntaxNode, ITerminatedConcreteStatement
 {
 	#region Properties
-	public override SyntaxKind Kind => throw new NotImplementedException();
+	public override SyntaxKind Kind => SyntaxKind.VariableDeclaration;
 	public ITokenNode TypeName { get; }
 	public ITokenNode Name { get; }
 	public ITokenNode Assignment { get; }

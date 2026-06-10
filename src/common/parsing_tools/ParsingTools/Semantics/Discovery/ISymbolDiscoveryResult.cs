@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Semantics;
+namespace OwlDomain.ParsingTools.Semantics.Discovery;
 
 /// <summary>
 /// 	Represents the result of the symbol discovery stage.

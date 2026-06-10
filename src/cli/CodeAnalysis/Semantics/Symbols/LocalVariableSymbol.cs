@@ -3,7 +3,6 @@ namespace OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Symbols;
 public class LocalVariableSymbol : BaseSymbol<AbstractVariableDeclarationStatement>
 {
 	#region Properties
-	[DisallowNull]
 	public ITypeInfo? Type
 	{
 		get;

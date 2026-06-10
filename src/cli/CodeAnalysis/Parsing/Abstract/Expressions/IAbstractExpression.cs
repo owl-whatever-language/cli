@@ -9,17 +9,17 @@ public interface IAbstractExpression : IAbstractSyntaxNode
 	#endregion
 }
 
-public interface IAbstractExpression<T> : IAbstractExpression, IAbstractSyntaxNode<T>
-	where T : notnull, IConcreteExpression
+public interface IAbstractExpression<TConcrete> : IAbstractExpression, IAbstractSyntaxNode<TConcrete>
+	where TConcrete : notnull, IConcreteExpression
 {
 	#region Properties
-	IConcreteSyntaxNode IAbstractSyntaxNode.Concrete => ((IAbstractSyntaxNode<T>)this).Concrete;
-	IConcreteExpression IAbstractExpression.Concrete => ((IAbstractSyntaxNode<T>)this).Concrete;
+	IConcreteSyntaxNode IAbstractSyntaxNode.Concrete => ((IAbstractSyntaxNode<TConcrete>)this).Concrete;
+	IConcreteExpression IAbstractExpression.Concrete => ((IAbstractSyntaxNode<TConcrete>)this).Concrete;
 	#endregion
 }
 
-public abstract class BaseAbstractExpression<T> : BaseAbstractSyntaxNode<T>, IAbstractExpression
-	where T : notnull, IConcreteExpression
+public abstract class BaseAbstractExpression<TConcrete> : BaseAbstractSyntaxNode<TConcrete>, IAbstractExpression
+	where TConcrete : notnull, IConcreteExpression
 {
 	#region Properties
 	IConcreteExpression IAbstractExpression.Concrete => Concrete;
@@ -27,6 +27,6 @@ public abstract class BaseAbstractExpression<T> : BaseAbstractSyntaxNode<T>, IAb
 	#endregion
 
 	#region Constructors
-	protected BaseAbstractExpression(T concrete) : base(concrete) { }
+	protected BaseAbstractExpression(TConcrete concrete) : base(concrete) { }
 	#endregion
 }
