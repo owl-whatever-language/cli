@@ -5,7 +5,7 @@
 		<Project Path="common/parsing_tools/ParsingTools/ParsingTools.csproj" />
 	</Folder>
 	<Folder Name="/examples/">
-		<File Path="examples/hello_forest.owl" />
+		<File Path="examples/hoot_hoot.owl" />
 	</Folder>
 	<Folder Name="/local/">
 		<Project Path="local/Playground/Playground.csproj" />
