@@ -4,7 +4,6 @@ public sealed class AbstractLiteralExpression : BaseAbstractExpression<ConcreteL
 {
 	#region Properties
 	public ITokenNode Literal => Concrete.Literal;
-	public object? Value => Literal.Value;
 	#endregion
 
 	#region Constructors

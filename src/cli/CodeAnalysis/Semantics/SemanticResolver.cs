@@ -104,13 +104,13 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 		}
 		private SemanticLiteralExpression Resolve(AbstractLiteralExpression expression)
 		{
-			ITypeInfo? type = expression.Value switch
+			ITypeInfo? type = expression.Literal.Value switch
 			{
 				string => FindSymbol<TypeSymbol>("text")?.Type,
 				_ => null,
 			};
 
-			return new(expression, type, expression.Value);
+			return new(expression, type, expression.Literal.Value);
 		}
 		private SemanticInvocationExpression Resolve(AbstractInvocationExpression @abstract)
 		{
