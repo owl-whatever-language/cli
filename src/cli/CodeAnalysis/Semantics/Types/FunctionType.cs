@@ -13,5 +13,6 @@ public sealed class FunctionType : ITypeInfo
 
 	#region Methods
 	public override string ToString() => Function.ToString() ?? "???";
+	public bool CanBeAssignedTo(ITypeInfo type) => type is FunctionType other && other.Function == Function;
 	#endregion
 }

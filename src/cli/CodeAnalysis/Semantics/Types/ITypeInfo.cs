@@ -5,6 +5,13 @@ public interface ITypeInfo
 	#region Properties
 	string? Name { get; }
 	#endregion
+
+	#region Methods
+	/// <summary>Checks whether a value of the current type can assigned to the given <paramref name="type"/>.</summary>
+	/// <param name="type">The type to assign a value of the current type.</param>
+	/// <returns><see langword="true"/> if a value of the current type can be assigned to the given <paramref name="type"/>.</returns>
+	bool CanBeAssignedTo(ITypeInfo type);
+	#endregion
 }
 
 public sealed class ImmutableTypeInfo : ITypeInfo
@@ -21,6 +28,7 @@ public sealed class ImmutableTypeInfo : ITypeInfo
 	#endregion
 
 	#region Methods
+	public bool CanBeAssignedTo(ITypeInfo type) => type.Name == Name;
 	public override string ToString() => Name ?? "???";
 	#endregion
 }
@@ -36,6 +44,7 @@ public sealed class MutableTypeInfo : ITypeInfo
 	#endregion
 
 	#region Methods
+	public bool CanBeAssignedTo(ITypeInfo type) => type.Name == Name;
 	public override string ToString() => Name ?? "???";
 	#endregion
 }
