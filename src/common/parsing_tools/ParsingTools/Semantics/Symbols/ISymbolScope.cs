@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Semantics;
+namespace OwlDomain.ParsingTools.Semantics.Symbols;
 
 /// <summary>
 /// 	Represents a scope for symbols.

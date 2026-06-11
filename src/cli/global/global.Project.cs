@@ -16,6 +16,7 @@ global using OwlDomain.ParsingTools.Parsing;
 global using OwlDomain.ParsingTools.Parsing.Concrete;
 global using OwlDomain.ParsingTools.Parsing.Abstract;
 global using OwlDomain.ParsingTools.Semantics;
+global using OwlDomain.ParsingTools.Semantics.Symbols;
 global using OwlDomain.ParsingTools.Semantics.Discovery;
 global using OwlDomain.ParsingTools.Semantics.Resolution;
 
