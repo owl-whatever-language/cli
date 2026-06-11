@@ -28,7 +28,7 @@ public interface IAbstractSeparatedSyntaxList<out TValue> : IAbstractSeparatedSy
 /// <typeparam name="TSeparator">The type of the separator nodes.</typeparam>
 public interface IAbstractSeparatedSyntaxList<out TValue, out TSeparator> : IAbstractSeparatedSyntaxList<TValue>, ISeparatedSyntaxList<TValue, TSeparator>
 	where TValue : class, IAbstractSyntaxNode
-	where TSeparator : class, ISyntaxNode
+	where TSeparator : class, IAbstractSyntaxNode
 {
 	#region Properties
 	/// <summary>The nodes that are acting as separators.</summary>
@@ -48,7 +48,7 @@ public interface IAbstractSeparatedSyntaxList<out TValue, out TSeparator, out TC
 	ISeparatedSyntaxList<TValue, TSeparator>,
 	IAbstractSyntaxNode<IConcreteSeparatedSyntaxList<TConcrete>>
 	where TValue : class, IAbstractSyntaxNode
-	where TSeparator : class, ISyntaxNode
+	where TSeparator : class, IAbstractSyntaxNode
 	where TConcrete : class, IConcreteSyntaxNode
 {
 }
@@ -63,7 +63,7 @@ public class AbstractSeparatedSyntaxList<TValue, TSeparator, TConcrete> :
 	BaseAbstractSyntaxNode<IConcreteSeparatedSyntaxList<TConcrete>>,
 	IAbstractSeparatedSyntaxList<TValue, TSeparator, TConcrete>
 	where TValue : class, IAbstractSyntaxNode
-	where TSeparator : class, ISyntaxNode
+	where TSeparator : class, IAbstractSyntaxNode
 	where TConcrete : class, IConcreteSyntaxNode
 {
 	#region Properties
@@ -110,7 +110,7 @@ public class AbstractSeparatedSyntaxList<TValue, TSeparator, TConcrete> :
 /// </summary>
 /// <typeparam name="TValue">The type of the value nodes.</typeparam>
 /// <typeparam name="TConcrete">The type of the concrete syntax node that the abstract syntax node is modelled after.</typeparam>
-public class AbstractSeparatedSyntaxList<TValue, TConcrete> : AbstractSeparatedSyntaxList<TValue, ITokenNode, TConcrete>
+public class AbstractSeparatedSyntaxList<TValue, TConcrete> : AbstractSeparatedSyntaxList<TValue, IAbstractSyntaxToken, TConcrete>
 	where TValue : class, IAbstractSyntaxNode
 	where TConcrete : class, IConcreteSyntaxNode
 {
@@ -124,7 +124,7 @@ public class AbstractSeparatedSyntaxList<TValue, TConcrete> : AbstractSeparatedS
 		IConcreteSeparatedSyntaxList<TConcrete> concrete,
 		IReadOnlyList<IAbstractSyntaxNode> nodes,
 		IReadOnlyList<TValue> values,
-		IReadOnlyList<ITokenNode> separators)
+		IReadOnlyList<IAbstractSyntaxToken> separators)
 		: base(concrete, nodes, values, separators)
 	{
 	}

@@ -9,6 +9,14 @@ public interface IAbstractSyntaxNode : ISyntaxNode
 	/// <summary>The concrete syntax node that this abstract syntax node is modelled after.</summary>
 	IConcreteSyntaxNode Concrete { get; }
 	#endregion
+
+
+	#region Methods
+	/// <summary>Gets the direct child syntax nodes.</summary>
+	/// <returns>An enumerable of the direct children.</returns>
+	new IEnumerable<IAbstractSyntaxNode> GetChildren();
+	IEnumerable<ISyntaxNode> ISyntaxNode.GetChildren() => GetChildren();
+	#endregion
 }
 
 /// <summary>
@@ -54,7 +62,7 @@ public abstract class BaseAbstractSyntaxNode<TConcrete> : IAbstractSyntaxNode<TC
 
 	#region Methods
 	/// <inheritdoc/>
-	public abstract IEnumerable<ISyntaxNode> GetChildren();
+	public abstract IEnumerable<IAbstractSyntaxNode> GetChildren();
 
 	/// <inheritdoc/>
 	public override string? ToString() => Concrete.ToString();

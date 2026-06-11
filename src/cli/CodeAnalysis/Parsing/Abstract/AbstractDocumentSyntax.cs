@@ -14,6 +14,6 @@ public sealed class AbstractDocumentSyntax : BaseAbstractSyntaxNode<ConcreteDocu
 	#endregion
 
 	#region Methods
-	public override IEnumerable<ISyntaxNode> GetChildren() => [Statements];
+	public override IEnumerable<IAbstractSyntaxNode> GetChildren() => [Statements];
 	#endregion
 }

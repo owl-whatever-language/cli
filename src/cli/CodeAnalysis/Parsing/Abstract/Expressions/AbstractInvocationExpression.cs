@@ -20,6 +20,6 @@ public sealed class AbstractInvocationExpression : BaseAbstractExpression<Concre
 	#endregion
 
 	#region Methods
-	public override IEnumerable<ISyntaxNode> GetChildren() => [Expression, Values];
+	public override IEnumerable<IAbstractSyntaxNode> GetChildren() => [Expression, Values];
 	#endregion
 }

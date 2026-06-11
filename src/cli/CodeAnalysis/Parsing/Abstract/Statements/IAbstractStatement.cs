@@ -9,24 +9,20 @@ public interface IAbstractStatement : IAbstractSyntaxNode
 	#endregion
 }
 
-public interface IAbstractStatement<T> : IAbstractStatement, IAbstractSyntaxNode<T>
-	where T : notnull, IConcreteStatement
+public interface IAbstractStatement<TConcrete> : IAbstractStatement, IAbstractSyntaxNode<TConcrete>
+	where TConcrete : notnull, IConcreteStatement
 {
 	#region Properties
-	IConcreteSyntaxNode IAbstractSyntaxNode.Concrete => ((IAbstractSyntaxNode<T>)this).Concrete;
-	IConcreteStatement IAbstractStatement.Concrete => ((IAbstractSyntaxNode<T>)this).Concrete;
+	new TConcrete Concrete { get; }
+	IConcreteSyntaxNode IAbstractSyntaxNode.Concrete => Concrete;
+	IConcreteStatement IAbstractStatement.Concrete => Concrete;
 	#endregion
 }
 
-public abstract class BaseAbstractStatement<T> : BaseAbstractSyntaxNode<T>, IAbstractStatement
-	where T : notnull, IConcreteStatement
+public abstract class BaseAbstractStatement<TConcrete> : BaseAbstractSyntaxNode<TConcrete>, IAbstractStatement<TConcrete>
+	where TConcrete : notnull, IConcreteStatement
 {
-	#region Properties
-	IConcreteStatement IAbstractStatement.Concrete => Concrete;
-	IConcreteSyntaxNode IAbstractSyntaxNode.Concrete => Concrete;
-	#endregion
-
 	#region Constructors
-	protected BaseAbstractStatement(T concrete) : base(concrete) { }
+	protected BaseAbstractStatement(TConcrete concrete) : base(concrete) { }
 	#endregion
 }

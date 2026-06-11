@@ -14,6 +14,6 @@ public sealed class AbstractExpressionStatement : BaseAbstractStatement<Concrete
 	#endregion
 
 	#region Methods
-	public override IEnumerable<ISyntaxNode> GetChildren() => [Expression];
+	public override IEnumerable<IAbstractSyntaxNode> GetChildren() => [Expression];
 	#endregion
 }

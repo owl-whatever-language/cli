@@ -13,19 +13,15 @@ public interface IAbstractExpression<TConcrete> : IAbstractExpression, IAbstract
 	where TConcrete : notnull, IConcreteExpression
 {
 	#region Properties
-	IConcreteSyntaxNode IAbstractSyntaxNode.Concrete => ((IAbstractSyntaxNode<TConcrete>)this).Concrete;
-	IConcreteExpression IAbstractExpression.Concrete => ((IAbstractSyntaxNode<TConcrete>)this).Concrete;
+	new TConcrete Concrete { get; }
+	IConcreteSyntaxNode IAbstractSyntaxNode.Concrete => Concrete;
+	IConcreteExpression IAbstractExpression.Concrete => Concrete;
 	#endregion
 }
 
-public abstract class BaseAbstractExpression<TConcrete> : BaseAbstractSyntaxNode<TConcrete>, IAbstractExpression
+public abstract class BaseAbstractExpression<TConcrete> : BaseAbstractSyntaxNode<TConcrete>, IAbstractExpression<TConcrete>
 	where TConcrete : notnull, IConcreteExpression
 {
-	#region Properties
-	IConcreteExpression IAbstractExpression.Concrete => Concrete;
-	IConcreteSyntaxNode IAbstractSyntaxNode.Concrete => Concrete;
-	#endregion
-
 	#region Constructors
 	protected BaseAbstractExpression(TConcrete concrete) : base(concrete) { }
 	#endregion

@@ -33,6 +33,10 @@ public sealed class AstCreator : BaseAstCreator<AbstractSyntaxTree, ConcreteSynt
 			IAbstractSyntaxList<IAbstractStatement> statements = Convert(concrete.Statements);
 			return new(concrete, statements);
 		}
+		private IAbstractSyntaxToken Convert(ITokenNode token)
+		{
+			return new AbstractSyntaxToken(token);
+		}
 		#endregion
 
 		#region Statement methods
@@ -57,8 +61,11 @@ public sealed class AstCreator : BaseAstCreator<AbstractSyntaxTree, ConcreteSynt
 		}
 		private AbstractVariableDeclarationStatement Convert(ConcreteVariableDeclarationStatement concrete)
 		{
+			IAbstractSyntaxToken typeName = Convert(concrete.TypeName);
+			IAbstractSyntaxToken name = Convert(concrete.Name);
 			IAbstractExpression value = Convert(concrete.Value);
-			return new(concrete, value);
+
+			return new(concrete, typeName, name, value);
 		}
 		private AbstractExpressionStatement Convert(ConcreteExpressionStatement concrete)
 		{
@@ -79,8 +86,16 @@ public sealed class AstCreator : BaseAstCreator<AbstractSyntaxTree, ConcreteSynt
 				_ => ThrowHelper.ThrowInvalidOperationException<IAbstractExpression>($"Could not convert the concrete expression ({concrete.GetType()}).")
 			};
 		}
-		private AbstractLiteralExpression Convert(ConcreteLiteralExpression concrete) => new(concrete);
-		private AbstractAccessExpression Convert(ConcreteAccessExpression concrete) => new(concrete);
+		private AbstractLiteralExpression Convert(ConcreteLiteralExpression concrete)
+		{
+			IAbstractSyntaxToken literal = Convert(concrete.Literal);
+			return new(concrete, literal);
+		}
+		private AbstractAccessExpression Convert(ConcreteAccessExpression concrete)
+		{
+			IAbstractSyntaxToken name = Convert(concrete.Name);
+			return new(concrete, name);
+		}
 		private AbstractInvocationExpression Convert(ConcreteInvocationExpression concrete)
 		{
 			IAbstractExpression expression = Convert(concrete.Expression);
