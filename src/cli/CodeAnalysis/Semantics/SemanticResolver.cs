@@ -10,7 +10,7 @@ public sealed class SemanticResolutionResult : BaseSemanticResolutionResult<Sema
 public sealed class SemanticResolutionInput : BaseSemanticResolutionInput
 {
 	#region Constructors
-	public SemanticResolutionInput(ISymbolScope symbols) : base(symbols) { }
+	public SemanticResolutionInput(ISymbolScope symbols, IReadOnlyCollection<ISymbolTarget> targets) : base(symbols, targets) { }
 	#endregion
 }
 
@@ -64,18 +64,19 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 		}
 		private SemanticVariableDeclarationStatement Resolve(AbstractVariableDeclarationStatement statement)
 		{
-			LocalVariableSymbol? symbol = FindSymbol<LocalVariableSymbol>(statement.Name.Value as string);
-			symbol?.Type = GetType(FindSymbol(symbol.Declaration?.TypeName.Value as string)?.FirstOrDefault());
+			LocalVariableTarget variable = GetSymbol<LocalVariableTarget>(statement);
+			variable.Type = TryGetSymbol<ITypeInfo>(statement.TypeName.Value as string, "type", statement.TypeName.Position);
+			variable.Lock();
 
-			Debug.Assert(symbol is not null, "If the declaration exists then the symbol should've been found.");
+			SemanticSyntaxToken typeName = new(statement.TypeName, variable.Type?.Symbol);
+			SemanticSyntaxToken name = new(statement.Name, variable.Symbol);
 
-			ITypeInfo? type = symbol.Type;
 			ISemanticExpression value = Resolve(statement.Value);
 
-			if (value.Type is not null && type is not null && (value.Type.CanBeAssignedTo(type) is false))
-				ReportInvalidTargetType(value.Type, type, statement.TypeName.Position);
+			if (value.Type is not null && variable.Type is not null && (value.Type.CanBeAssignedTo(variable.Type) is false))
+				ReportInvalidTargetType(value.Type, variable.Type, statement.TypeName.Position);
 
-			return new(statement, type, symbol, value);
+			return new(statement, typeName, name, value, variable);
 		}
 		#endregion
 
@@ -93,20 +94,17 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 		}
 		private SemanticAccessExpression Resolve(AbstractAccessExpression expression)
 		{
-			string? name = expression.Name.Value as string;
-			ISymbol? symbol = FindSymbol(name)?.FirstOrDefault();
-			ITypeInfo? type = GetType(symbol);
+			ISymbolTarget? target = TryGetSymbol(expression.Name.Value as string, expression.Name.Position);
+			SemanticSyntaxToken name = new(expression.Name, target?.Symbol);
+			ITypeInfo? type = ExtractType(target);
 
-			if (symbol is null)
-				ReportUnknownValueAccess(name, expression.Name.Position);
-
-			return new(expression, symbol, type);
+			return new(expression, name, type);
 		}
 		private SemanticLiteralExpression Resolve(AbstractLiteralExpression expression)
 		{
 			ITypeInfo? type = expression.Literal.Value switch
 			{
-				string => FindSymbol<TypeSymbol>("text")?.Type,
+				string => SpecialTypes.Text,
 				_ => null,
 			};
 
@@ -120,7 +118,6 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 
 			int? expectedCount = function?.Signature?.Parameters.Count;
 			int actualCount = values.Values.Count;
-
 
 			if (expression.Type is not FunctionType)
 				ReportInvalidInvocationTarget(@abstract.Concrete.OpeningBracket.Position);
@@ -153,19 +150,21 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 		}
 		#endregion
 
-		#region Diagnostic methods
-		private void ReportUnknownValueAccess(string? name, IndexedPositionRange position)
+		#region Helpers
+		private ITypeInfo? ExtractType(ISymbolTarget? target)
 		{
-			Diagnostics.Add(new Diagnostic()
+			return target switch
 			{
-				Provider = DiagnosticProvider,
-				Kind = DiagnosticKind.Error,
-				Id = "unknown_value_access",
+				ITypeInfo type => type,
+				IFunctionInfo function => function.AsType,
+				ILocalVariableTarget local => local.Type,
 
-				Location = new DiagnosticSourceLocation(Tree.Source, position),
-				Message = $"The value '{name}' doesn't exist.",
-			});
+				_ => null,
+			};
 		}
+		#endregion
+
+		#region Diagnostic methods
 		private void ReportInvalidTargetType(ITypeInfo source, ITypeInfo target, IndexedPositionRange position)
 		{
 			Diagnostics.Add(new Diagnostic()
@@ -202,40 +201,46 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 				Message = $"The function expected {expected:n0} arguments but it received {actual:n0}.",
 			});
 		}
-		#endregion
-
-		#region Helpers
-		private ITypeInfo? GetType(ISymbol? symbol)
+		protected override void ReportAmbiguousSymbolTargets(IReadOnlyCollection<ISymbolTarget> targets, IndexedPositionRange position)
 		{
-			return symbol switch
+			string targetsText = string.Join(", ", targets.Select(t => $"\"{t}\""));
+
+			Diagnostics.Add(new Diagnostic()
 			{
-				LocalVariableSymbol variable => variable.Type,
-				TypeSymbol type => type.Type,
-				FunctionSymbol function => function.Function?.AsType,
+				Provider = DiagnosticProvider,
+				Kind = DiagnosticKind.Error,
+				Id = "",
 
-				_ => null,
-			};
+				Location = new DiagnosticSourceLocation(Tree.Source, position),
+				Message = $"Couldn't differentiate between: {targetsText}.",
+			});
 		}
-		private T? FindSymbol<T>(string? name)
-			where T : notnull, ISymbol
+		protected override void ReportMissingSymbol(string name, string expectedKind, IndexedPositionRange position)
 		{
-			if (name is null)
-				return default;
+			Diagnostics.Add(new Diagnostic()
+			{
+				Provider = DiagnosticProvider,
+				Kind = DiagnosticKind.Error,
+				Id = "missing_symbol",
 
-			if (Symbols.TryGet(name, out ISymbolGroup? symbols))
-				return symbols.OfType<T>().FirstOrDefault();
-
-			return default;
+				Location = new DiagnosticSourceLocation(Tree.Source, position),
+				Message = $"There is no {expectedKind} with the name '{name}'.",
+			});
 		}
-		private ISymbolGroup? FindSymbol(string? name)
+		protected override void ReportInvalidSymbolKind(string name, IReadOnlyCollection<ISymbolTarget> targets, string expectedKind, IndexedPositionRange position)
 		{
-			if (name is null)
-				return null;
+			Guard.IsNotEmpty(targets);
+			string[] otherKinds = targets.Select(t => t.Kind).Distinct().ToArray();
 
-			if (Symbols.TryGet(name, out ISymbolGroup? symbols))
-				return symbols;
+			Diagnostics.Add(new Diagnostic()
+			{
+				Provider = DiagnosticProvider,
+				Kind = DiagnosticKind.Error,
+				Id = "",
 
-			return null;
+				Location = new DiagnosticSourceLocation(Tree.Source, position),
+				Message = $"There is no {expectedKind} with the name '{name}', but could find: {string.Join(", ", otherKinds)}.",
+			});
 		}
 		#endregion
 	}

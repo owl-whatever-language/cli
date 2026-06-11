@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Semantics;
+namespace OwlDomain.ParsingTools.Semantics.Syntax;
 
 /// <summary>
 /// 	Represents a general syntax list that has separator nodes.
@@ -28,7 +28,7 @@ public interface ISemanticSeparatedSyntaxList<out TValue> : ISemanticSeparatedSy
 /// <typeparam name="TSeparator">The type of the separator nodes.</typeparam>
 public interface ISemanticSeparatedSyntaxList<out TValue, out TSeparator> : ISemanticSeparatedSyntaxList<TValue>, ISeparatedSyntaxList<TValue, TSeparator>
 	where TValue : class, ISemanticSyntaxNode
-	where TSeparator : class, ISyntaxNode
+	where TSeparator : class, ISemanticSyntaxNode
 {
 	#region Properties
 	/// <summary>The nodes that are acting as separators.</summary>
@@ -48,7 +48,7 @@ public interface ISemanticSeparatedSyntaxList<out TValue, out TSeparator, out TA
 	ISeparatedSyntaxList<TValue, TSeparator>,
 	ISemanticSyntaxNode<IAbstractSeparatedSyntaxList<TAbstract>>
 	where TValue : class, ISemanticSyntaxNode
-	where TSeparator : class, ISyntaxNode
+	where TSeparator : class, ISemanticSyntaxNode
 	where TAbstract : class, IAbstractSyntaxNode
 {
 }
@@ -63,7 +63,7 @@ public class SemanticSeparatedSyntaxList<TValue, TSeparator, TAbstract> :
 	BaseSemanticSyntaxNode<IAbstractSeparatedSyntaxList<TAbstract>>,
 	ISemanticSeparatedSyntaxList<TValue, TSeparator, TAbstract>
 	where TValue : class, ISemanticSyntaxNode
-	where TSeparator : class, ISyntaxNode
+	where TSeparator : class, ISemanticSyntaxNode
 	where TAbstract : class, IAbstractSyntaxNode
 {
 	#region Properties
@@ -110,7 +110,7 @@ public class SemanticSeparatedSyntaxList<TValue, TSeparator, TAbstract> :
 /// </summary>
 /// <typeparam name="TValue">The type of the value nodes.</typeparam>
 /// <typeparam name="TAbstract">The type of the abstract syntax node that the semantic syntax node is modelled after.</typeparam>
-public class SemanticSeparatedSyntaxList<TValue, TAbstract> : SemanticSeparatedSyntaxList<TValue, ITokenNode, TAbstract>
+public class SemanticSeparatedSyntaxList<TValue, TAbstract> : SemanticSeparatedSyntaxList<TValue, ISemanticSyntaxToken, TAbstract>
 	where TValue : class, ISemanticSyntaxNode
 	where TAbstract : class, IAbstractSyntaxNode
 {
@@ -124,7 +124,7 @@ public class SemanticSeparatedSyntaxList<TValue, TAbstract> : SemanticSeparatedS
 		IAbstractSeparatedSyntaxList<TAbstract> @abstract,
 		IReadOnlyList<ISemanticSyntaxNode> nodes,
 		IReadOnlyList<TValue> values,
-		IReadOnlyList<ITokenNode> separators)
+		IReadOnlyList<ISemanticSyntaxToken> separators)
 		: base(@abstract, nodes, values, separators)
 	{
 	}

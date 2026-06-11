@@ -3,22 +3,25 @@ namespace OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Nodes.Statements;
 public class SemanticVariableDeclarationStatement : BaseSemanticStatement<AbstractVariableDeclarationStatement>
 {
 	#region Properties
-	public ITypeInfo? Type { get; }
-	public LocalVariableSymbol Symbol { get; }
+	public ILocalVariableTarget Target { get; }
+	public ISemanticSyntaxToken TypeName { get; }
+	public ISemanticSyntaxToken Name { get; }
 	public ISemanticExpression Value { get; }
 	#endregion
 
 	#region Constructors
 	public SemanticVariableDeclarationStatement(
 		AbstractVariableDeclarationStatement @abstract,
-		ITypeInfo? type,
-		LocalVariableSymbol symbol,
-		ISemanticExpression value)
+		ISemanticSyntaxToken typeName,
+		ISemanticSyntaxToken name,
+		ISemanticExpression value,
+		ILocalVariableTarget target)
 		: base(@abstract)
 	{
-		Type = type;
-		Symbol = symbol;
+		TypeName = typeName;
+		Name = name;
 		Value = value;
+		Target = target;
 	}
 	#endregion
 

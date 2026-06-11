@@ -11,6 +11,9 @@ public interface ISymbol
 
 	/// <summary>The abstract syntax node that declared the symbol.</summary>
 	IAbstractSyntaxNode? Declaration { get; }
+
+	/// <summary>The thing that the symbol is referencing.</summary>
+	ISymbolTarget Target { get; }
 	#endregion
 }
 
@@ -29,11 +32,11 @@ where T : notnull, IAbstractSyntaxNode
 }
 
 /// <summary>
-/// 	Represents the base implementation for a symbol.
+/// 	Represents a symbol.
 /// </summary>
 /// <typeparam name="T">The type of the abstract syntax node that declared the symbol.</typeparam>
 [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
-public abstract class BaseSymbol<T> : ISymbol<T>
+public class Symbol<T> : ISymbol<T>
 	where T : notnull, IAbstractSyntaxNode
 {
 	#region Properties
@@ -42,34 +45,44 @@ public abstract class BaseSymbol<T> : ISymbol<T>
 
 	/// <inheritdoc/>
 	public T? Declaration { get; }
+
+	/// <inheritdoc/>
+	public ISymbolTarget Target { get; }
 	#endregion
 
 	#region Constructors
-	/// <summary>Populates the <see cref="BaseSymbol{T}"/> properties.</summary>
+	/// <summary>Creates a new <see cref="Symbol{T}"/> instance.</summary>
 	/// <param name="name">The name of the symbol.</param>
 	/// <param name="declaration">The abstract syntax node that declared the symbol.</param>
-	protected BaseSymbol(string? name, T? declaration)
+	/// <param name="target">The thing that the symbol is referencing.</param>
+	/// <exception cref="ArgumentException">Thrown if both the <paramref name="name"/> and <paramref name="declaration"/> are <see langword="null"/>.</exception>
+	public Symbol(string? name, T? declaration, ISymbolTarget target)
 	{
+		if (name is null && declaration is null)
+			ThrowHelper.ThrowArgumentException(nameof(name), "The name can only be null if the declaration is provided.");
+
 		Name = name;
 		Declaration = declaration;
+		Target = target;
 	}
 	#endregion
 
 	#region Methods
 	/// <inheritdoc/>
-	public override string ToString() => Name ?? "???";
-	private string DebuggerDisplay() => $"{GetType().Name} {{ Name = ({Name}) }}";
+	public override string ToString() => Name ?? Target.ToString() ?? "???";
+	private string DebuggerDisplay() => $"{GetType().Name} {{ Name = ({Name}), Target = ({Target}) }}";
 	#endregion
 }
 
 /// <summary>
-/// 	Represents the base implementation for a symbol that won't have a declaration.
+/// 	Represents a symbol that won't have a declaration.
 /// </summary>
-public abstract class BaseSymbol : BaseSymbol<IAbstractSyntaxNode>
+public class Symbol : Symbol<IAbstractSyntaxNode>
 {
 	#region Constructors
-	/// <summary>Populates the <see cref="BaseSymbol"/> properties.</summary>
+	/// <summary>Creates a new <see cref="Symbol"/> instance.</summary>
 	/// <param name="name">The name of the symbol.</param>
-	protected BaseSymbol(string? name) : base(name, null) { }
+	/// <param name="target">The thing that the symbol is referencing.</param>
+	public Symbol(string name, ISymbolTarget target) : base(name, null, target) { }
 	#endregion
 }

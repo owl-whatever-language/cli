@@ -31,8 +31,11 @@ public sealed class SymbolFinder : BaseSymbolFinder<AbstractSyntaxTree>
 		}
 		private void Explore(AbstractVariableDeclarationStatement statement)
 		{
-			LocalVariableSymbol symbol = new(statement.Name.Value as string, statement);
-			Scope.Add(symbol);
+			LocalVariableTarget target = new(statement.Name.Value as string);
+			target.WithSymbol(statement.Name.Value as string, statement);
+
+			Targets.Add(target);
+			Scope.Add(target.Symbol);
 		}
 		#endregion
 	}

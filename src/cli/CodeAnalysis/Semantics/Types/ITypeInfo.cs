@@ -1,6 +1,6 @@
 namespace OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Types;
 
-public interface ITypeInfo
+public interface ITypeInfo : ISymbolTarget
 {
 	#region Properties
 	string? Name { get; }
@@ -14,37 +14,28 @@ public interface ITypeInfo
 	#endregion
 }
 
-public sealed class ImmutableTypeInfo : ITypeInfo
+public sealed class TypeInfo : BaseSymbolTarget, ITypeInfo
 {
 	#region Properties
-	public string? Name { get; }
+	public override string Kind => "type";
+
+	public string? Name
+	{
+		get;
+		set => Set(ref field, value);
+	}
 	#endregion
 
 	#region Constructors
-	public ImmutableTypeInfo(string? name)
+	public TypeInfo(string? name = null)
 	{
 		Name = name;
 	}
 	#endregion
 
 	#region Methods
-	public bool CanBeAssignedTo(ITypeInfo type) => type.Name == Name;
-	public override string ToString() => Name ?? "???";
-	#endregion
-}
-
-public sealed class MutableTypeInfo : ITypeInfo
-{
-	#region Properties
-	public string? Name { get; set; }
-	#endregion
-
-	#region Methods
-	public ImmutableTypeInfo ToImmutable() => new(Name);
-	#endregion
-
-	#region Methods
-	public bool CanBeAssignedTo(ITypeInfo type) => type.Name == Name;
+	/// <inheritdoc/>
+	public bool CanBeAssignedTo(ITypeInfo type) => type == this;
 	public override string ToString() => Name ?? "???";
 	#endregion
 }

@@ -60,6 +60,9 @@ public abstract class BaseSymbolFinder<TAbstract> : ISymbolFinder<TAbstract>
 
 		/// <summary>The current scope for symbols.</summary>
 		protected SymbolScope Scope { get; private set; }
+
+		/// <summary>The collection of the newly created symbol targets.</summary>
+		protected List<ISymbolTarget> Targets { get; } = [];
 		#endregion
 
 		#region Constructors
@@ -90,7 +93,10 @@ public abstract class BaseSymbolFinder<TAbstract> : ISymbolFinder<TAbstract>
 
 			Explore(Trees);
 
-			return new SymbolDiscoveryResult(Diagnostics, watch.Elapsed, ResultScope);
+			foreach (ISymbolTarget target in Targets)
+				_ = target.Symbol; // Note(Nightowl): Ensure very target has a symbol assigned;
+
+			return new SymbolDiscoveryResult(Diagnostics, watch.Elapsed, ResultScope, Targets);
 		}
 
 		/// <summary>Explores the given abstract syntax <paramref name="trees"/> (ASTs) for the defined symbols.</summary>

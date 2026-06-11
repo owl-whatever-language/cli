@@ -17,6 +17,12 @@ public class FunctionSignature
 		Parameters = parameters;
 		Return = @return;
 	}
+	public FunctionSignature(string? name, params IReadOnlyList<FunctionParameterSignature> parameters)
+	{
+		Name = name;
+		Parameters = parameters;
+		Return = new(SpecialTypes.Void);
+	}
 	#endregion
 
 	#region Methods

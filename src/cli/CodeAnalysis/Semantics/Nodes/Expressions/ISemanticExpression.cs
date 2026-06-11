@@ -6,7 +6,6 @@ public interface ISemanticExpression : ISemanticSyntaxNode
 	/// <summary>The abstract syntax node that this semantic syntax node is modelled after.</summary>
 	new IAbstractExpression Abstract { get; }
 	IAbstractSyntaxNode ISemanticSyntaxNode.Abstract => Abstract;
-
 	ITypeInfo? Type { get; }
 	#endregion
 }

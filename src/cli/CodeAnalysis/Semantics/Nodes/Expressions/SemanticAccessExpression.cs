@@ -3,13 +3,13 @@ namespace OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Nodes.Expressions;
 public sealed class SemanticAccessExpression : BaseSemanticExpression<AbstractAccessExpression>
 {
 	#region Properties
-	public ISymbol? Symbol { get; }
+	public ISemanticSyntaxToken Name { get; }
 	#endregion
 
 	#region Constructors
-	public SemanticAccessExpression(AbstractAccessExpression @abstract, ISymbol? symbol, ITypeInfo? type) : base(@abstract, type)
+	public SemanticAccessExpression(AbstractAccessExpression @abstract, ISemanticSyntaxToken name, ITypeInfo? type) : base(@abstract, type)
 	{
-		Symbol = symbol;
+		Name = name;
 	}
 	#endregion
 

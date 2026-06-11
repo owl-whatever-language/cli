@@ -127,6 +127,12 @@ public abstract class BaseSemanticResolver<TInput, TAbstract, TSemantic, TResult
 
 			TSemantic semantic = Resolve(Tree);
 
+			foreach (ISymbolTarget target in AdditionalInputs.Targets)
+			{
+				if (target.IsMutable)
+					ThrowHelper.ThrowInvalidOperationException($"The symbol target ({target}) for the symbol ({target.Symbol.Name}) is still mutable.");
+			}
+
 			return CreateResult(watch.Elapsed, semantic);
 		}
 
@@ -140,6 +146,89 @@ public abstract class BaseSemanticResolver<TInput, TAbstract, TSemantic, TResult
 		/// <param name="tree">The abstract syntax tree (AST) to resolve.</param>
 		/// <returns>The generated semantic syntax tree (SST).</returns>
 		protected abstract TSemantic Resolve(TAbstract tree);
+
+		/// <summary>Tries to get a single unambiguous symbol target for the given <paramref name="name"/>.</summary>
+		/// <typeparam name="TTarget">The type of the symbol target.</typeparam>
+		/// <param name="name">The name of the symbol target.</param>
+		/// <param name="expectedKind">The target kind of the expected <typeparamref name="TTarget"/> target.</param>
+		/// <param name="position">The position to report the diagnostics at.</param>
+		/// <returns>The found target, or <see langword="null"/>.</returns>
+		protected TTarget? TryGetSymbol<TTarget>(string? name, string expectedKind, IndexedPositionRange position)
+			where TTarget : class, ISymbolTarget
+		{
+			if (name is null)
+				return null;
+
+			if (Symbols.TryGet(name, out ISymbolGroup? group) is false)
+			{
+				ReportMissingSymbol(name, expectedKind, position);
+				return default;
+			}
+			Debug.Assert(group.Count > 0);
+
+			TTarget[] targets = group.Select(s => s.Target).OfType<TTarget>().ToArray();
+			if (targets.Length is 1)
+				return targets[0];
+
+			if (targets.Length is 0)
+			{
+				ReportInvalidSymbolKind(name, group.Select(s => s.Target).ToArray(), expectedKind, position);
+				return default;
+			}
+
+			ReportAmbiguousSymbolTargets(targets, position);
+			return default;
+		}
+
+		/// <summary>Tries to get a single unambiguous symbol target for the given <paramref name="name"/>.</summary>
+		/// <param name="name">The name of the symbol target.</param>
+		/// <param name="position">The position to report the diagnostics at.</param>
+		/// <returns>The found target, or <see langword="null"/>.</returns>
+		protected ISymbolTarget? TryGetSymbol(string? name, IndexedPositionRange position) => TryGetSymbol<ISymbolTarget>(name, "value", position);
+
+		/// <summary>Gets the symbol target that has been declared for the given <paramref name="node"/>.</summary>
+		/// <typeparam name="TTarget">The type of the symbol target.</typeparam>
+		/// <param name="node">The node that the symbol was declared for.</param>
+		/// <returns>The declared symbol.</returns>
+		/// <exception cref="InvalidOperationException">
+		/// 	Thrown if the symbol declared for the given <paramref name="node"/>
+		/// 	was not of the expected type <typeparamref name="TTarget"/>.
+		/// </exception>
+		/// <exception cref="ArgumentException">Thrown if no symbol was declared for the given <paramref name="node"/>.</exception>
+		protected TTarget GetSymbol<TTarget>(IAbstractSyntaxNode node)
+			where TTarget : notnull
+		{
+			if (Symbols.TryGet(node, out ISymbol? symbol))
+			{
+				if (symbol.Target is TTarget typed)
+					return typed;
+
+				ThrowHelper.ThrowInvalidOperationException($"The ({symbol}) symbol ({symbol.GetType()}) found for the given node ({node}) was not of the expected type ({typeof(TTarget)}).");
+			}
+
+			ThrowHelper.ThrowArgumentException(nameof(node), $"Could not find a symbol for the given node ({node}).");
+			return default;
+		}
+		#endregion
+
+		#region Diagnostic methods
+		/// <summary>Reports that a symbol with the given <paramref name="name"/> is missing.</summary>
+		/// <param name="name">The name of the symbol that was missing.</param>
+		/// <param name="expectedKind">The kind of the expected target.</param>
+		/// <param name="position">The position to report the diagnostic at.</param>
+		protected abstract void ReportMissingSymbol(string name, string expectedKind, IndexedPositionRange position);
+
+		/// <summary>Reports an ambiguity between the given <paramref name="targets"/>.</summary>
+		/// <param name="targets">The symbol targets that were ambiguous.</param>
+		/// <param name="position">The position to report the diagnostic at.</param>
+		protected abstract void ReportAmbiguousSymbolTargets(IReadOnlyCollection<ISymbolTarget> targets, IndexedPositionRange position);
+
+		/// <summary>Reports that a target with the <paramref name="expectedKind"/> was missing, but that <paramref name="targets"/> with other kinds did exist.</summary>
+		/// <param name="name">The name of the symbol that was missing.</param>
+		/// <param name="targets">The found targets that didn't match the <paramref name="expectedKind"/>.</param>
+		/// <param name="expectedKind">The kind of the expected target.</param>
+		/// <param name="position">The position to report hte diagnostic at.</param>
+		protected abstract void ReportInvalidSymbolKind(string name, IReadOnlyCollection<ISymbolTarget> targets, string expectedKind, IndexedPositionRange position);
 		#endregion
 	}
 	#endregion

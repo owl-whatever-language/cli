@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Semantics;
+namespace OwlDomain.ParsingTools.Semantics.Syntax;
 
 /// <summary>
 /// 	Represents a complete semantic syntax tree (SST).
@@ -27,7 +27,6 @@ public interface ISemanticSyntaxTree<out TAbstract> : ISemanticSyntaxTree
 	new TAbstract Abstract { get; }
 	IAbstractSyntaxTree ISemanticSyntaxTree.Abstract => Abstract;
 	#endregion
-
 }
 
 /// <summary>

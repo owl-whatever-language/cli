@@ -1,6 +1,6 @@
 namespace OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Functions;
 
-public interface IFunctionInfo
+public interface IFunctionInfo : ISymbolTarget
 {
 	#region Properties
 	FunctionType AsType { get; }
@@ -8,15 +8,20 @@ public interface IFunctionInfo
 	#endregion
 }
 
-public sealed class ImmutableFunctionInfo : IFunctionInfo
+public sealed class FunctionInfo : BaseSymbolTarget, IFunctionInfo
 {
 	#region Properties
+	public override string Kind => "function";
 	public FunctionType AsType { get; }
-	public FunctionSignature? Signature { get; }
+	public FunctionSignature? Signature
+	{
+		get;
+		set => Set(ref field, value);
+	}
 	#endregion
 
 	#region Constructors
-	public ImmutableFunctionInfo(FunctionSignature? signature)
+	public FunctionInfo(FunctionSignature? signature = null)
 	{
 		AsType = new(this);
 		Signature = signature;
@@ -24,26 +29,6 @@ public sealed class ImmutableFunctionInfo : IFunctionInfo
 	#endregion
 
 	#region Methods
-	public override string ToString() => Signature?.ToString() ?? "???";
-	#endregion
-}
-
-public sealed class MutableFunctionInfo : IFunctionInfo
-{
-	#region Properties
-	public FunctionType AsType { get; }
-	public FunctionSignature? Signature { get; set; }
-	#endregion
-
-	#region Constructors
-	public MutableFunctionInfo()
-	{
-		AsType = new(this);
-	}
-	#endregion
-
-	#region Methods
-	public ImmutableFunctionInfo ToMutable() => new(Signature);
 	public override string ToString() => Signature?.ToString() ?? "???";
 	#endregion
 }
