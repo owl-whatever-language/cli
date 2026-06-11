@@ -72,3 +72,18 @@ public abstract class BaseSemanticSyntaxTree<TAbstract, TDocument> : BaseSyntaxT
 	}
 	#endregion
 }
+
+/// <summary>
+/// 	Contains various extensions related to the semantic syntax tree (SST).
+/// </summary>
+public static class ISemanticSyntaxTreeExtensions
+{
+	extension<TConcrete>(ISemanticSyntaxTree<IAbstractSyntaxTree<TConcrete>> tree)
+		where TConcrete : notnull, IConcreteSyntaxTree
+	{
+		#region Properties
+		/// <summary>The concrete syntax tree (CST) that the semantic syntax tree (SST) is modelled after.</summary>
+		public TConcrete Concrete => tree.Abstract.Concrete;
+		#endregion
+	}
+}
