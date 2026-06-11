@@ -18,7 +18,7 @@ public sealed class SymbolFinder : BaseSymbolFinder<AbstractSyntaxTree>
 		#region Methods
 		protected override void Explore(AbstractSyntaxTree tree)
 		{
-			foreach (IAbstractStatement statement in tree.Document.Statements)
+			foreach (IAbstractStatement statement in tree.Document.Statements.Values)
 				Explore(statement);
 		}
 		#endregion

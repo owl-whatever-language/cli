@@ -3,17 +3,17 @@ namespace OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Nodes;
 public class SemanticDocumentSyntax : BaseSemanticSyntaxNode<AbstractDocumentSyntax>
 {
 	#region Properties
-	public IReadOnlyList<ISemanticStatement> Statements { get; }
+	public ISemanticSyntaxList<ISemanticStatement> Statements { get; }
 	#endregion
 
 	#region Constructors
-	public SemanticDocumentSyntax(AbstractDocumentSyntax @abstract, IReadOnlyList<ISemanticStatement> statements) : base(@abstract)
+	public SemanticDocumentSyntax(AbstractDocumentSyntax @abstract, ISemanticSyntaxList<ISemanticStatement> statements) : base(@abstract)
 	{
 		Statements = statements;
 	}
 	#endregion
 
 	#region Methods
-	public override IEnumerable<ISemanticSyntaxNode> GetChildren() => Statements;
+	public override IEnumerable<ISemanticSyntaxNode> GetChildren() => [Statements];
 	#endregion
 }

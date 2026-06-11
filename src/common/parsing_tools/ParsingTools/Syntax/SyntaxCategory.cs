@@ -33,6 +33,9 @@ public readonly struct SyntaxCategory :
 	/// <summary>A syntax category for root document nodes.</summary>
 	public static SyntaxCategory Document { get; } = new("document");
 
+	/// <summary>A syntax category for general syntax lists.</summary>
+	public static SyntaxCategory SyntaxList { get; } = new("syntax_list");
+
 	/// <summary>The name of the syntax category.</summary>
 	public string Name => _name ?? "unknown";
 	#endregion

@@ -4,22 +4,22 @@ public sealed class AbstractInvocationExpression : BaseAbstractExpression<Concre
 {
 	#region Properties
 	public IAbstractExpression Expression { get; }
-	public IAbstractExpression Value { get; }
+	public IAbstractSyntaxList<IAbstractExpression> Values { get; }
 	#endregion
 
 	#region Constructors
 	public AbstractInvocationExpression(
 		ConcreteInvocationExpression concrete,
 		IAbstractExpression expression,
-		IAbstractExpression value)
+		IAbstractSyntaxList<IAbstractExpression> values)
 		: base(concrete)
 	{
 		Expression = expression;
-		Value = value;
+		Values = values;
 	}
 	#endregion
 
 	#region Methods
-	public override IEnumerable<ISyntaxNode> GetChildren() => [Expression, Value];
+	public override IEnumerable<ISyntaxNode> GetChildren() => [Expression, Values];
 	#endregion
 }

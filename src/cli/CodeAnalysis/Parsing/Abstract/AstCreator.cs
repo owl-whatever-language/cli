@@ -30,20 +30,20 @@ public sealed class AstCreator : BaseAstCreator<AbstractSyntaxTree, ConcreteSynt
 
 		private AbstractDocumentSyntax Convert(ConcreteDocumentSyntax concrete)
 		{
-			IReadOnlyList<IAbstractStatement> statements = Convert(concrete.Statements);
+			IAbstractSyntaxList<IAbstractStatement> statements = Convert(concrete.Statements);
 			return new(concrete, statements);
 		}
 		#endregion
 
 		#region Statement methods
-		private IReadOnlyList<IAbstractStatement> Convert(IReadOnlyList<IConcreteStatement> concrete)
+		private IAbstractSyntaxList<IAbstractStatement> Convert(IConcreteSyntaxList<IConcreteStatement> concrete)
 		{
-			IAbstractStatement[] statements = new IAbstractStatement[concrete.Count];
+			IAbstractStatement[] statements = new IAbstractStatement[concrete.Values.Count];
 
-			for (int i = 0; i < concrete.Count; i++)
-				statements[i] = Convert(concrete[i]);
+			for (int i = 0; i < concrete.Values.Count; i++)
+				statements[i] = Convert(concrete.Values[i]);
 
-			return statements;
+			return new AbstractSyntaxList<IAbstractStatement, IConcreteStatement>(concrete, statements);
 		}
 		private IAbstractStatement Convert(IConcreteStatement concrete)
 		{
@@ -84,9 +84,18 @@ public sealed class AstCreator : BaseAstCreator<AbstractSyntaxTree, ConcreteSynt
 		private AbstractInvocationExpression Convert(ConcreteInvocationExpression concrete)
 		{
 			IAbstractExpression expression = Convert(concrete.Expression);
-			IAbstractExpression value = Convert(concrete.Value);
+			IAbstractSyntaxList<IAbstractExpression> values = Convert(concrete.Values);
 
-			return new(concrete, expression, value);
+			return new(concrete, expression, values);
+		}
+		private IAbstractSyntaxList<IAbstractExpression> Convert(IConcreteSyntaxList<IConcreteExpression> concrete)
+		{
+			IAbstractExpression[] result = new IAbstractExpression[concrete.Values.Count];
+
+			for (int i = 0; i < concrete.Values.Count; i++)
+				result[i] = Convert(concrete.Values[i]);
+
+			return new AbstractSyntaxList<IAbstractExpression, IConcreteExpression>(concrete, result);
 		}
 		#endregion
 	}

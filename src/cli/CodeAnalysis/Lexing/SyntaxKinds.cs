@@ -11,6 +11,7 @@ public static class TokenTypes
 		public static SyntaxKind EqualSign => new("equal_sign", SyntaxCategory.Token);
 		public static SyntaxKind StringLiteral => new("string_literal", SyntaxCategory.Token);
 		public static SyntaxKind Identifier => new("identifier", SyntaxCategory.Token);
+		public static SyntaxKind Comma => new("comma", SyntaxCategory.Token);
 		#endregion
 	}
 }

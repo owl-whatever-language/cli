@@ -4,7 +4,7 @@ public sealed class SemanticInvocationExpression : BaseSemanticExpression<Abstra
 {
 	#region Properties
 	public ISemanticExpression Expression { get; }
-	public ISemanticExpression Value { get; }
+	public ISemanticSyntaxList<ISemanticExpression> Values { get; }
 	public IFunctionInfo? Function { get; }
 	#endregion
 
@@ -13,17 +13,17 @@ public sealed class SemanticInvocationExpression : BaseSemanticExpression<Abstra
 		AbstractInvocationExpression @abstract,
 		ITypeInfo? type,
 		ISemanticExpression expression,
-		ISemanticExpression value,
+		ISemanticSyntaxList<ISemanticExpression> values,
 		IFunctionInfo? function)
 		: base(@abstract, type)
 	{
 		Expression = expression;
-		Value = value;
+		Values = values;
 		Function = function;
 	}
 	#endregion
 
 	#region Methods
-	public override IEnumerable<ISemanticSyntaxNode> GetChildren() => [Expression, Value];
+	public override IEnumerable<ISemanticSyntaxNode> GetChildren() => [Expression, Values];
 	#endregion
 }

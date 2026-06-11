@@ -6,21 +6,25 @@ public sealed class ConcreteInvocationExpression : BaseConcreteSyntaxNode, IConc
 	public override SyntaxKind Kind => SyntaxKind.Invocation;
 	public IConcreteExpression Expression { get; }
 	public ITokenNode OpeningBracket { get; }
-	public IConcreteExpression Value { get; }
+	public IConcreteSeparatedSyntaxList<IConcreteExpression, ITokenNode> Values { get; }
 	public ITokenNode ClosingBracket { get; }
 	#endregion
 
 	#region Constructors
-	public ConcreteInvocationExpression(IConcreteExpression expression, ITokenNode openingBracket, IConcreteExpression value, ITokenNode closingBracket)
+	public ConcreteInvocationExpression(
+		IConcreteExpression expression,
+		ITokenNode openingBracket,
+		IConcreteSeparatedSyntaxList<IConcreteExpression, ITokenNode> values,
+		ITokenNode closingBracket)
 	{
 		Expression = expression;
 		OpeningBracket = openingBracket;
-		Value = value;
+		Values = values;
 		ClosingBracket = closingBracket;
 	}
 	#endregion
 
 	#region Methods
-	public override IEnumerable<IConcreteSyntaxNode> GetChildren() => [Expression, OpeningBracket, Value, ClosingBracket];
+	public override IEnumerable<IConcreteSyntaxNode> GetChildren() => [Expression, OpeningBracket, Values, ClosingBracket];
 	#endregion
 }

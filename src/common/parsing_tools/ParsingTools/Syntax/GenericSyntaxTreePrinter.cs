@@ -135,6 +135,12 @@ public sealed class GenericSyntaxTreePrinter
 				return property.GetValue(value) is true;
 		}
 
+		if (declaringType.IsAssignableTo(typeof(ISeparatedSyntaxList)))
+		{
+			if (property.Name is nameof(ISeparatedSyntaxList.Separators) or nameof(ISeparatedSyntaxList.Values))
+				return false;
+		}
+
 		return true;
 	}
 	private void PrintListValue(IndentedTextWriter writer, string label, IReadOnlyCollection<object?> collection)

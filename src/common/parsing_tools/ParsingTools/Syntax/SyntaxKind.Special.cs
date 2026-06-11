@@ -28,5 +28,11 @@ partial struct SyntaxKind
 
 	/// <summary>Represents a syntax kind for the root document.</summary>
 	public static SyntaxKind Document { get; } = new("document", SyntaxCategory.Document);
+
+	/// <summary>Represents a syntax kind for general syntax lists.</summary>
+	public static SyntaxKind SyntaxList { get; } = new("syntax_list", SyntaxCategory.SyntaxList);
+
+	/// <summary>Represents a syntax kind for general syntax lists that have a separating node.</summary>
+	public static SyntaxKind SeparatedSyntaxList { get; } = new("separated", SyntaxCategory.SyntaxList);
 	#endregion
 }

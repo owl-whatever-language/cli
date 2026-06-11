@@ -32,20 +32,20 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 		}
 		private SemanticDocumentSyntax Resolve(AbstractDocumentSyntax document)
 		{
-			IReadOnlyList<ISemanticStatement> statements = Resolve(document.Statements);
+			ISemanticSyntaxList<ISemanticStatement> statements = Resolve(document.Statements);
 			return new(document, statements);
 		}
 		#endregion
 
 		#region Statement methods
-		private IReadOnlyList<ISemanticStatement> Resolve(IReadOnlyList<IAbstractStatement> statements)
+		private ISemanticSyntaxList<ISemanticStatement> Resolve(IAbstractSyntaxList<IAbstractStatement> statements)
 		{
-			ISemanticStatement[] result = new ISemanticStatement[statements.Count];
+			ISemanticStatement[] result = new ISemanticStatement[statements.Values.Count];
 
-			for (int i = 0; i < statements.Count; i++)
-				result[i] = Resolve(statements[i]);
+			for (int i = 0; i < statements.Values.Count; i++)
+				result[i] = Resolve(statements.Values[i]);
 
-			return result;
+			return new SemanticSyntaxList<ISemanticStatement, IAbstractStatement>(statements, result);
 		}
 		private ISemanticStatement Resolve(IAbstractStatement @abstract)
 		{
@@ -110,13 +110,22 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 		private SemanticInvocationExpression Resolve(AbstractInvocationExpression @abstract)
 		{
 			ISemanticExpression expression = Resolve(@abstract.Expression);
-			ISemanticExpression value = Resolve(@abstract.Value);
+			ISemanticSyntaxList<ISemanticExpression> values = Resolve(@abstract.Values);
 			IFunctionInfo? function = (expression.Type as FunctionType)?.Function;
 			ITypeInfo? resultType = null; // Nothing for now since function signatures are not a thing yet.
 
 			// Todo(Nightowl): Report if the expression's type is not a function;
 
-			return new(@abstract, resultType, expression, value, function);
+			return new(@abstract, resultType, expression, values, function);
+		}
+		private ISemanticSyntaxList<ISemanticExpression> Resolve(IAbstractSyntaxList<IAbstractExpression> expressions)
+		{
+			ISemanticExpression[] result = new ISemanticExpression[expressions.Values.Count];
+
+			for (int i = 0; i < expressions.Values.Count; i++)
+				result[i] = Resolve(expressions.Values[i]);
+
+			return new SemanticSyntaxList<ISemanticExpression, IAbstractExpression>(expressions, result);
 		}
 		#endregion
 

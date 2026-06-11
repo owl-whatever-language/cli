@@ -19,6 +19,7 @@ public sealed class Lexer : BaseLexer
 				TryLexSimpleToken(")", SyntaxKind.CloseBracket) ||
 				TryLexSimpleToken("=", SyntaxKind.EqualSign) ||
 				TryLexSimpleToken(";", SyntaxKind.Semicolon) ||
+				TryLexSimpleToken(",", SyntaxKind.Comma) ||
 				TryLexTextLiteral() ||
 				TryLexIdentifier();
 		}

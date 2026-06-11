@@ -24,7 +24,7 @@ public sealed class Parser : BaseParser<ParserResult, ConcreteSyntaxTree>
 		#region Methods
 		protected override ConcreteSyntaxTree ParseTree()
 		{
-			IReadOnlyList<IConcreteStatement> statements = ParseDocumentStatements();
+			IConcreteSyntaxList<IConcreteStatement> statements = ParseDocumentStatements();
 
 			Debug.Assert(Current is not null);
 			if (Current.Kind != SyntaxKind.EndOfInput)
@@ -39,7 +39,7 @@ public sealed class Parser : BaseParser<ParserResult, ConcreteSyntaxTree>
 		#endregion
 
 		#region Statement methods
-		private IReadOnlyList<IConcreteStatement> ParseDocumentStatements()
+		private IConcreteSyntaxList<IConcreteStatement> ParseDocumentStatements()
 		{
 			List<IConcreteStatement> statements = [];
 
@@ -51,7 +51,7 @@ public sealed class Parser : BaseParser<ParserResult, ConcreteSyntaxTree>
 					statements.Add(statement);
 			});
 
-			return statements;
+			return new ConcreteSyntaxList<IConcreteStatement>(statements);
 		}
 
 		private IConcreteStatement ParseStatement()
@@ -92,7 +92,7 @@ public sealed class Parser : BaseParser<ParserResult, ConcreteSyntaxTree>
 					break;
 
 				if (Current.Kind == SyntaxKind.OpenBracket)
-					expression = ParseCallExpression(expression, power);
+					expression = ParseInvocationExpression(expression); // Invocations don't care about the pratt parsing power for values.
 			}
 
 			return expression;
@@ -109,13 +109,35 @@ public sealed class Parser : BaseParser<ParserResult, ConcreteSyntaxTree>
 
 			return new ConcreteLiteralExpression(identifier);
 		}
-		private IConcreteExpression ParseCallExpression(IConcreteExpression expression, ExpressionPower power)
+		private IConcreteExpression ParseInvocationExpression(IConcreteExpression expression)
 		{
 			ITokenNode open = Expect(SyntaxKind.OpenBracket, "Expected a function call to use an opening bracket '(' before the arguments.");
-			IConcreteExpression value = ParseExpression(power);
+			IConcreteSeparatedSyntaxList<IConcreteExpression, ITokenNode> values = ParseInvocationValues();
 			ITokenNode close = Expect(SyntaxKind.CloseBracket, "Expected a closing bracket ')' to end a function call.");
 
-			return new ConcreteInvocationExpression(expression, open, value, close);
+			return new ConcreteInvocationExpression(expression, open, values, close);
+		}
+		private IConcreteSeparatedSyntaxList<IConcreteExpression, ITokenNode> ParseInvocationValues()
+		{
+			List<IConcreteSyntaxNode> nodes = [];
+			List<IConcreteExpression> values = [];
+			List<ITokenNode> separators = [];
+
+			LoopGuard(() => RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket, () =>
+			{
+				IConcreteExpression value = ParseExpression();
+				nodes.Add(value);
+				values.Add(value);
+
+				if (RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket)
+				{
+					ITokenNode separator = Expect(SyntaxKind.Comma, "Expect a comma ',' to separate function call arguments.");
+					nodes.Add(separator);
+					separators.Add(separator);
+				}
+			});
+
+			return new ConcreteSeparatedSyntaxList<IConcreteExpression, ITokenNode>(nodes, values, separators);
 		}
 		#endregion
 
