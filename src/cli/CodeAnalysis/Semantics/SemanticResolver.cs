@@ -65,7 +65,7 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 		private SemanticVariableDeclarationStatement Resolve(AbstractVariableDeclarationStatement statement)
 		{
 			LocalVariableSymbol? symbol = FindSymbol<LocalVariableSymbol>(statement.Name.Value as string);
-			symbol?.Type = GetType(FindSymbol(symbol.Declaration?.TypeName.Value as string));
+			symbol?.Type = GetType(FindSymbol(symbol.Declaration?.TypeName.Value as string)?.FirstOrDefault());
 
 			Debug.Assert(symbol is not null, "If the declaration exists then the symbol should've been found.");
 
@@ -94,7 +94,7 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 		private SemanticAccessExpression Resolve(AbstractAccessExpression expression)
 		{
 			string? name = expression.Name.Value as string;
-			ISymbol? symbol = FindSymbol(name);
+			ISymbol? symbol = FindSymbol(name)?.FirstOrDefault();
 			ITypeInfo? type = GetType(symbol);
 
 			if (symbol is null)
@@ -222,18 +222,18 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 			if (name is null)
 				return default;
 
-			if (Symbols.TryGet(name, out IReadOnlyList<ISymbol>? symbols))
+			if (Symbols.TryGet(name, out ISymbolGroup? symbols))
 				return symbols.OfType<T>().FirstOrDefault();
 
 			return default;
 		}
-		private ISymbol? FindSymbol(string? name)
+		private ISymbolGroup? FindSymbol(string? name)
 		{
 			if (name is null)
 				return null;
 
-			if (Symbols.TryGet(name, out IReadOnlyList<ISymbol>? symbols))
-				return symbols[0];
+			if (Symbols.TryGet(name, out ISymbolGroup? symbols))
+				return symbols;
 
 			return null;
 		}

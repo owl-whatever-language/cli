@@ -30,7 +30,7 @@ public interface ISymbolScope
 	/// 	<see langword="true"/> if any <paramref name="symbols"/> could be found for
 	/// 	the given <paramref name="name"/>, <see langword="false"/> otherwise.
 	/// </returns>
-	bool TryGet(string name, [NotNullWhen(true)] out IReadOnlyList<ISymbol>? symbols);
+	bool TryGet(string name, [NotNullWhen(true)] out ISymbolGroup? symbols);
 
 	/// <summary>tries to get the <paramref name="symbol"/> that was created for the given <paramref name="declaration"/>.</summary>
 	/// <param name="declaration">The abstract syntax node that created the symbol.</param>
@@ -47,7 +47,7 @@ public interface ISymbolScope
 public sealed class SymbolScope : ISymbolScope
 {
 	#region Fields
-	private readonly Dictionary<string, List<ISymbol>> _nameLookup = [];
+	private readonly Dictionary<string, SymbolGroup> _nameLookup = [];
 	private readonly Dictionary<IAbstractSyntaxNode, ISymbol> _nodeLookup = [];
 	#endregion
 
@@ -97,7 +97,7 @@ public sealed class SymbolScope : ISymbolScope
 
 		if (symbol.Name is not null)
 		{
-			if (_nameLookup.TryGetValue(symbol.Name, out List<ISymbol>? symbols) is false)
+			if (_nameLookup.TryGetValue(symbol.Name, out SymbolGroup? symbols) is false)
 			{
 				symbols = [];
 				_nameLookup.Add(symbol.Name, symbols);
@@ -111,9 +111,9 @@ public sealed class SymbolScope : ISymbolScope
 	}
 
 	/// <inheritdoc/>
-	public bool TryGet(string name, [NotNullWhen(true)] out IReadOnlyList<ISymbol>? symbols)
+	public bool TryGet(string name, [NotNullWhen(true)] out ISymbolGroup? symbols)
 	{
-		if (_nameLookup.TryGetValue(name, out List<ISymbol>? list))
+		if (_nameLookup.TryGetValue(name, out SymbolGroup? list))
 		{
 			Debug.Assert(list.Count > 0);
 			symbols = list;

@@ -105,7 +105,6 @@ public abstract class BaseSymbolFinder<TAbstract> : ISymbolFinder<TAbstract>
 		/// <param name="tree">The abstract syntax tree (AST) to explore.</param>
 		protected abstract void Explore(TAbstract tree);
 
-
 		/// <summary>Creates and enters a new scope.</summary>
 		/// <param name="name">The name of the new scope, to help with debugging.</param>
 		protected void EnterNewScope(string name) => Scope = new SymbolScope(name, Scope);
