@@ -4,7 +4,7 @@ public interface IFunctionInfo
 {
 	#region Properties
 	FunctionType AsType { get; }
-	string? Name { get; }
+	FunctionSignature? Signature { get; }
 	#endregion
 }
 
@@ -12,19 +12,19 @@ public sealed class ImmutableFunctionInfo : IFunctionInfo
 {
 	#region Properties
 	public FunctionType AsType { get; }
-	public string? Name { get; }
+	public FunctionSignature? Signature { get; }
 	#endregion
 
 	#region Constructors
-	public ImmutableFunctionInfo(string? name)
+	public ImmutableFunctionInfo(FunctionSignature? signature)
 	{
-		Name = name;
 		AsType = new(this);
+		Signature = signature;
 	}
 	#endregion
 
 	#region Methods
-	public override string ToString() => Name ?? "???";
+	public override string ToString() => Signature?.ToString() ?? "???";
 	#endregion
 }
 
@@ -32,7 +32,7 @@ public sealed class MutableFunctionInfo : IFunctionInfo
 {
 	#region Properties
 	public FunctionType AsType { get; }
-	public string? Name { get; set; }
+	public FunctionSignature? Signature { get; set; }
 	#endregion
 
 	#region Constructors
@@ -43,7 +43,7 @@ public sealed class MutableFunctionInfo : IFunctionInfo
 	#endregion
 
 	#region Methods
-	public ImmutableFunctionInfo ToMutable() => new(Name);
-	public override string ToString() => Name ?? "???";
+	public ImmutableFunctionInfo ToMutable() => new(Signature);
+	public override string ToString() => Signature?.ToString() ?? "???";
 	#endregion
 }

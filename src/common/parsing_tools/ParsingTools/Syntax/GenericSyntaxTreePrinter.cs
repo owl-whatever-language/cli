@@ -82,6 +82,7 @@ public sealed class GenericSyntaxTreePrinter
 			nameof(IConcreteSyntaxNode.IsFabricated),
 			nameof(IConcreteSyntaxNode.Position),
 			nameof(IConcreteSyntaxNode.FullPosition),
+			"Symbol",
 			"Type",
 			"Function",
 			"Value"

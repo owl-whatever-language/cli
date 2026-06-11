@@ -21,9 +21,9 @@ public sealed class FunctionSymbol : BaseSymbol
 	public FunctionSymbol(string? name) : base(name)
 	{
 	}
-	public FunctionSymbol(IFunctionInfo type) : this(type.Name)
+	public FunctionSymbol(IFunctionInfo function) : this(function.Signature?.Name)
 	{
-		Function = type;
+		Function = function;
 	}
 	#endregion
 }

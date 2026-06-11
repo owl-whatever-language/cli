@@ -4,7 +4,7 @@ public sealed class FunctionType : ITypeInfo
 {
 	#region Properties
 	public IFunctionInfo Function { get; }
-	public string? Name => Function.Name;
+	public string? Name => Function.Signature?.ToString() ?? "???";
 	#endregion
 
 	#region Constructors
@@ -12,6 +12,6 @@ public sealed class FunctionType : ITypeInfo
 	#endregion
 
 	#region Methods
-	public override string ToString() => Name ?? "???";
+	public override string ToString() => Function.ToString() ?? "???";
 	#endregion
 }
