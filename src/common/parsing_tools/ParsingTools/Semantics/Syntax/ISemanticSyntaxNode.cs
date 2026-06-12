@@ -20,3 +20,18 @@ public interface ISemanticSyntaxNode : ISyntaxNode<ISemanticSyntaxNode>, IConcre
 public abstract class BaseSemanticSyntaxNode : BaseSyntaxNode<ISemanticSyntaxNode>, ISemanticSyntaxNode
 {
 }
+
+/// <summary>
+/// 	Contains various extensions related to the <see cref="ISemanticSyntaxNode"/>.
+/// </summary>
+public static class ISemanticSyntaxNodeExtensions
+{
+	extension(ISemanticSyntaxNode node)
+	{
+		#region Methods
+		/// <summary>Flattens the current node to all of the leaf tokens that make it up.</summary>
+		/// <returns>A list of the leaf tokens that make up the current node.</returns>
+		public IReadOnlyList<ISemanticSyntaxToken> Flatten() => node.Flatten<ISemanticSyntaxToken>();
+		#endregion
+	}
+}

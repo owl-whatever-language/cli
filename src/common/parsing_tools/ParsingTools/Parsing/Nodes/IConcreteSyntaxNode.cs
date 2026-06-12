@@ -21,3 +21,18 @@ public interface IConcreteSyntaxNode : ISyntaxNode<IConcreteSyntaxNode>
 public abstract class BaseConcreteSyntaxNode : BaseSyntaxNode<IConcreteSyntaxNode>, IConcreteSyntaxNode
 {
 }
+
+/// <summary>
+/// 	Contains various extensions related to the <see cref="IConcreteSyntaxNode"/>.
+/// </summary>
+public static class IConcreteSyntaxNodeExtensions
+{
+	extension(IConcreteSyntaxNode node)
+	{
+		#region Methods
+		/// <summary>Flattens the current node to all of the leaf tokens that make it up.</summary>
+		/// <returns>A list of the leaf tokens that make up the current node.</returns>
+		public IReadOnlyList<IConcreteSyntaxToken> Flatten() => node.Flatten<IConcreteSyntaxToken>();
+		#endregion
+	}
+}

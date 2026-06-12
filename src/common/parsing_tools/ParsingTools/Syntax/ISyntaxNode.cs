@@ -134,3 +134,36 @@ public static class SyntaxNodeGuards
 		#endregion
 	}
 }
+
+/// <summary>
+/// 	Contains various extensions related to the <see cref="ISyntaxNode"/>.
+/// </summary>
+public static class ISyntaxNodeExtensions
+{
+	extension(ISyntaxNode node)
+	{
+		#region Functions
+		/// <summary>Flattens the current node to the nodes of the type <typeparamref name="T"/> that make it up.</summary>
+		/// <typeparam name="T">The type of the nodes to flatten to.</typeparam>
+		/// <returns>A flattened list of the nodes of the type <typeparamref name="T"/> that make up the current node.</returns>
+		public IReadOnlyList<T> Flatten<T>() where T : notnull, ISyntaxNode
+		{
+			List<T> destination = [];
+			Flatten(node, destination);
+
+			return destination;
+		}
+		private static void Flatten<T>(ISyntaxNode current, List<T> destination) where T : notnull, ISyntaxNode
+		{
+			if (current is T typed)
+			{
+				destination.Add(typed);
+				return;
+			}
+
+			foreach (ISyntaxNode child in current.GetChildren())
+				Flatten(child, destination);
+		}
+		#endregion
+	}
+}

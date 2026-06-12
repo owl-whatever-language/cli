@@ -27,7 +27,7 @@ public static class DebugPrinter
 	{
 		IConcreteSyntaxToken? last = null;
 
-		foreach (IConcreteSyntaxToken token in FlattenTokens(node))
+		foreach (IConcreteSyntaxToken token in node.Flatten())
 		{
 			if (last is not null)
 				Write(writer, last.TrailingTrivia);
@@ -50,40 +50,6 @@ public static class DebugPrinter
 	{
 		foreach (ITriviaNode trivia in list)
 			writer.Write(trivia.Lexeme);
-	}
-	#endregion
-
-	#region Helpers
-	private static IEnumerable<IConcreteSyntaxToken> FlattenTokens(ISyntaxNode node)
-	{
-		List<ISyntaxNode> store = [];
-		GetAllChildren(node, store);
-
-		return store.OfType<IConcreteSyntaxToken>();
-	}
-	private static void GetAllChildren(ISyntaxNode node, List<ISyntaxNode> store)
-	{
-		if (node is ITriviaNode trivia)
-		{
-			if (trivia.Value is ISyntaxNode value)
-				GetAllChildren(value, store);
-		}
-		else if (node is TriviaList triviaList)
-		{
-			foreach (ITriviaNode current in triviaList)
-				GetAllChildren(current, store);
-		}
-		else if (node is IConcreteSyntaxToken token)
-		{
-			GetAllChildren(token.LeadingTrivia, store);
-			store.Add(token);
-			GetAllChildren(token.TrailingTrivia, store);
-		}
-		else
-		{
-			foreach (ISyntaxNode child in node.GetChildren())
-				GetAllChildren(child, store);
-		}
 	}
 	#endregion
 }

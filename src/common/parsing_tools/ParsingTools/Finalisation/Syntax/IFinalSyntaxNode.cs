@@ -22,3 +22,18 @@ public interface IFinalSyntaxNode : ISyntaxNode<IFinalSyntaxNode>, ISemanticSynt
 public abstract class BaseFinalSyntaxNode : BaseSyntaxNode<IFinalSyntaxNode>, IFinalSyntaxNode
 {
 }
+
+/// <summary>
+/// 	Contains various extensions related to the <see cref="IFinalSyntaxNode"/>.
+/// </summary>
+public static class IFinalSyntaxNodeExtensions
+{
+	extension(IFinalSyntaxNode node)
+	{
+		#region Methods
+		/// <summary>Flattens the current node to all of the leaf tokens that make it up.</summary>
+		/// <returns>A list of the leaf tokens that make up the current node.</returns>
+		public IReadOnlyList<IFinalSyntaxToken> Flatten() => node.Flatten<IFinalSyntaxToken>();
+		#endregion
+	}
+}
