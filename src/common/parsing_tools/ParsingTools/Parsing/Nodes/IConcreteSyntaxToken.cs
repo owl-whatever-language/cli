@@ -17,6 +17,9 @@ public interface IConcreteSyntaxToken : IConcreteSyntaxNode
 
 	/// <summary>The value of the token.</summary>
 	object? Value { get; }
+
+	/// <summary>The classifications of the token.</summary>
+	ClassificationList Classification { get; }
 	#endregion
 }
 
@@ -58,6 +61,9 @@ public class ConcreteSyntaxToken : BaseConcreteSyntaxNode, IConcreteSyntaxToken
 
 	/// <inheritdoc/>
 	public override bool IsFabricated { get; }
+
+	/// <inheritdoc/>
+	public ClassificationList Classification { get; }
 	#endregion
 
 	#region Constructors
@@ -69,6 +75,7 @@ public class ConcreteSyntaxToken : BaseConcreteSyntaxNode, IConcreteSyntaxToken
 	/// <param name="trailingTrivia">The list of the trailing trivia nodes.</param>
 	/// <param name="value">The value of the token.</param>
 	/// <param name="isFabricated">Whether the token is fabricated.</param>
+	/// <param name="classification">The classifications for the token.</param>
 	/// <exception cref="ArgumentException">Thrown if the given syntax <paramref name="kind"/> is not a token.</exception>
 	protected ConcreteSyntaxToken(
 		SyntaxKind kind,
@@ -77,7 +84,8 @@ public class ConcreteSyntaxToken : BaseConcreteSyntaxNode, IConcreteSyntaxToken
 		TriviaList leadingTrivia,
 		TriviaList trailingTrivia,
 		object? value,
-		bool isFabricated)
+		bool isFabricated,
+		ClassificationList classification)
 	{
 		Guard.IsOfCategory(kind, SyntaxCategory.Token);
 
@@ -88,11 +96,13 @@ public class ConcreteSyntaxToken : BaseConcreteSyntaxNode, IConcreteSyntaxToken
 		TrailingTrivia = trailingTrivia;
 		Value = value;
 		IsFabricated = isFabricated;
+		Classification = classification;
 	}
 
 	/// <summary>Copies the values from the given <paramref name="token"/>.</summary>
 	/// <param name="token">The token to copy the values from.</param>
-	protected ConcreteSyntaxToken(IConcreteSyntaxToken token)
+	/// <param name="classification">The new classifications for the token.</param>
+	protected ConcreteSyntaxToken(IConcreteSyntaxToken token, ClassificationList? classification = null)
 	{
 		Kind = token.Kind;
 		Lexeme = token.Lexeme;
@@ -101,6 +111,7 @@ public class ConcreteSyntaxToken : BaseConcreteSyntaxNode, IConcreteSyntaxToken
 		TrailingTrivia = token.TrailingTrivia;
 		Value = token.Value;
 		IsFabricated = token.IsFabricated;
+		Classification = classification ?? token.Classification;
 	}
 
 	/// <summary>Creates a new <see cref="ConcreteSyntaxToken"/> instance.</summary>
@@ -110,6 +121,7 @@ public class ConcreteSyntaxToken : BaseConcreteSyntaxNode, IConcreteSyntaxToken
 	/// <param name="leadingTrivia">The list of the leading trivia nodes.</param>
 	/// <param name="trailingTrivia">The list of the trailing trivia nodes.</param>
 	/// <param name="value">The value of the token.</param>
+	/// <param name="classification">The classifications for the token.</param>
 	/// <exception cref="ArgumentException">Thrown if the given syntax <paramref name="kind"/> is not a token.</exception>
 	public ConcreteSyntaxToken(
 		SyntaxKind kind,
@@ -117,7 +129,8 @@ public class ConcreteSyntaxToken : BaseConcreteSyntaxNode, IConcreteSyntaxToken
 		IndexedPositionRange position,
 		TriviaList leadingTrivia,
 		TriviaList trailingTrivia,
-		object? value)
+		object? value,
+		ClassificationList classification)
 	{
 		Guard.IsOfCategory(kind, SyntaxCategory.Token);
 
@@ -128,11 +141,13 @@ public class ConcreteSyntaxToken : BaseConcreteSyntaxNode, IConcreteSyntaxToken
 		TrailingTrivia = trailingTrivia;
 		Value = value;
 		IsFabricated = false;
+		Classification = classification;
 	}
 
 	/// <summary>Creates a new <see cref="ConcreteSyntaxToken"/> instance from the given <paramref name="token"/>.</summary>
 	/// <param name="token">The token produced by the lexer to inherit the values from.</param>
-	public ConcreteSyntaxToken(ITokenNode token)
+	/// <param name="classification">The classifications for the token.</param>
+	public ConcreteSyntaxToken(ITokenNode token, ClassificationList classification)
 	{
 		Kind = token.Kind;
 		Lexeme = token.Lexeme;
@@ -141,6 +156,7 @@ public class ConcreteSyntaxToken : BaseConcreteSyntaxNode, IConcreteSyntaxToken
 		TrailingTrivia = token.TrailingTrivia;
 		Value = token.Value;
 		IsFabricated = false;
+		Classification = classification;
 	}
 
 	/// <summary>Creates a new, fabricated <see cref="ConcreteSyntaxToken"/> instance.</summary>
@@ -155,6 +171,7 @@ public class ConcreteSyntaxToken : BaseConcreteSyntaxNode, IConcreteSyntaxToken
 		TrailingTrivia = [];
 
 		IsFabricated = true;
+		Classification = [];
 	}
 	#endregion
 

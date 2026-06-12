@@ -15,3 +15,4 @@ global using OwlDomain.ParsingTools.Lexing.Trivia;
 global using OwlDomain.ParsingTools.Parsing.Nodes;
 global using OwlDomain.ParsingTools.Semantics.Syntax;
 global using OwlDomain.ParsingTools.Semantics.Symbols;
+global using OwlDomain.ParsingTools.Classification;

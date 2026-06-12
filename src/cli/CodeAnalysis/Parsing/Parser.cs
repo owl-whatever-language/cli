@@ -64,17 +64,17 @@ public sealed class Parser : BaseParser<ParserResult, ConcreteSyntaxTree>
 		private IConcreteStatement ParseExpressionStatement()
 		{
 			IConcreteExpression expression = ParseExpression();
-			IConcreteSyntaxToken terminator = Expect(SyntaxKind.Semicolon, "Expected a semicolon ';' to end an expression statement.");
+			IConcreteSyntaxToken terminator = Expect(SyntaxKind.Semicolon, "Expected a semicolon ';' to end an expression statement.", ClassificationKind.Punctuation);
 
 			return new ConcreteExpressionStatement(expression, terminator);
 		}
 		private IConcreteStatement ParseVariableDeclaration()
 		{
-			IConcreteSyntaxToken type = Expect(SyntaxKind.Identifier, "Expected the type name.");
-			IConcreteSyntaxToken variable = Expect(SyntaxKind.Identifier, "Expected the variable name.");
-			IConcreteSyntaxToken assignment = Expect(SyntaxKind.EqualSign, "Expected the equal sign '=' before the variable's value.");
+			IConcreteSyntaxToken type = Expect(SyntaxKind.Identifier, "Expected the type name.", ClassificationKind.Identifier, ClassificationKind.Type);
+			IConcreteSyntaxToken variable = Expect(SyntaxKind.Identifier, "Expected the variable name.", ClassificationKind.Identifier, ClassificationKind.Variable);
+			IConcreteSyntaxToken assignment = Expect(SyntaxKind.EqualSign, "Expected the equal sign '=' before the variable's value.", ClassificationKind.Punctuation);
 			IConcreteExpression value = ParseExpression();
-			IConcreteSyntaxToken terminator = Expect(SyntaxKind.Semicolon, "Expected a semicolon ';' to end a variable declaration.");
+			IConcreteSyntaxToken terminator = Expect(SyntaxKind.Semicolon, "Expected a semicolon ';' to end a variable declaration.", ClassificationKind.Punctuation);
 
 			return new ConcreteVariableDeclarationStatement(type, variable, assignment, value, terminator);
 		}
@@ -100,17 +100,17 @@ public sealed class Parser : BaseParser<ParserResult, ConcreteSyntaxTree>
 
 		private IConcreteExpression ParseLiteral()
 		{
-			if (Match(SyntaxKind.StringLiteral, out IConcreteSyntaxToken? stringLiteral))
+			if (Match(SyntaxKind.StringLiteral, out IConcreteSyntaxToken? stringLiteral, ClassificationKind.Literal, ClassificationKind.String))
 				return new ConcreteLiteralExpression(stringLiteral);
 
-			IConcreteSyntaxToken identifier = Expect(SyntaxKind.Identifier, "Expected an expression.");
+			IConcreteSyntaxToken identifier = Expect(SyntaxKind.Identifier, "Expected an expression.", ClassificationKind.Identifier);
 			return new ConcreteAccessExpression(identifier);
 		}
 		private IConcreteExpression ParseInvocationExpression(IConcreteExpression expression)
 		{
-			IConcreteSyntaxToken open = Expect(SyntaxKind.OpenBracket, "Expected a function call to use an opening bracket '(' before the arguments.");
+			IConcreteSyntaxToken open = Expect(SyntaxKind.OpenBracket, "Expected a function call to use an opening bracket '(' before the arguments.", ClassificationKind.Punctuation);
 			IConcreteSeparatedSyntaxList<IConcreteExpression, IConcreteSyntaxToken> values = ParseInvocationValues();
-			IConcreteSyntaxToken close = Expect(SyntaxKind.CloseBracket, "Expected a closing bracket ')' to end a function call.");
+			IConcreteSyntaxToken close = Expect(SyntaxKind.CloseBracket, "Expected a closing bracket ')' to end a function call.", ClassificationKind.Punctuation);
 
 			return new ConcreteInvocationExpression(expression, open, values, close);
 		}
@@ -128,7 +128,7 @@ public sealed class Parser : BaseParser<ParserResult, ConcreteSyntaxTree>
 
 				if (RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket)
 				{
-					IConcreteSyntaxToken separator = Expect(SyntaxKind.Comma, "Expect a comma ',' to separate function call arguments.");
+					IConcreteSyntaxToken separator = Expect(SyntaxKind.Comma, "Expect a comma ',' to separate function call arguments.", ClassificationKind.Punctuation);
 					nodes.Add(separator);
 					separators.Add(separator);
 				}

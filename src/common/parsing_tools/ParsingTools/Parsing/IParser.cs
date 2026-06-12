@@ -200,16 +200,17 @@ public abstract class BaseParser<TResult, TTree> : IParser<TResult, TTree>
 		/// <summary>Advances the parser if the current token matches the given <paramref name="kind"/>.</summary>
 		/// <param name="kind">The kind of the token to match.</param>
 		/// <param name="token">The matched token.</param>
+		/// <param name="classification">The classifications for the token.</param>
 		/// <returns>
 		/// 	<see langword="true"/> if the current token matched the given <paramref name="kind"/>
 		/// 	and the parser was advanced, <see langword="false"/> otherwise.
 		/// </returns>
 		[MemberNotNullWhen(true, nameof(Current))]
-		protected bool Match(SyntaxKind kind, [NotNullWhen(true)] out IConcreteSyntaxToken? token)
+		protected bool Match(SyntaxKind kind, [NotNullWhen(true)] out IConcreteSyntaxToken? token, params ReadOnlySpan<ClassificationKind> classification)
 		{
 			if (Current?.Kind == kind)
 			{
-				token = Convert(Current);
+				token = Convert(Current, classification);
 				Advance();
 
 				return true;
@@ -222,12 +223,13 @@ public abstract class BaseParser<TResult, TTree> : IParser<TResult, TTree>
 		/// <summary>Tries to match the current token against any of the given <paramref name="kinds"/>.</summary>
 		/// <param name="kinds">The kinds of syntax kinds to try and match the current token against.</param>
 		/// <param name="token">The matched token, or <see langword="null"/> if the current token didn't match any of the given <paramref name="kinds"/>.</param>
+		/// <param name="classification">The classifications for the token.</param>
 		/// <returns>
 		/// 	<see langword="true"/> if the current token matched any of the given <paramref name="kinds"/>
 		/// 	and the parser was advanced, <see langword="false"/> otherwise.
 		/// </returns>
 		[MemberNotNullWhen(true, nameof(Current))]
-		protected bool MatchAny(ReadOnlySpan<SyntaxKind> kinds, [NotNullWhen(true)] out IConcreteSyntaxToken? token)
+		protected bool MatchAny(ReadOnlySpan<SyntaxKind> kinds, [NotNullWhen(true)] out IConcreteSyntaxToken? token, params ReadOnlySpan<ClassificationKind> classification)
 		{
 			ITokenNode? current = Current;
 			if (current is null)
@@ -242,7 +244,7 @@ public abstract class BaseParser<TResult, TTree> : IParser<TResult, TTree>
 			{
 				if (current.Kind == kind)
 				{
-					token = Convert(current);
+					token = Convert(current, classification);
 					return true;
 				}
 			}
@@ -254,10 +256,11 @@ public abstract class BaseParser<TResult, TTree> : IParser<TResult, TTree>
 		/// <summary>Consumes the current token if it matches the given <paramref name="kind"/>, otherwise fabricated the expected token.</summary>
 		/// <param name="kind">The kind of the token is expected.</param>
 		/// <param name="message">The message explaining why the token was expected.</param>
+		/// <param name="classification">The classifications for the token.</param>
 		/// <returns>The matched token, or the fabricated one if matching failed.</returns>
-		protected IConcreteSyntaxToken Expect(SyntaxKind kind, string message)
+		protected IConcreteSyntaxToken Expect(SyntaxKind kind, string message, params ReadOnlySpan<ClassificationKind> classification)
 		{
-			if (Match(kind, out IConcreteSyntaxToken? current))
+			if (Match(kind, out IConcreteSyntaxToken? current, classification))
 				return current;
 
 			Debug.Assert(Tokens.Count > 0, "Must have at least one token representing the end of the input.");
@@ -287,7 +290,7 @@ public abstract class BaseParser<TResult, TTree> : IParser<TResult, TTree>
 				ThrowHelper.ThrowInvalidOperationException("The very last token (which should be the special end of input token) cannot be skipped as it is required for error recovery.");
 
 			ITokenNode next = Next;
-			IConcreteSyntaxToken? current = Convert(Current);
+			IConcreteSyntaxToken? current = Convert(Current, []);
 			Debug.Assert(current is not null);
 
 			FabricatedTriviaNode<IConcreteSyntaxNode> newTrivia = new(SyntaxKind.BadSyntax, current.Position, current);
@@ -325,14 +328,18 @@ public abstract class BaseParser<TResult, TTree> : IParser<TResult, TTree>
 
 		/// <summary>Converts the given <paramref name="token"/> produced by the lexer into a concrete syntax token.</summary>
 		/// <param name="token">The token to convert.</param>
+		/// <param name="classification">The classifications for the token.</param>
 		/// <returns>The converted token.</returns>
 		[return: NotNullIfNotNull(nameof(token))]
-		protected IConcreteSyntaxToken? Convert(ITokenNode? token)
+		protected IConcreteSyntaxToken? Convert(ITokenNode? token, params ReadOnlySpan<ClassificationKind> classification)
 		{
-			if (token is not null)
-				return new ConcreteSyntaxToken(token);
+			if (token is null)
+				return null;
 
-			return null;
+			if (classification.Length is 0)
+				return new ConcreteSyntaxToken(token, []);
+
+			return new ConcreteSyntaxToken(token, new ClassificationList(classification));
 		}
 		#endregion
 

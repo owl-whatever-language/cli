@@ -21,6 +21,7 @@ public class FinalSyntaxToken : SemanticSyntaxToken, IFinalSyntaxToken
 	/// <param name="trailingTrivia">The list of the trailing trivia nodes.</param>
 	/// <param name="value">The value of the token.</param>
 	/// <param name="isFabricated">Whether the token is fabricated.</param>
+	/// <param name="classification">The classifications for the token.</param>
 	/// <param name="symbol">The symbol that the token is referencing.</param>
 	/// <exception cref="ArgumentException">Thrown if the given syntax <paramref name="kind"/> is not a token.</exception>
 	public FinalSyntaxToken(
@@ -31,8 +32,9 @@ public class FinalSyntaxToken : SemanticSyntaxToken, IFinalSyntaxToken
 		TriviaList trailingTrivia,
 		object? value,
 		bool isFabricated,
+		ClassificationList classification,
 		ISymbol? symbol)
-		: base(kind, lexeme, position, leadingTrivia, trailingTrivia, value, isFabricated, symbol)
+		: base(kind, lexeme, position, leadingTrivia, trailingTrivia, value, isFabricated, classification, symbol)
 	{
 	}
 

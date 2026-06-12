@@ -37,7 +37,26 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 
 			return new(statements, endOfInput);
 		}
-		private ISemanticSyntaxToken Resolve(IConcreteSyntaxToken token, ISymbol? symbol = null) => new SemanticSyntaxToken(token, symbol);
+		private ISemanticSyntaxToken Resolve(IConcreteSyntaxToken token, ISymbol? symbol = null)
+		{
+			if (symbol is null)
+				return new SemanticSyntaxToken(token, symbol);
+
+			List<ClassificationKind> classifications = [.. token.Classification];
+
+			ISymbolTarget target = symbol.Target;
+
+			if (target is ILocalVariableTarget)
+				classifications.Add(ClassificationKind.Variable);
+
+			if (target is IFunctionInfo)
+				classifications.Add(ClassificationKind.Function);
+
+			if (target is ITypeInfo)
+				classifications.Add(ClassificationKind.Type);
+
+			return new SemanticSyntaxToken(token, symbol, new ClassificationList(classifications));
+		}
 		#endregion
 
 		#region Statement methods

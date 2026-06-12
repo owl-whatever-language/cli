@@ -17,6 +17,7 @@ global using OwlDomain.ParsingTools.Semantics.Syntax;
 global using OwlDomain.ParsingTools.Semantics.Symbols;
 global using OwlDomain.ParsingTools.Semantics.Discovery;
 global using OwlDomain.ParsingTools.Semantics.Resolution;
+global using OwlDomain.ParsingTools.Classification;
 
 global using OwlDomain.Owl.CLI.CodeAnalysis.Lexing;
 global using OwlDomain.Owl.CLI.CodeAnalysis.Parsing;
