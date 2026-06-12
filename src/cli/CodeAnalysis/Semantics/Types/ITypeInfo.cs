@@ -1,9 +1,10 @@
 namespace OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Types;
 
-public interface ITypeInfo : ISymbolTarget
+public interface ITypeInfo : ISymbolTarget, ITypeTarget
 {
 	#region Properties
 	string? Name { get; }
+	ITypeInfo? ITypeTarget.Type => this;
 	#endregion
 
 	#region Methods

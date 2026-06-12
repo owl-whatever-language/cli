@@ -1,6 +1,6 @@
 namespace OwlDomain.Owl.CLI.CodeAnalysis.Semantics;
 
-public sealed class SemanticResolutionResult : BaseSemanticResolutionResult<SemanticSyntaxTree, AbstractSyntaxTree>
+public sealed class SemanticResolutionResult : BaseSemanticResolutionResult<SemanticSyntaxTree>
 {
 	#region Constructors
 	public SemanticResolutionResult(IDiagnosticBag diagnostics, TimeSpan duration, SemanticSyntaxTree tree) : base(diagnostics, duration, tree) { }
@@ -14,122 +14,126 @@ public sealed class SemanticResolutionInput : BaseSemanticResolutionInput
 	#endregion
 }
 
-public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionInput, AbstractSyntaxTree, SemanticSyntaxTree, SemanticResolutionResult>
+public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionInput, ConcreteSyntaxTree, SemanticSyntaxTree, SemanticResolutionResult>
 {
 	#region Nested types
 	private sealed class Instance : ResolverInstance
 	{
 		#region Constructors
-		public Instance(ISemanticResolver resolver, SemanticResolutionInput additionalInputs, AbstractSyntaxTree tree) : base(resolver, additionalInputs, tree) { }
+		public Instance(ISemanticResolver resolver, SemanticResolutionInput additionalInputs, ConcreteSyntaxTree tree) : base(resolver, additionalInputs, tree) { }
 		#endregion
 
 		#region Methods
 		protected override SemanticResolutionResult CreateResult(TimeSpan duration, SemanticSyntaxTree semantic) => new(Diagnostics, duration, semantic);
-		protected override SemanticSyntaxTree Resolve(AbstractSyntaxTree tree)
+		protected override SemanticSyntaxTree Resolve(ConcreteSyntaxTree tree)
 		{
 			SemanticDocumentSyntax document = Resolve(tree.Document);
-			return new(tree.Source, tree, document);
+			return new(tree.Source, document);
 		}
-		private SemanticDocumentSyntax Resolve(AbstractDocumentSyntax document)
+		private SemanticDocumentSyntax Resolve(ConcreteDocumentSyntax document)
 		{
 			ISemanticSyntaxList<ISemanticStatement> statements = Resolve(document.Statements);
-			return new(document, statements);
+			ISemanticSyntaxToken endOfInput = Resolve(document.EndOfInput);
+
+			return new(statements, endOfInput);
 		}
+		private ISemanticSyntaxToken Resolve(IConcreteSyntaxToken token, ISymbol? symbol = null) => new SemanticSyntaxToken(token, symbol);
 		#endregion
 
 		#region Statement methods
-		private ISemanticSyntaxList<ISemanticStatement> Resolve(IAbstractSyntaxList<IAbstractStatement> statements)
+		private ISemanticSyntaxList<ISemanticStatement> Resolve(IConcreteSyntaxList<IConcreteStatement> statements)
 		{
 			ISemanticStatement[] result = new ISemanticStatement[statements.Values.Count];
 
 			for (int i = 0; i < statements.Values.Count; i++)
 				result[i] = Resolve(statements.Values[i]);
 
-			return new SemanticSyntaxList<ISemanticStatement, IAbstractStatement>(statements, result);
+			return new SemanticSyntaxList<ISemanticStatement>(result);
 		}
-		private ISemanticStatement Resolve(IAbstractStatement @abstract)
+		private ISemanticStatement Resolve(IConcreteStatement concrete)
 		{
-			return @abstract switch
+			return concrete switch
 			{
-				AbstractExpressionStatement statement => Resolve(statement),
-				AbstractVariableDeclarationStatement statement => Resolve(statement),
+				ConcreteExpressionStatement statement => Resolve(statement),
+				ConcreteVariableDeclarationStatement statement => Resolve(statement),
 
-				_ => ThrowHelper.ThrowArgumentException<ISemanticStatement>(nameof(@abstract), $"Unable to resolve the abstract statement ({@abstract.GetType()}).")
+				_ => ThrowHelper.ThrowArgumentException<ISemanticStatement>(nameof(concrete), $"Unable to resolve the concrete statement ({concrete.GetType()}).")
 			};
 		}
-		private SemanticExpressionStatement Resolve(AbstractExpressionStatement statement)
+		private SemanticExpressionStatement Resolve(ConcreteExpressionStatement statement)
 		{
 			ISemanticExpression expression = Resolve(statement.Expression);
-			return new(statement, expression);
+			ISemanticSyntaxToken terminator = Resolve(statement.Terminator);
+
+			return new(expression, terminator);
 		}
-		private SemanticVariableDeclarationStatement Resolve(AbstractVariableDeclarationStatement statement)
+		private SemanticVariableDeclarationStatement Resolve(ConcreteVariableDeclarationStatement statement)
 		{
 			LocalVariableTarget variable = GetSymbol<LocalVariableTarget>(statement);
 			variable.Type = TryGetSymbol<ITypeInfo>(statement.TypeName.Value as string, "type", statement.TypeName.Position);
 			variable.Lock();
 
-			SemanticSyntaxToken typeName = new(statement.TypeName, variable.Type?.Symbol);
-			SemanticSyntaxToken name = new(statement.Name, variable.Symbol);
-
+			ISemanticSyntaxToken typeName = Resolve(statement.TypeName, variable.Type?.Symbol);
+			ISemanticSyntaxToken name = Resolve(statement.Name, variable.Symbol);
+			ISemanticSyntaxToken assignment = Resolve(statement.Assignment);
 			ISemanticExpression value = Resolve(statement.Value);
+			ISemanticSyntaxToken terminator = Resolve(statement.Terminator);
 
 			if (value.Type is not null && variable.Type is not null && (value.Type.CanBeAssignedTo(variable.Type) is false))
 				ReportInvalidTargetType(value.Type, variable.Type, statement.TypeName.Position);
 
-			return new(statement, typeName, name, value, variable);
+			return new(typeName, name, assignment, value, terminator);
 		}
 		#endregion
 
 		#region Expression methods
-		private ISemanticExpression Resolve(IAbstractExpression @abstract)
+		private ISemanticExpression Resolve(IConcreteExpression concrete)
 		{
-			return @abstract switch
+			return concrete switch
 			{
-				AbstractAccessExpression expression => Resolve(expression),
-				AbstractLiteralExpression expression => Resolve(expression),
-				AbstractInvocationExpression expression => Resolve(expression),
+				ConcreteAccessExpression expression => Resolve(expression),
+				ConcreteLiteralExpression expression => Resolve(expression),
+				ConcreteInvocationExpression expression => Resolve(expression),
 
-				_ => ThrowHelper.ThrowArgumentException<ISemanticExpression>(nameof(@abstract), $"Unable to resolve the abstract expression ({@abstract.GetType()}).")
+				_ => ThrowHelper.ThrowArgumentException<ISemanticExpression>(nameof(concrete), $"Unable to resolve the concrete expression ({concrete.GetType()}).")
 			};
 		}
-		private SemanticAccessExpression Resolve(AbstractAccessExpression expression)
+		private SemanticAccessExpression Resolve(ConcreteAccessExpression expression)
 		{
 			ISymbolTarget? target = TryGetSymbol(expression.Name.Value as string, expression.Name.Position);
-			SemanticSyntaxToken name = new(expression.Name, target?.Symbol);
-			ITypeInfo? type = ExtractType(target);
+			ISemanticSyntaxToken name = Resolve(expression.Name, target?.Symbol);
 
-			return new(expression, name, type);
+			return new(name);
 		}
-		private SemanticLiteralExpression Resolve(AbstractLiteralExpression expression)
+		private SemanticLiteralExpression Resolve(ConcreteLiteralExpression expression)
 		{
-			ITypeInfo? type = expression.Literal.Value switch
-			{
-				string => SpecialTypes.Text,
-				_ => null,
-			};
+			ISemanticSyntaxToken literal = Resolve(expression.Literal);
 
-			return new(expression, type, expression.Literal.Value);
+			return new(literal);
 		}
-		private SemanticInvocationExpression Resolve(AbstractInvocationExpression @abstract)
+		private SemanticInvocationExpression Resolve(ConcreteInvocationExpression concrete)
 		{
-			ISemanticExpression expression = Resolve(@abstract.Expression);
-			ISemanticSyntaxList<ISemanticExpression> values = Resolve(@abstract.Values);
-			IFunctionInfo? function = (expression.Type as FunctionType)?.Function;
+			ISemanticExpression expression = Resolve(concrete.Expression);
+			ISemanticSyntaxToken openingBracket = Resolve(concrete.OpeningBracket);
+			ISemanticSeparatedSyntaxList<ISemanticExpression, ISemanticSyntaxToken> values = Resolve(concrete.Values);
+			ISemanticSyntaxToken closingBracket = Resolve(concrete.ClosingBracket);
 
-			int? expectedCount = function?.Signature?.Parameters.Count;
+			SemanticInvocationExpression semantic = new(expression, openingBracket, values, closingBracket);
+
+			int? expectedCount = semantic.Function?.Signature?.Parameters.Count;
 			int actualCount = values.Values.Count;
 
 			if (expression.Type is not FunctionType)
-				ReportInvalidInvocationTarget(@abstract.Concrete.OpeningBracket.Position);
+				ReportInvalidInvocationTarget(concrete.OpeningBracket.Position);
 			else if (expectedCount is not null)
 			{
 				if (expectedCount != actualCount)
-					ReportArgumentCountMismatch(expectedCount.Value, actualCount, @abstract.Concrete.OpeningBracket.Position);
+					ReportArgumentCountMismatch(expectedCount.Value, actualCount, concrete.OpeningBracket.Position);
 
-				Debug.Assert(function?.Signature is not null);
+				Debug.Assert(semantic.Function?.Signature is not null);
 				for (int i = 0; i < Math.Min(expectedCount.Value, actualCount); i++)
 				{
-					FunctionParameterSignature parameter = function.Signature.Parameters[i];
+					FunctionParameterSignature parameter = semantic.Function.Signature.Parameters[i];
 					ISemanticExpression argument = values.Values[i];
 
 					if (argument.Type?.CanBeAssignedTo(parameter.Type) is false)
@@ -137,30 +141,37 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 				}
 			}
 
-			return new(@abstract, function?.Signature?.Return.Type, expression, values, function);
+			return semantic;
 		}
-		private ISemanticSyntaxList<ISemanticExpression> Resolve(IAbstractSyntaxList<IAbstractExpression> expressions)
+		private ISemanticSeparatedSyntaxList<ISemanticExpression, ISemanticSyntaxToken> Resolve(IConcreteSeparatedSyntaxList<IConcreteExpression, IConcreteSyntaxToken> expressions)
 		{
-			ISemanticExpression[] result = new ISemanticExpression[expressions.Values.Count];
+			ISemanticSyntaxNode[] nodes = new ISemanticSyntaxNode[expressions.Nodes.Count];
+			ISemanticExpression[] values = new ISemanticExpression[expressions.Values.Count];
+			ISemanticSyntaxToken[] separators = new ISemanticSyntaxToken[expressions.Separators.Count];
 
-			for (int i = 0; i < expressions.Values.Count; i++)
-				result[i] = Resolve(expressions.Values[i]);
+			int resultIndex = 0;
+			int separatorsIndex = 0;
 
-			return new SemanticSyntaxList<ISemanticExpression, IAbstractExpression>(expressions, result);
-		}
-		#endregion
-
-		#region Helpers
-		private ITypeInfo? ExtractType(ISymbolTarget? target)
-		{
-			return target switch
+			for (int i = 0; i < expressions.Nodes.Count; i++)
 			{
-				ITypeInfo type => type,
-				IFunctionInfo function => function.AsType,
-				ILocalVariableTarget local => local.Type,
+				IConcreteSyntaxNode concrete = expressions.Nodes[i];
+				if (concrete is IConcreteSyntaxToken token)
+				{
+					ISemanticSyntaxToken semantic = Resolve(token);
+					nodes[i] = semantic;
+					separators[separatorsIndex++] = semantic;
+				}
+				else if (concrete is IConcreteExpression expression)
+				{
+					ISemanticExpression semantic = Resolve(expression);
+					nodes[i] = semantic;
+					values[resultIndex++] = semantic;
+				}
+				else
+					ThrowHelper.ThrowInvalidOperationException($"Unexpected node type ({concrete.GetType()}) in the separated list.");
+			}
 
-				_ => null,
-			};
+			return new SemanticSeparatedSyntaxList<ISemanticExpression>(nodes, values, separators);
 		}
 		#endregion
 
@@ -247,7 +258,7 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 	#endregion
 
 	#region Methods
-	protected override ResolverInstance CreateInstance(SemanticResolutionInput additionalInputs, AbstractSyntaxTree tree)
+	protected override ResolverInstance CreateInstance(SemanticResolutionInput additionalInputs, ConcreteSyntaxTree tree)
 	{
 		return new Instance(this, additionalInputs, tree);
 	}

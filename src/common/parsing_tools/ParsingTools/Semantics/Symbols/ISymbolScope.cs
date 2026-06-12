@@ -36,7 +36,7 @@ public interface ISymbolScope
 	/// <param name="declaration">The abstract syntax node that created the symbol.</param>
 	/// <param name="symbol">The symbol that was created for the given <paramref name="declaration"/>.</param>
 	/// <returns><see langword="true"/> if a <paramref name="symbol"/> could be found, <see langword="false"/> otherwise.</returns>
-	bool TryGet(IAbstractSyntaxNode declaration, [NotNullWhen(true)] out ISymbol? symbol);
+	bool TryGet(IConcreteSyntaxNode declaration, [NotNullWhen(true)] out ISymbol? symbol);
 	#endregion
 }
 
@@ -48,7 +48,7 @@ public sealed class SymbolScope : ISymbolScope
 {
 	#region Fields
 	private readonly Dictionary<string, SymbolGroup> _nameLookup = [];
-	private readonly Dictionary<IAbstractSyntaxNode, ISymbol> _nodeLookup = [];
+	private readonly Dictionary<IConcreteSyntaxNode, ISymbol> _nodeLookup = [];
 	#endregion
 
 	#region Properties
@@ -132,7 +132,7 @@ public sealed class SymbolScope : ISymbolScope
 	}
 
 	/// <inheritdoc/>
-	public bool TryGet(IAbstractSyntaxNode declaration, [NotNullWhen(true)] out ISymbol? symbol)
+	public bool TryGet(IConcreteSyntaxNode declaration, [NotNullWhen(true)] out ISymbol? symbol)
 	{
 		if (_nodeLookup.TryGetValue(declaration, out symbol))
 			return true;

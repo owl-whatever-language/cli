@@ -1,19 +1,21 @@
 namespace OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Nodes.Expressions;
 
-public sealed class SemanticLiteralExpression : BaseSemanticExpression<AbstractLiteralExpression>
+public sealed class SemanticLiteralExpression : BaseSemanticSyntaxNode, ISemanticExpression
 {
 	#region Properties
-	public object? Value { get; }
+	public override SyntaxKind Kind => SyntaxKind.Literal;
+	public ISemanticSyntaxToken Literal { get; }
+	public ITypeInfo? Type => Literal.Type;
 	#endregion
 
 	#region Constructors
-	public SemanticLiteralExpression(AbstractLiteralExpression @abstract, ITypeInfo? type, object? value) : base(@abstract, type)
+	public SemanticLiteralExpression(ISemanticSyntaxToken literal)
 	{
-		Value = value;
+		Literal = literal;
 	}
 	#endregion
 
 	#region Methods
-	public override IEnumerable<ISemanticSyntaxNode> GetChildren() => [];
+	public override IEnumerable<ISemanticSyntaxNode> GetChildren() => [Literal];
 	#endregion
 }

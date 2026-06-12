@@ -205,11 +205,11 @@ public abstract class BaseParser<TResult, TTree> : IParser<TResult, TTree>
 		/// 	and the parser was advanced, <see langword="false"/> otherwise.
 		/// </returns>
 		[MemberNotNullWhen(true, nameof(Current))]
-		protected bool Match(SyntaxKind kind, [NotNullWhen(true)] out ITokenNode? token)
+		protected bool Match(SyntaxKind kind, [NotNullWhen(true)] out IConcreteSyntaxToken? token)
 		{
 			if (Current?.Kind == kind)
 			{
-				token = Current;
+				token = Convert(Current);
 				Advance();
 
 				return true;
@@ -227,7 +227,7 @@ public abstract class BaseParser<TResult, TTree> : IParser<TResult, TTree>
 		/// 	and the parser was advanced, <see langword="false"/> otherwise.
 		/// </returns>
 		[MemberNotNullWhen(true, nameof(Current))]
-		protected bool MatchAny(ReadOnlySpan<SyntaxKind> kinds, [NotNullWhen(true)] out ITokenNode? token)
+		protected bool MatchAny(ReadOnlySpan<SyntaxKind> kinds, [NotNullWhen(true)] out IConcreteSyntaxToken? token)
 		{
 			ITokenNode? current = Current;
 			if (current is null)
@@ -242,7 +242,7 @@ public abstract class BaseParser<TResult, TTree> : IParser<TResult, TTree>
 			{
 				if (current.Kind == kind)
 				{
-					token = current;
+					token = Convert(current);
 					return true;
 				}
 			}
@@ -255,22 +255,22 @@ public abstract class BaseParser<TResult, TTree> : IParser<TResult, TTree>
 		/// <param name="kind">The kind of the token is expected.</param>
 		/// <param name="message">The message explaining why the token was expected.</param>
 		/// <returns>The matched token, or the fabricated one if matching failed.</returns>
-		protected ITokenNode Expect(SyntaxKind kind, string message)
+		protected IConcreteSyntaxToken Expect(SyntaxKind kind, string message)
 		{
-			if (Match(kind, out ITokenNode? current))
+			if (Match(kind, out IConcreteSyntaxToken? current))
 				return current;
 
 			Debug.Assert(Tokens.Count > 0, "Must have at least one token representing the end of the input.");
-			ITokenNode expected = current ?? Tokens.Last();
+			ISyntaxNode expected = Current ?? Tokens.Last();
 
 			ReportExpectedToken(expected.Position, kind, message);
-			return new FabricatedTokenNode(kind, expected.Position);
+			return new ConcreteSyntaxToken(kind, expected.Position);
 		}
 
 		/// <summary>Marks the end of the parsed input.</summary>
 		/// <returns>The token representing the end of the input.</returns>
 		/// <remarks>Any unparsed tokens will be handled by this method, however reporting the diagnostics for unexpected syntax is the callers responsibility.</remarks>
-		protected ITokenNode ExpectEndOfInput()
+		protected IConcreteSyntaxToken ExpectEndOfInput()
 		{
 			while (Current?.Kind != SyntaxKind.EndOfInput)
 				SkipCurrent();
@@ -287,7 +287,7 @@ public abstract class BaseParser<TResult, TTree> : IParser<TResult, TTree>
 				ThrowHelper.ThrowInvalidOperationException("The very last token (which should be the special end of input token) cannot be skipped as it is required for error recovery.");
 
 			ITokenNode next = Next;
-			ITokenNode? current = Current;
+			IConcreteSyntaxToken? current = Convert(Current);
 			Debug.Assert(current is not null);
 
 			FabricatedTriviaNode<IConcreteSyntaxNode> newTrivia = new(SyntaxKind.BadSyntax, current.Position, current);
@@ -321,6 +321,18 @@ public abstract class BaseParser<TResult, TTree> : IParser<TResult, TTree>
 				using (LoopGuard())
 					body.Invoke();
 			}
+		}
+
+		/// <summary>Converts the given <paramref name="token"/> produced by the lexer into a concrete syntax token.</summary>
+		/// <param name="token">The token to convert.</param>
+		/// <returns>The converted token.</returns>
+		[return: NotNullIfNotNull(nameof(token))]
+		protected IConcreteSyntaxToken? Convert(ITokenNode? token)
+		{
+			if (token is not null)
+				return new ConcreteSyntaxToken(token);
+
+			return null;
 		}
 		#endregion
 

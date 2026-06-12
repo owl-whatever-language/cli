@@ -25,9 +25,9 @@ public static class DebugPrinter
 
 	private static void Write(IndentedTextWriter writer, IConcreteSyntaxNode node, bool includeEndTrivia)
 	{
-		ITokenNode? last = null;
+		IConcreteSyntaxToken? last = null;
 
-		foreach (ITokenNode token in FlattenTokens(node))
+		foreach (IConcreteSyntaxToken token in FlattenTokens(node))
 		{
 			if (last is not null)
 				Write(writer, last.TrailingTrivia);
@@ -54,12 +54,12 @@ public static class DebugPrinter
 	#endregion
 
 	#region Helpers
-	private static IEnumerable<ITokenNode> FlattenTokens(ISyntaxNode node)
+	private static IEnumerable<IConcreteSyntaxToken> FlattenTokens(ISyntaxNode node)
 	{
 		List<ISyntaxNode> store = [];
 		GetAllChildren(node, store);
 
-		return store.OfType<ITokenNode>();
+		return store.OfType<IConcreteSyntaxToken>();
 	}
 	private static void GetAllChildren(ISyntaxNode node, List<ISyntaxNode> store)
 	{
@@ -73,7 +73,7 @@ public static class DebugPrinter
 			foreach (ITriviaNode current in triviaList)
 				GetAllChildren(current, store);
 		}
-		else if (node is ITokenNode token)
+		else if (node is IConcreteSyntaxToken token)
 		{
 			GetAllChildren(token.LeadingTrivia, store);
 			store.Add(token);

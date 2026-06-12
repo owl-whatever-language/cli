@@ -66,7 +66,7 @@ public sealed class Lexer : BaseLexer
 			string value = GetValue();
 
 			FinishFullToken(out TriviaList leading, out TriviaList trailing);
-			TokenNode<string> token = new(SyntaxKind.StringLiteral, new(start, Text.Position), lexeme, value, leading, trailing);
+			TokenNode token = new(SyntaxKind.StringLiteral, lexeme, new(start, Text.Position), leading, trailing, value);
 			Tokens.Add(token);
 
 			return true;
@@ -96,7 +96,7 @@ public sealed class Lexer : BaseLexer
 			string value = GetValue();
 
 			FinishFullToken(out TriviaList leading, out TriviaList trailing);
-			TokenNode<string> token = new(SyntaxKind.Identifier, new(start, Text.Position), lexeme, value, leading, trailing);
+			TokenNode token = new(SyntaxKind.Identifier, lexeme, new(start, Text.Position), leading, trailing, value);
 			Tokens.Add(token);
 
 			return true;

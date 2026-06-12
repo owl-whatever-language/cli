@@ -120,12 +120,9 @@ public sealed class GenericSyntaxTreePrinter
 		if (property.PropertyType == typeof(SyntaxKind))
 			return false;
 
-		if (declaringType.IsAssignableTo(typeof(IAbstractSyntaxNode)) && property.Name == nameof(IAbstractSyntaxNode.Concrete))
-			return false;
-
 		if (declaringType.IsAssignableTo(typeof(ISemanticSyntaxNode)))
 		{
-			if (property.Name is nameof(ISemanticSyntaxNode.Abstract) or nameof(ISemanticSyntaxNode.Position))
+			if (property.Name is nameof(ISemanticSyntaxNode.Position))
 				return false;
 		}
 

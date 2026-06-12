@@ -1,7 +1,7 @@
 namespace OwlDomain.ParsingTools.Semantics.Syntax;
 
 /// <summary>
-/// 	Represents a general syntax list that has separator nodes.
+/// 	Represents a semantic syntax list that has separator nodes.
 /// </summary>
 public interface ISemanticSeparatedSyntaxList : ISeparatedSyntaxList, ISemanticSyntaxList, ISemanticSyntaxNode
 {
@@ -9,11 +9,15 @@ public interface ISemanticSeparatedSyntaxList : ISeparatedSyntaxList, ISemanticS
 	/// <summary>The list of all of the syntax nodes in the list.</summary>
 	new IReadOnlyList<ISemanticSyntaxNode> Nodes { get; }
 	IReadOnlyList<ISyntaxNode> ISeparatedSyntaxList.Nodes => Nodes;
+
+	/// <summary>The nodes that are acting as separators.</summary>
+	new IReadOnlyList<ISemanticSyntaxNode> Separators { get; }
+	IReadOnlyList<ISyntaxNode> ISeparatedSyntaxList.Separators => Separators;
 	#endregion
 }
 
 /// <summary>
-/// 	Represents a general syntax list that has separator nodes.
+/// 	Represents a semantic syntax list that has separator nodes.
 /// </summary>
 /// <typeparam name="TValue">The type of the value nodes.</typeparam>
 public interface ISemanticSeparatedSyntaxList<out TValue> : ISemanticSeparatedSyntaxList, ISeparatedSyntaxList<TValue>, ISemanticSyntaxList<TValue>
@@ -22,7 +26,7 @@ public interface ISemanticSeparatedSyntaxList<out TValue> : ISemanticSeparatedSy
 }
 
 /// <summary>
-/// 	Represents a general syntax list that has separator nodes.
+/// 	Represents a semantic syntax list that has separator nodes.
 /// </summary>
 /// <typeparam name="TValue">The type of the value nodes.</typeparam>
 /// <typeparam name="TSeparator">The type of the separator nodes.</typeparam>
@@ -34,37 +38,18 @@ public interface ISemanticSeparatedSyntaxList<out TValue, out TSeparator> : ISem
 	/// <summary>The nodes that are acting as separators.</summary>
 	new IReadOnlyList<TSeparator> Separators { get; }
 	IReadOnlyList<ISyntaxNode> ISeparatedSyntaxList.Separators => Separators;
+	IReadOnlyList<ISemanticSyntaxNode> ISemanticSeparatedSyntaxList.Separators => Separators;
 	#endregion
 }
 
 /// <summary>
-/// 	Represents a general syntax list that has separator nodes.
+/// 	Represents a semantic syntax list that has separator nodes.
 /// </summary>
 /// <typeparam name="TValue">The type of the value nodes.</typeparam>
 /// <typeparam name="TSeparator">The type of the separator nodes.</typeparam>
-/// <typeparam name="TAbstract">The type of the abstract syntax node that the semantic syntax node is modelled after.</typeparam>
-public interface ISemanticSeparatedSyntaxList<out TValue, out TSeparator, out TAbstract> :
-	ISemanticSeparatedSyntaxList<TValue>,
-	ISeparatedSyntaxList<TValue, TSeparator>,
-	ISemanticSyntaxNode<IAbstractSeparatedSyntaxList<TAbstract>>
+public class SemanticSeparatedSyntaxList<TValue, TSeparator> : BaseSemanticSyntaxNode, ISemanticSeparatedSyntaxList<TValue, TSeparator>
 	where TValue : class, ISemanticSyntaxNode
 	where TSeparator : class, ISemanticSyntaxNode
-	where TAbstract : class, IAbstractSyntaxNode
-{
-}
-
-/// <summary>
-/// 	Represents a general syntax list that has separator nodes.
-/// </summary>
-/// <typeparam name="TValue">The type of the value nodes.</typeparam>
-/// <typeparam name="TSeparator">The type of the separator nodes.</typeparam>
-/// <typeparam name="TAbstract">The type of the abstract syntax node that the semantic syntax node is modelled after.</typeparam>
-public class SemanticSeparatedSyntaxList<TValue, TSeparator, TAbstract> :
-	BaseSemanticSyntaxNode<IAbstractSeparatedSyntaxList<TAbstract>>,
-	ISemanticSeparatedSyntaxList<TValue, TSeparator, TAbstract>
-	where TValue : class, ISemanticSyntaxNode
-	where TSeparator : class, ISemanticSyntaxNode
-	where TAbstract : class, IAbstractSyntaxNode
 {
 	#region Properties
 	/// <inheritdoc/>
@@ -81,17 +66,11 @@ public class SemanticSeparatedSyntaxList<TValue, TSeparator, TAbstract> :
 	#endregion
 
 	#region Constructors
-	/// <summary>Creates a new <see cref="SemanticSeparatedSyntaxList{TValue, TSeparator, TAbstract}"/> instance.</summary>
-	/// <param name="abstract">The abstract syntax tree that this semantic syntax node is modelled after.</param>
+	/// <summary>Creates a new <see cref="SemanticSeparatedSyntaxList{TValue, TSeparator}"/> instance.</summary>
 	/// <param name="nodes">All of the nodes in the list.</param>
 	/// <param name="values">The value nodes in the list.</param>
 	/// <param name="separators">The separator nodes in the list.</param>
-	public SemanticSeparatedSyntaxList(
-		IAbstractSeparatedSyntaxList<TAbstract> @abstract,
-		IReadOnlyList<ISemanticSyntaxNode> nodes,
-		IReadOnlyList<TValue> values,
-		IReadOnlyList<TSeparator> separators)
-		: base(@abstract)
+	public SemanticSeparatedSyntaxList(IReadOnlyList<ISemanticSyntaxNode> nodes, IReadOnlyList<TValue> values, IReadOnlyList<TSeparator> separators)
 	{
 		Nodes = nodes;
 		Values = values;
@@ -106,26 +85,22 @@ public class SemanticSeparatedSyntaxList<TValue, TSeparator, TAbstract> :
 }
 
 /// <summary>
-/// 	Represents a general syntax list that has separator nodes.
+/// 	Represents a semantic syntax list that has separator nodes.
 /// </summary>
 /// <typeparam name="TValue">The type of the value nodes.</typeparam>
-/// <typeparam name="TAbstract">The type of the abstract syntax node that the semantic syntax node is modelled after.</typeparam>
-public class SemanticSeparatedSyntaxList<TValue, TAbstract> : SemanticSeparatedSyntaxList<TValue, ISemanticSyntaxToken, TAbstract>
+public class SemanticSeparatedSyntaxList<TValue> : SemanticSeparatedSyntaxList<TValue, ISemanticSyntaxToken>
 	where TValue : class, ISemanticSyntaxNode
-	where TAbstract : class, IAbstractSyntaxNode
 {
 	#region Constructors
-	/// <summary>Creates a new <see cref="SemanticSeparatedSyntaxList{TValue, TAbstract}"/> instance.</summary>
-	/// <param name="abstract">The abstract syntax tree that this semantic syntax node is modelled after.</param>
+	/// <summary>Creates a new <see cref="SemanticSeparatedSyntaxList{TValue}"/> instance.</summary>
 	/// <param name="nodes">All of the nodes in the list.</param>
 	/// <param name="values">The value nodes in the list.</param>
 	/// <param name="separators">The separator nodes in the list.</param>
 	public SemanticSeparatedSyntaxList(
-		IAbstractSeparatedSyntaxList<TAbstract> @abstract,
 		IReadOnlyList<ISemanticSyntaxNode> nodes,
 		IReadOnlyList<TValue> values,
 		IReadOnlyList<ISemanticSyntaxToken> separators)
-		: base(@abstract, nodes, values, separators)
+		: base(nodes, values, separators)
 	{
 	}
 	#endregion

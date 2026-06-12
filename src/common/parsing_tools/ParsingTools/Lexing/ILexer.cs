@@ -117,7 +117,7 @@ public abstract class BaseLexer : ILexer
 		/// <param name="leading">The list of the leading trivia nodes.</param>
 		protected virtual void LexEndOfInput(TriviaList leading)
 		{
-			FabricatedTokenNode token = new(SyntaxKind.EndOfInput, new(Text.Position, Text.Position), leading);
+			TokenNode token = new(SyntaxKind.EndOfInput, "", new(Text.Position, Text.Position), leading, null, null);
 			Tokens.Add(token);
 		}
 
@@ -133,7 +133,7 @@ public abstract class BaseLexer : ILexer
 			IndexedPositionRange position = new(start, Text.Position);
 			FinishFullToken(out TriviaList leading, out TriviaList trailing);
 
-			TokenNode bad = new(SyntaxKind.BadCharacter, position, lexeme, leading, trailing);
+			TokenNode bad = new(SyntaxKind.BadCharacter, lexeme, position, leading, trailing, null);
 			Tokens.Add(bad);
 		}
 
@@ -281,7 +281,7 @@ public abstract class BaseLexer : ILexer
 			Text.Advance(sequence.Length);
 
 			FinishFullToken(out TriviaList leading, out TriviaList trailing);
-			TokenNode token = new(kind, new(start, Text.Position), sequence, leading, trailing);
+			TokenNode token = new(kind, sequence, new(start, Text.Position), leading, trailing, null);
 			Tokens.Add(token);
 
 			return true;

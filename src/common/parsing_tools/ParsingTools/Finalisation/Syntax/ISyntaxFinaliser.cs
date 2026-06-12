@@ -10,17 +10,33 @@ public interface ISyntaxFinaliser : IDiagnosticProvider
 /// <summary>
 /// 	Represents a finaliser for syntax trees.
 /// </summary>
-/// <typeparam name="TFinal">The type of the final syntax tree (FST).</typeparam>
 /// <typeparam name="TSemantic">The type of the semantic syntax tree (SST).</typeparam>
-public interface ISyntaxFinaliser<out TFinal, TSemantic> : ISyntaxFinaliser
-	where TFinal : notnull, IFinalSyntaxTree<TSemantic>
+public interface ISyntaxFinaliser<in TSemantic> : ISyntaxFinaliser
 	where TSemantic : notnull, ISemanticSyntaxTree
 {
 	#region Methods
 	/// <summary>Finalises the given <paramref name="semantic"/> syntax tree (SST).</summary>
 	/// <param name="semantic">The semantic syntax tree (SST) to finalise.</param>
 	/// <returns>The result of finalising the given <paramref name="semantic"/> syntax tree (SST).</returns>
-	ISyntaxFinalisationResult<TFinal, TSemantic> Finalise(TSemantic semantic);
+	ISyntaxFinalisationResult Finalise(TSemantic semantic);
+	#endregion
+}
+
+/// <summary>
+/// 	Represents a finaliser for syntax trees.
+/// </summary>
+/// <typeparam name="TFinal">The type of the final syntax tree (FST).</typeparam>
+/// <typeparam name="TSemantic">The type of the semantic syntax tree (SST).</typeparam>
+public interface ISyntaxFinaliser<out TFinal, in TSemantic> : ISyntaxFinaliser<TSemantic>
+	where TFinal : notnull, IFinalSyntaxTree
+	where TSemantic : notnull, ISemanticSyntaxTree
+{
+	#region Methods
+	/// <summary>Finalises the given <paramref name="semantic"/> syntax tree (SST).</summary>
+	/// <param name="semantic">The semantic syntax tree (SST) to finalise.</param>
+	/// <returns>The result of finalising the given <paramref name="semantic"/> syntax tree (SST).</returns>
+	new ISyntaxFinalisationResult<TFinal> Finalise(TSemantic semantic);
+	ISyntaxFinalisationResult ISyntaxFinaliser<TSemantic>.Finalise(TSemantic semantic) => Finalise(semantic);
 	#endregion
 }
 
@@ -30,17 +46,17 @@ public interface ISyntaxFinaliser<out TFinal, TSemantic> : ISyntaxFinaliser
 /// <typeparam name="TFinal">The type of the final syntax tree (FST).</typeparam>
 /// <typeparam name="TSemantic">The type of the semantic syntax tree (SST).</typeparam>
 /// <typeparam name="TResult">The type of the syntax finalisation result.</typeparam>
-public interface ISyntaxFinaliser<out TFinal, TSemantic, out TResult> : ISyntaxFinaliser<TFinal, TSemantic>
-	where TFinal : notnull, IFinalSyntaxTree<TSemantic>
+public interface ISyntaxFinaliser<out TFinal, in TSemantic, out TResult> : ISyntaxFinaliser<TFinal, TSemantic>
+	where TFinal : notnull, IFinalSyntaxTree
 	where TSemantic : notnull, ISemanticSyntaxTree
-	where TResult : notnull, ISyntaxFinalisationResult<TFinal, TSemantic>
+	where TResult : notnull, ISyntaxFinalisationResult<TFinal>
 {
 	#region Methods
 	/// <summary>Finalises the given <paramref name="semantic"/> syntax tree (SST).</summary>
 	/// <param name="semantic">The semantic syntax tree (SST) to finalise.</param>
 	/// <returns>The result of finalising the given <paramref name="semantic"/> syntax tree (SST).</returns>
 	new TResult Finalise(TSemantic semantic);
-	ISyntaxFinalisationResult<TFinal, TSemantic> ISyntaxFinaliser<TFinal, TSemantic>.Finalise(TSemantic semantic) => Finalise(semantic);
+	ISyntaxFinalisationResult<TFinal> ISyntaxFinaliser<TFinal, TSemantic>.Finalise(TSemantic semantic) => Finalise(semantic);
 	#endregion
 }
 
@@ -52,9 +68,9 @@ public interface ISyntaxFinaliser<out TFinal, TSemantic, out TResult> : ISyntaxF
 /// <typeparam name="TResult">The type of the syntax finalisation result.</typeparam>
 public abstract class BaseSyntaxFinaliser<TFinal, TSemantic, TResult> :
 	ISyntaxFinaliser<TFinal, TSemantic, TResult>
-	where TFinal : notnull, IFinalSyntaxTree<TSemantic>
+	where TFinal : notnull, IFinalSyntaxTree
 	where TSemantic : notnull, ISemanticSyntaxTree
-	where TResult : notnull, ISyntaxFinalisationResult<TFinal, TSemantic>
+	where TResult : notnull, ISyntaxFinalisationResult<TFinal>
 {
 	#region Nested types
 	/// <summary>Represents the finaliser instance that can be used for a single final syntax tree (FST) generation.</summary>

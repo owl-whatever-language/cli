@@ -10,25 +10,25 @@ public interface ISymbolFinder : IDiagnosticProvider
 /// <summary>
 /// 	Represents the finder for symbols.
 /// </summary>
-/// <typeparam name="TAbstract">The type of the abstract syntax trees (ASTs) that will be explored for symbols.</typeparam>
-public interface ISymbolFinder<TAbstract> : ISymbolFinder
-	where TAbstract : notnull, IAbstractSyntaxTree
+/// <typeparam name="TConcrete">The type of the concrete syntax trees (CSTs) that will be explored for symbols.</typeparam>
+public interface ISymbolFinder<in TConcrete> : ISymbolFinder
+	where TConcrete : notnull, IConcreteSyntaxTree
 {
 	#region Methods
-	/// <summary>Explores the given abstract syntax <paramref name="trees"/> (ASTs) to discover the defined symbols.</summary>
+	/// <summary>Explores the given concrete syntax <paramref name="trees"/> (CSTs) to discover the defined symbols.</summary>
 	/// <param name="baseScope">The base scope to use for the built-in and externally defined symbols.</param>
-	/// <param name="trees">The abstract syntax trees (ASTs) to explore for the defined symbols.</param>
+	/// <param name="trees">The concrete syntax trees (CSTs) to explore for the defined symbols.</param>
 	/// <returns>The result of the symbol discovery.</returns>
-	ISymbolDiscoveryResult Explore(ISymbolScope baseScope, IReadOnlyCollection<TAbstract> trees);
+	ISymbolDiscoveryResult Explore(ISymbolScope baseScope, IReadOnlyCollection<TConcrete> trees);
 	#endregion
 }
 
 /// <summary>
 /// 	Represents the base implementation for the finder for symbols.
 /// </summary>
-/// <typeparam name="TAbstract">The type of the abstract syntax trees (ASTs) that will be explored for symbols.</typeparam>
-public abstract class BaseSymbolFinder<TAbstract> : ISymbolFinder<TAbstract>
-	where TAbstract : notnull, IAbstractSyntaxTree
+/// <typeparam name="TConcrete">The type of the concrete syntax trees (CSTs) that will be explored for symbols.</typeparam>
+public abstract class BaseSymbolFinder<TConcrete> : ISymbolFinder<TConcrete>
+	where TConcrete : notnull, IConcreteSyntaxTree
 {
 	#region Nested types
 	/// <summary>
@@ -55,8 +55,8 @@ public abstract class BaseSymbolFinder<TAbstract> : ISymbolFinder<TAbstract>
 		/// <summary>The original scope that represents the result of the symbol discovery.</summary>
 		protected ISymbolScope ResultScope { get; }
 
-		/// <summary>The abstract syntax trees (ASTs) to explore for the defined symbols.</summary>
-		protected IReadOnlyCollection<TAbstract> Trees { get; }
+		/// <summary>The concrete syntax trees (CSTs) to explore for the defined symbols.</summary>
+		protected IReadOnlyCollection<TConcrete> Trees { get; }
 
 		/// <summary>The current scope for symbols.</summary>
 		protected SymbolScope Scope { get; private set; }
@@ -69,11 +69,11 @@ public abstract class BaseSymbolFinder<TAbstract> : ISymbolFinder<TAbstract>
 		/// <summary>Populates the <see cref="FinderInstance"/> properties.</summary>
 		/// <param name="symbolFinder">The symbol finder that created this instance.</param>
 		/// <param name="baseScope">The base scope to use for built-in / externally defined symbols.</param>
-		/// <param name="trees">The abstract syntax trees (ASTs) to explore for the defined symbols.</param>
+		/// <param name="trees">The concrete syntax trees (CSTs) to explore for the defined symbols.</param>
 		protected FinderInstance(
 			ISymbolFinder symbolFinder,
 			ISymbolScope baseScope,
-			IReadOnlyCollection<TAbstract> trees)
+			IReadOnlyCollection<TConcrete> trees)
 			: base(symbolFinder)
 		{
 			BaseScope = baseScope;
@@ -85,7 +85,7 @@ public abstract class BaseSymbolFinder<TAbstract> : ISymbolFinder<TAbstract>
 		#endregion
 
 		#region Methods
-		/// <summary>Explores the provided abstract syntax trees (ASTs) for the defined symbols.</summary>
+		/// <summary>Explores the provided concrete syntax trees (CSTs) for the defined symbols.</summary>
 		/// <returns>The result of the symbol discovery.</returns>
 		public ISymbolDiscoveryResult Explore()
 		{
@@ -99,17 +99,17 @@ public abstract class BaseSymbolFinder<TAbstract> : ISymbolFinder<TAbstract>
 			return new SymbolDiscoveryResult(Diagnostics, watch.Elapsed, ResultScope, Targets);
 		}
 
-		/// <summary>Explores the given abstract syntax <paramref name="trees"/> (ASTs) for the defined symbols.</summary>
-		/// <param name="trees">The abstract syntax trees (ASTs) to explore.</param>
-		protected virtual void Explore(IReadOnlyCollection<TAbstract> trees)
+		/// <summary>Explores the given concrete syntax <paramref name="trees"/> (CSTs) for the defined symbols.</summary>
+		/// <param name="trees">The concrete syntax trees (CSTs) to explore.</param>
+		protected virtual void Explore(IReadOnlyCollection<TConcrete> trees)
 		{
-			foreach (TAbstract tree in trees)
+			foreach (TConcrete tree in trees)
 				Explore(tree);
 		}
 
-		/// <summary>Explores the given abstract syntax <paramref name="tree"/> (AST) for the defined symbols.</summary>
-		/// <param name="tree">The abstract syntax tree (AST) to explore.</param>
-		protected abstract void Explore(TAbstract tree);
+		/// <summary>Explores the given concrete syntax <paramref name="tree"/> (CST) for the defined symbols.</summary>
+		/// <param name="tree">The concrete syntax tree (CST) to explore.</param>
+		protected abstract void Explore(TConcrete tree);
 
 		/// <summary>Creates and enters a new scope.</summary>
 		/// <param name="name">The name of the new scope, to help with debugging.</param>
@@ -144,7 +144,7 @@ public abstract class BaseSymbolFinder<TAbstract> : ISymbolFinder<TAbstract>
 
 	#region Methods
 	/// <inheritdoc/>
-	public ISymbolDiscoveryResult Explore(ISymbolScope baseScope, IReadOnlyCollection<TAbstract> trees)
+	public ISymbolDiscoveryResult Explore(ISymbolScope baseScope, IReadOnlyCollection<TConcrete> trees)
 	{
 		FinderInstance finder = CreateInstance(baseScope, trees);
 
@@ -153,8 +153,8 @@ public abstract class BaseSymbolFinder<TAbstract> : ISymbolFinder<TAbstract>
 
 	/// <summary>Creates a new instance of the finder.</summary>
 	/// <param name="baseScope">The base scope to use for built-in / externally defined symbols.</param>
-	/// <param name="trees">The abstract syntax trees (ASTs) to explore for the defined symbols.</param>
+	/// <param name="trees">The concrete syntax trees (CSTs) to explore for the defined symbols.</param>
 	/// <returns>The created symbol finder instance.</returns>
-	protected abstract FinderInstance CreateInstance(ISymbolScope baseScope, IReadOnlyCollection<TAbstract> trees);
+	protected abstract FinderInstance CreateInstance(ISymbolScope baseScope, IReadOnlyCollection<TConcrete> trees);
 	#endregion
 }

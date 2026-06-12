@@ -23,7 +23,7 @@ public interface ISymbolTarget
 /// </summary>
 /// <typeparam name="TDeclaration">The type of the abstract syntax node that declared the symbol.</typeparam>
 public interface ISymbolTarget<TDeclaration> : ISymbolTarget
-	where TDeclaration : notnull, IAbstractSyntaxNode
+	where TDeclaration : notnull, IConcreteSyntaxNode
 {
 	#region Properties
 	/// <summary>The symbol that should be used to reference this target.</summary>
@@ -37,7 +37,7 @@ public interface ISymbolTarget<TDeclaration> : ISymbolTarget
 /// </summary>
 /// <typeparam name="TDeclaration">The type of the abstract syntax node that declared the symbol.</typeparam>
 public abstract class BaseSymbolTarget<TDeclaration> : ISymbolTarget<TDeclaration>
-	where TDeclaration : notnull, IAbstractSyntaxNode
+	where TDeclaration : notnull, IConcreteSyntaxNode
 {
 	#region Fields
 	private ISymbol<TDeclaration>? _symbol;
@@ -120,7 +120,7 @@ public abstract class BaseSymbolTarget<TDeclaration> : ISymbolTarget<TDeclaratio
 /// <summary>
 /// 	Represents the base implementation for the target of a symbol.
 /// </summary>
-public abstract class BaseSymbolTarget : BaseSymbolTarget<IAbstractSyntaxNode> { }
+public abstract class BaseSymbolTarget : BaseSymbolTarget<IConcreteSyntaxNode> { }
 
 /// <summary>
 /// 	Contains various extensions related to the <see cref="ISymbolTarget"/>.
@@ -150,7 +150,7 @@ public static class SymbolTargetExtensions
 		#endregion
 	}
 
-	extension<TDeclaration>(BaseSymbolTarget<TDeclaration> target) where TDeclaration : notnull, IAbstractSyntaxNode
+	extension<TDeclaration>(BaseSymbolTarget<TDeclaration> target) where TDeclaration : notnull, IConcreteSyntaxNode
 	{
 		/// <summary>Sets the target's symbol to a symbol with only a name and no declaration.</summary>
 		/// <param name="name">The name to give to the target.</param>

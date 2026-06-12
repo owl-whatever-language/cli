@@ -1,29 +1,32 @@
 namespace OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Nodes.Expressions;
 
-public sealed class SemanticInvocationExpression : BaseSemanticExpression<AbstractInvocationExpression>
+public sealed class SemanticInvocationExpression : BaseSemanticSyntaxNode, ISemanticExpression
 {
 	#region Properties
+	public override SyntaxKind Kind => SyntaxKind.Invocation;
 	public ISemanticExpression Expression { get; }
-	public ISemanticSyntaxList<ISemanticExpression> Values { get; }
-	public IFunctionInfo? Function { get; }
+	public ISemanticSyntaxToken OpeningBracket { get; }
+	public ISemanticSeparatedSyntaxList<ISemanticExpression, ISemanticSyntaxToken> Values { get; }
+	public ISemanticSyntaxToken ClosingBracket { get; }
+	public IFunctionInfo? Function => (Expression.Type as FunctionType)?.Function;
+	public ITypeInfo? Type => Expression.Type.ReturnType;
 	#endregion
 
 	#region Constructors
 	public SemanticInvocationExpression(
-		AbstractInvocationExpression @abstract,
-		ITypeInfo? type,
 		ISemanticExpression expression,
-		ISemanticSyntaxList<ISemanticExpression> values,
-		IFunctionInfo? function)
-		: base(@abstract, type)
+		ISemanticSyntaxToken openingBracket,
+		ISemanticSeparatedSyntaxList<ISemanticExpression, ISemanticSyntaxToken> values,
+		ISemanticSyntaxToken closingBracket)
 	{
 		Expression = expression;
+		OpeningBracket = openingBracket;
 		Values = values;
-		Function = function;
+		ClosingBracket = closingBracket;
 	}
 	#endregion
 
 	#region Methods
-	public override IEnumerable<ISemanticSyntaxNode> GetChildren() => [Expression, Values];
+	public override IEnumerable<ISemanticSyntaxNode> GetChildren() => [Expression, OpeningBracket, Values, ClosingBracket];
 	#endregion
 }

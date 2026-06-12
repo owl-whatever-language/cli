@@ -11,17 +11,17 @@ public interface ISemanticResolver : IDiagnosticProvider
 /// 	Represents the final resolver for semantic information.
 /// </summary>
 /// <typeparam name="TInput">The type that represents the additional inputs to the resolver.</typeparam>
-/// <typeparam name="TAbstract">The type of the abstract syntax tree (AST) that will be used as input.</typeparam>
-public interface ISemanticResolver<TInput, TAbstract> : ISemanticResolver
+/// <typeparam name="TConcrete">The type of the concrete syntax tree (CST) that will be used as input.</typeparam>
+public interface ISemanticResolver<in TInput, in TConcrete> : ISemanticResolver
 	where TInput : notnull, ISemanticResolutionInput
-	where TAbstract : notnull, IAbstractSyntaxTree
+	where TConcrete : notnull, IConcreteSyntaxTree
 {
 	#region Methods
-	/// <summary>Resolves the abstract syntax <paramref name="tree"/> (AST) into a semantic syntax tree (SST).</summary>
+	/// <summary>Resolves the concrete syntax <paramref name="tree"/> (CST) into a semantic syntax tree (SST).</summary>
 	/// <param name="additionalInputs">The additional inputs to the resolver.</param>
-	/// <param name="tree">The abstract syntax tree (AST) to resolve.</param>
+	/// <param name="tree">The concrete syntax tree (CST) to resolve.</param>
 	/// <returns>The result of the semantic resolution.</returns>
-	ISemanticResolutionResult Resolve(TInput additionalInputs, TAbstract tree);
+	ISemanticResolutionResult Resolve(TInput additionalInputs, TConcrete tree);
 	#endregion
 }
 
@@ -29,20 +29,20 @@ public interface ISemanticResolver<TInput, TAbstract> : ISemanticResolver
 /// 	Represents the final resolver for semantic information.
 /// </summary>
 /// <typeparam name="TInput">The type that represents the additional inputs to the resolver.</typeparam>
-/// <typeparam name="TAbstract">The type of the abstract syntax tree (AST) that will be used as input.</typeparam>
+/// <typeparam name="TConcrete">The type of the concrete syntax tree (CST) that will be used as input.</typeparam>
 /// <typeparam name="TSemantic">The type of the generated semantic syntax tree (SST).</typeparam>
-public interface ISemanticResolver<TInput, TAbstract, TSemantic> : ISemanticResolver<TInput, TAbstract>
+public interface ISemanticResolver<in TInput, in TConcrete, out TSemantic> : ISemanticResolver<TInput, TConcrete>
 	where TInput : notnull, ISemanticResolutionInput
-	where TAbstract : notnull, IAbstractSyntaxTree
-	where TSemantic : notnull, ISemanticSyntaxTree<TAbstract>
+	where TConcrete : notnull, IConcreteSyntaxTree
+	where TSemantic : notnull, ISemanticSyntaxTree
 {
 	#region Methods
-	/// <summary>Resolves the abstract syntax <paramref name="tree"/> (AST) into a semantic syntax tree (SST).</summary>
+	/// <summary>Resolves the concrete syntax <paramref name="tree"/> (CST) into a semantic syntax tree (SST).</summary>
 	/// <param name="additionalInputs">The additional inputs to the resolver.</param>
-	/// <param name="tree">The abstract syntax tree (AST) to resolve.</param>
+	/// <param name="tree">The concrete syntax tree (CST) to resolve.</param>
 	/// <returns>The result of the semantic resolution.</returns>
-	new ISemanticResolutionResult<TSemantic, TAbstract> Resolve(TInput additionalInputs, TAbstract tree);
-	ISemanticResolutionResult ISemanticResolver<TInput, TAbstract>.Resolve(TInput additionalInputs, TAbstract tree) => Resolve(additionalInputs, tree);
+	new ISemanticResolutionResult<TSemantic> Resolve(TInput additionalInputs, TConcrete tree);
+	ISemanticResolutionResult ISemanticResolver<TInput, TConcrete>.Resolve(TInput additionalInputs, TConcrete tree) => Resolve(additionalInputs, tree);
 	#endregion
 }
 
@@ -50,24 +50,24 @@ public interface ISemanticResolver<TInput, TAbstract, TSemantic> : ISemanticReso
 /// 	Represents the final resolver for semantic information.
 /// </summary>
 /// <typeparam name="TInput">The type that represents the additional inputs to the resolver.</typeparam>
-/// <typeparam name="TAbstract">The type of the abstract syntax tree (AST) that will be used as input.</typeparam>
+/// <typeparam name="TConcrete">The type of the concrete syntax tree (CST) that will be used as input.</typeparam>
 /// <typeparam name="TSemantic">The type of the generated semantic syntax tree (SST).</typeparam>
 /// <typeparam name="TResult">The type of the semantic resolution result.</typeparam>
-public interface ISemanticResolver<TInput, TAbstract, TSemantic, TResult> : ISemanticResolver<TInput, TAbstract, TSemantic>
+public interface ISemanticResolver<in TInput, in TConcrete, out TSemantic, out TResult> : ISemanticResolver<TInput, TConcrete, TSemantic>
 	where TInput : notnull, ISemanticResolutionInput
-	where TAbstract : notnull, IAbstractSyntaxTree
-	where TSemantic : notnull, ISemanticSyntaxTree<TAbstract>
-	where TResult : notnull, ISemanticResolutionResult<TSemantic, TAbstract>
+	where TConcrete : notnull, IConcreteSyntaxTree
+	where TSemantic : notnull, ISemanticSyntaxTree
+	where TResult : notnull, ISemanticResolutionResult<TSemantic>
 {
 	#region Methods
-	/// <summary>Resolves the abstract syntax <paramref name="tree"/> (AST) into a semantic syntax tree (SST).</summary>
+	/// <summary>Resolves the concrete syntax <paramref name="tree"/> (CST) into a semantic syntax tree (SST).</summary>
 	/// <param name="additionalInputs">The additional inputs to the resolver.</param>
-	/// <param name="tree">The abstract syntax tree (AST) to resolve.</param>
+	/// <param name="tree">The concrete syntax tree (CST) to resolve.</param>
 	/// <returns>The result of the semantic resolution.</returns>
-	new TResult Resolve(TInput additionalInputs, TAbstract tree);
-	ISemanticResolutionResult<TSemantic, TAbstract> ISemanticResolver<TInput, TAbstract, TSemantic>.Resolve(
+	new TResult Resolve(TInput additionalInputs, TConcrete tree);
+	ISemanticResolutionResult<TSemantic> ISemanticResolver<TInput, TConcrete, TSemantic>.Resolve(
 		TInput additionalInputs,
-		TAbstract tree)
+		TConcrete tree)
 	{
 		return Resolve(additionalInputs, tree);
 	}
@@ -78,14 +78,14 @@ public interface ISemanticResolver<TInput, TAbstract, TSemantic, TResult> : ISem
 /// 	Represents the base implementation for the final resolver for semantic information.
 /// </summary>
 /// <typeparam name="TInput">The type that represents the additional inputs to the resolver.</typeparam>
-/// <typeparam name="TAbstract">The type of the abstract syntax tree (AST) that will be used as input.</typeparam>
+/// <typeparam name="TConcrete">The type of the concrete syntax tree (CST) that will be used as input.</typeparam>
 /// <typeparam name="TSemantic">The type of the generated semantic syntax tree (SST).</typeparam>
 /// <typeparam name="TResult">The type of the semantic resolution result.</typeparam>
-public abstract class BaseSemanticResolver<TInput, TAbstract, TSemantic, TResult> : ISemanticResolver<TInput, TAbstract, TSemantic, TResult>
+public abstract class BaseSemanticResolver<TInput, TConcrete, TSemantic, TResult> : ISemanticResolver<TInput, TConcrete, TSemantic, TResult>
 	where TInput : notnull, ISemanticResolutionInput
-	where TAbstract : notnull, IAbstractSyntaxTree
-	where TSemantic : notnull, ISemanticSyntaxTree<TAbstract>
-	where TResult : notnull, ISemanticResolutionResult<TSemantic, TAbstract>
+	where TConcrete : notnull, IConcreteSyntaxTree
+	where TSemantic : notnull, ISemanticSyntaxTree
+	where TResult : notnull, ISemanticResolutionResult<TSemantic>
 {
 	#region Nested types
 	/// <summary>
@@ -97,8 +97,8 @@ public abstract class BaseSemanticResolver<TInput, TAbstract, TSemantic, TResult
 		/// <summary>The additional inputs that were provided to the resolver.</summary>
 		protected TInput AdditionalInputs { get; }
 
-		/// <summary>The abstract syntax tree (AST) to resolve.</summary>
-		protected TAbstract Tree { get; }
+		/// <summary>The concrete syntax tree (CST) to resolve.</summary>
+		protected TConcrete Tree { get; }
 
 		/// <summary>The current symbol scope.</summary>
 		protected ISymbolScope Symbols { get; }
@@ -108,8 +108,8 @@ public abstract class BaseSemanticResolver<TInput, TAbstract, TSemantic, TResult
 		/// <summary>Populates the <see cref="ResolverInstance"/> properties.</summary>
 		/// <param name="resolver">The resolver that created this instance.</param>
 		/// <param name="additionalInputs">The additional inputs that were provided to the resolver.</param>
-		/// <param name="tree">The abstract syntax tree (AST) to resolve.</param>
-		protected ResolverInstance(ISemanticResolver resolver, TInput additionalInputs, TAbstract tree) : base(resolver)
+		/// <param name="tree">The concrete syntax tree (CST) to resolve.</param>
+		protected ResolverInstance(ISemanticResolver resolver, TInput additionalInputs, TConcrete tree) : base(resolver)
 		{
 			AdditionalInputs = additionalInputs;
 			Tree = tree;
@@ -119,7 +119,7 @@ public abstract class BaseSemanticResolver<TInput, TAbstract, TSemantic, TResult
 		#endregion
 
 		#region Methods
-		/// <summary>Resolves the provided abstract syntax tree (AST).</summary>
+		/// <summary>Resolves the provided concrete syntax tree (CST).</summary>
 		/// <returns>The result of the semantic resolution.</returns>
 		public TResult Resolve()
 		{
@@ -142,10 +142,10 @@ public abstract class BaseSemanticResolver<TInput, TAbstract, TSemantic, TResult
 		/// <returns></returns>
 		protected abstract TResult CreateResult(TimeSpan duration, TSemantic semantic);
 
-		/// <summary>Resolves the given abstract syntax <paramref name="tree"/> (AST).</summary>
-		/// <param name="tree">The abstract syntax tree (AST) to resolve.</param>
+		/// <summary>Resolves the given concrete syntax <paramref name="tree"/> (CST).</summary>
+		/// <param name="tree">The concrete syntax tree (CST) to resolve.</param>
 		/// <returns>The generated semantic syntax tree (SST).</returns>
-		protected abstract TSemantic Resolve(TAbstract tree);
+		protected abstract TSemantic Resolve(TConcrete tree);
 
 		/// <summary>Tries to get a single unambiguous symbol target for the given <paramref name="name"/>.</summary>
 		/// <typeparam name="TTarget">The type of the symbol target.</typeparam>
@@ -195,7 +195,7 @@ public abstract class BaseSemanticResolver<TInput, TAbstract, TSemantic, TResult
 		/// 	was not of the expected type <typeparamref name="TTarget"/>.
 		/// </exception>
 		/// <exception cref="ArgumentException">Thrown if no symbol was declared for the given <paramref name="node"/>.</exception>
-		protected TTarget GetSymbol<TTarget>(IAbstractSyntaxNode node)
+		protected TTarget GetSymbol<TTarget>(IConcreteSyntaxNode node)
 			where TTarget : notnull
 		{
 			if (Symbols.TryGet(node, out ISymbol? symbol))
@@ -240,7 +240,7 @@ public abstract class BaseSemanticResolver<TInput, TAbstract, TSemantic, TResult
 
 	#region Methods
 	/// <inheritdoc/>
-	public TResult Resolve(TInput additionalInputs, TAbstract tree)
+	public TResult Resolve(TInput additionalInputs, TConcrete tree)
 	{
 		ResolverInstance resolver = CreateInstance(additionalInputs, tree);
 
@@ -249,8 +249,8 @@ public abstract class BaseSemanticResolver<TInput, TAbstract, TSemantic, TResult
 
 	/// <summary>Creates a new resolver instance.</summary>
 	/// <param name="additionalInputs">The additional inputs that were provided to the resolver.</param>
-	/// <param name="tree">The abstract syntax tree (AST) to resolve.</param>
+	/// <param name="tree">The concrete syntax tree (CST) to resolve.</param>
 	/// <returns>The resolver instance.</returns>
-	protected abstract ResolverInstance CreateInstance(TInput additionalInputs, TAbstract tree);
+	protected abstract ResolverInstance CreateInstance(TInput additionalInputs, TConcrete tree);
 	#endregion
 }

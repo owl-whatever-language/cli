@@ -1,14 +1,13 @@
 namespace OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Targets;
 
-public interface ILocalVariableTarget : ISymbolTarget
+public interface ILocalVariableTarget : ISymbolTarget, ITypeTarget
 {
 	#region Properties
 	public string? Name { get; }
-	public ITypeInfo? Type { get; }
 	#endregion
 }
 
-public sealed class LocalVariableTarget : BaseSymbolTarget<AbstractVariableDeclarationStatement>, ILocalVariableTarget
+public sealed class LocalVariableTarget : BaseSymbolTarget<ConcreteVariableDeclarationStatement>, ILocalVariableTarget
 {
 	#region Properties
 	public override string Kind => "local variable";

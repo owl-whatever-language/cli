@@ -1,31 +1,33 @@
 namespace OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Nodes.Statements;
 
-public class SemanticVariableDeclarationStatement : BaseSemanticStatement<AbstractVariableDeclarationStatement>
+public sealed class SemanticVariableDeclarationStatement : BaseSemanticSyntaxNode, ISemanticTerminatedStatement
 {
 	#region Properties
-	public ILocalVariableTarget Target { get; }
+	public override SyntaxKind Kind => SyntaxKind.VariableDeclaration;
 	public ISemanticSyntaxToken TypeName { get; }
 	public ISemanticSyntaxToken Name { get; }
+	public ISemanticSyntaxToken Assignment { get; }
 	public ISemanticExpression Value { get; }
+	public ISemanticSyntaxToken Terminator { get; }
 	#endregion
 
 	#region Constructors
 	public SemanticVariableDeclarationStatement(
-		AbstractVariableDeclarationStatement @abstract,
 		ISemanticSyntaxToken typeName,
 		ISemanticSyntaxToken name,
+		ISemanticSyntaxToken assignment,
 		ISemanticExpression value,
-		ILocalVariableTarget target)
-		: base(@abstract)
+		ISemanticSyntaxToken terminator)
 	{
 		TypeName = typeName;
 		Name = name;
+		Assignment = assignment;
 		Value = value;
-		Target = target;
+		Terminator = terminator;
 	}
 	#endregion
 
 	#region Methods
-	public override IEnumerable<ISemanticSyntaxNode> GetChildren() => [Value];
+	public override IEnumerable<ISemanticSyntaxNode> GetChildren() => [TypeName, Name, Assignment, Value, Terminator];
 	#endregion
 }

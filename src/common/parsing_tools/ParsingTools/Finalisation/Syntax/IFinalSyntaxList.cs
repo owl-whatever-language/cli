@@ -1,51 +1,27 @@
 namespace OwlDomain.ParsingTools.Finalisation.Syntax;
 
 /// <summary>
-/// 	Represents a general syntax list.
+/// 	Represents a final syntax list.
 /// </summary>
 public interface IFinalSyntaxList : ISyntaxList, IFinalSyntaxNode
 {
-	#region Properties
-	/// <summary>The values stored in the syntax list.</summary>
-	new IReadOnlyList<IFinalSyntaxNode> Values { get; }
-	IReadOnlyList<ISyntaxNode> ISyntaxList.Values => Values;
-	#endregion
 }
 
 /// <summary>
-/// 	Represents a general syntax list.
+/// 	Represents a final syntax list.
 /// </summary>
-/// <typeparam name="TValue">The type of the syntax nodes that the list stores.</typeparam>
+/// <typeparam name="TValue">The type of the final syntax nodes that the list stores.</typeparam>
 public interface IFinalSyntaxList<out TValue> : ISyntaxList<TValue>, IFinalSyntaxList
 	where TValue : class, IFinalSyntaxNode
 {
-	#region Properties
-	/// <summary>The values stored in the syntax list.</summary>
-	new IReadOnlyList<TValue> Values { get; }
-	IReadOnlyList<ISyntaxNode> ISyntaxList.Values => Values;
-	IReadOnlyList<IFinalSyntaxNode> IFinalSyntaxList.Values => Values;
-	#endregion
 }
 
 /// <summary>
-/// 	Represents a general syntax list.
+/// 	Represents a final syntax list.
 /// </summary>
-/// <typeparam name="TValue">The type of the syntax nodes that the list stores.</typeparam>
-/// <typeparam name="TSemantic">The type of the semantic syntax node that the final syntax node is modelled after.</typeparam>
-public interface IFinalSyntaxList<out TValue, out TSemantic> : IFinalSyntaxList<TValue>, IFinalSyntaxNode<ISemanticSyntaxList<TSemantic>>
+/// <typeparam name="TValue">The type of the final syntax nodes that the list stores.</typeparam>
+public class FinalSyntaxList<TValue> : BaseFinalSyntaxNode, IFinalSyntaxList<TValue>
 	where TValue : class, IFinalSyntaxNode
-	where TSemantic : class, ISemanticSyntaxNode
-{
-}
-
-/// <summary>
-/// 	Represents a general syntax list.
-/// </summary>
-/// <typeparam name="TValue">The type of the syntax nodes that the list stores.</typeparam>
-/// <typeparam name="TSemantic">The type of the semantic syntax node that the final syntax node is modelled after.</typeparam>
-public class FinalSyntaxList<TValue, TSemantic> : BaseFinalSyntaxNode<ISemanticSyntaxList<TSemantic>>, IFinalSyntaxList<TValue, TSemantic>
-	where TValue : class, IFinalSyntaxNode
-	where TSemantic : class, ISemanticSyntaxNode
 {
 	#region Properties
 	/// <inheritdoc/>
@@ -56,17 +32,18 @@ public class FinalSyntaxList<TValue, TSemantic> : BaseFinalSyntaxNode<ISemanticS
 	#endregion
 
 	#region Constructors
-	/// <summary>Creates a new <see cref="FinalSyntaxList{TValue, TSemantic}"/> instance.</summary>
-	/// <param name="semantic">The semantic syntax tree that this final syntax node is modelled after.</param>
-	/// <param name="values">The value nodes stored in the list.</param>
-	public FinalSyntaxList(ISemanticSyntaxList<TSemantic> semantic, IReadOnlyList<TValue> values) : base(semantic)
+	/// <summary>Creates a new <see cref="FinalSyntaxList{TValue}"/> instance.</summary>
+	/// <param name="values">The values to store in the list.</param>
+	public FinalSyntaxList(IReadOnlyList<TValue> values)
 	{
+		Guard.IsOrdered(values);
+
 		Values = values;
 	}
 	#endregion
 
 	#region Methods
 	/// <inheritdoc/>
-	public override IEnumerable<IFinalSyntaxNode> GetChildren() => Values;
+	public override IEnumerable<TValue> GetChildren() => Values;
 	#endregion
 }

@@ -1,13 +1,12 @@
 namespace OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Nodes;
 
-public sealed class SemanticSyntaxTree : BaseSemanticSyntaxTree<AbstractSyntaxTree, SemanticDocumentSyntax>
+public sealed class SemanticSyntaxTree : BaseSemanticSyntaxTree<SemanticDocumentSyntax>
 {
 	#region Constructors
 	public SemanticSyntaxTree(
 		ISourceFile source,
-		AbstractSyntaxTree @abstract,
 		SemanticDocumentSyntax document)
-		: base(source, @abstract, document)
+		: base(source, document)
 	{
 	}
 	#endregion

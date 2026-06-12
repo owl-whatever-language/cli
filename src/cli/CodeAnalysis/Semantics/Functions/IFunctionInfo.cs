@@ -1,10 +1,11 @@
 namespace OwlDomain.Owl.CLI.CodeAnalysis.Semantics.Functions;
 
-public interface IFunctionInfo : ISymbolTarget
+public interface IFunctionInfo : ISymbolTarget, ITypeTarget
 {
 	#region Properties
 	FunctionType AsType { get; }
 	FunctionSignature? Signature { get; }
+	ITypeInfo? ITypeTarget.Type => AsType;
 	#endregion
 }
 

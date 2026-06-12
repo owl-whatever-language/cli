@@ -18,8 +18,6 @@
 	</PropertyGroup>
 
 	<!-- Project references -->
-	<ItemGroup Label="projects">
-	</ItemGroup>
 
 	<!-- Package references -->
 	<ItemGroup Label="packages">
