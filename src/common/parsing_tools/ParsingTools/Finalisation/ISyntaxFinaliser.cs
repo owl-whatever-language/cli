@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Finalisation.Syntax;
+namespace OwlDomain.ParsingTools.Finalisation;
 
 /// <summary>
 /// 	Represents a finaliser for syntax trees.
