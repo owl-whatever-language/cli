@@ -238,7 +238,7 @@ public sealed class IndexedPositionRangeTests
 	public void ToString_ReturnsExpectedString()
 	{
 		// Arrange
-		const string expected = "1, 2, 3 -> 4, 5, 6";
+		const string expected = "2, 3 -> 5, 6";
 		IndexedPositionRange sut = new(1, 2, 3, 4, 5, 6);
 
 		// Act

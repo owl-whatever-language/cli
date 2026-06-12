@@ -87,7 +87,7 @@ public readonly struct IndexedLinePosition :
 	public override int GetHashCode() => HashCode.Combine(Index, Position);
 
 	/// <inheritdoc/>
-	public override string ToString() => $"{Index}, {Position}";
+	public override string ToString() => Position.ToString();
 	#endregion
 
 	#region Operators

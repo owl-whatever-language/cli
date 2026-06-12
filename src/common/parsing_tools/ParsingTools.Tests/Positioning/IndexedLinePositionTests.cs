@@ -137,7 +137,7 @@ public sealed class IndexedLinePositionTests
 	public void ToString_ReturnsExpectedString()
 	{
 		// Arrange
-		const string expected = "1, 2, 3";
+		const string expected = "2, 3";
 		IndexedLinePosition sut = new(1, 2, 3);
 
 		// Act
