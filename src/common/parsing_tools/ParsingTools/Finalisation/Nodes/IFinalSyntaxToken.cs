@@ -40,13 +40,13 @@ public class FinalSyntaxToken : SemanticSyntaxToken, IFinalSyntaxToken
 
 	/// <summary>Creates a new <see cref="SemanticSyntaxToken"/> instance.</summary>
 	/// <param name="semantic">The semantic token to inherit the values from.</param>
-	public FinalSyntaxToken(SemanticSyntaxToken semantic) : base(semantic)
+	public FinalSyntaxToken(ISemanticSyntaxToken semantic) : base(semantic)
 	{
 	}
 
 	/// <summary>Copies the values from the given <paramref name="token"/>.</summary>
 	/// <param name="token">The token to copy the values from.</param>
-	protected FinalSyntaxToken(FinalSyntaxToken token) : base(token)
+	protected FinalSyntaxToken(IFinalSyntaxToken token) : base(token)
 	{
 	}
 	#endregion

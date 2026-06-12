@@ -62,7 +62,7 @@ public class SemanticSyntaxToken : ConcreteSyntaxToken, ISemanticSyntaxToken
 	/// <param name="classification">The classifications for the token.</param>
 	protected SemanticSyntaxToken(ISemanticSyntaxToken token, ClassificationList? classification = null) : base(token, classification)
 	{
-		Symbol = Symbol;
+		Symbol = token.Symbol;
 	}
 	#endregion
 
