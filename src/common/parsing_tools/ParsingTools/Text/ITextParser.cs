@@ -9,10 +9,6 @@ public interface ITextParser
 	/// <summary>The current position of the parser.</summary>
 	IndexedLinePosition Position { get; }
 
-	/// <summary>The exclusive end position for the current position.</summary>
-	/// <remarks>This should be used to ensure that the end position is exclusive, but that it doesn't accidentally go onto the next line.</remarks>
-	IndexedLinePosition EndPosition { get; }
-
 	/// <summary>The text element at the current position.</summary>
 	TextElement Current { get; }
 

@@ -60,13 +60,14 @@ public sealed class Lexer : BaseLexer
 			}
 
 			if (reportUnclosed)
-				ReportUnclosedTextLiteral(new(start, Text.EndPosition));
+				ReportUnclosedTextLiteral(new(start, Text.Position));
 
 			string lexeme = GetLexeme();
 			string value = GetValue();
 
+			IndexedLinePosition end = Text.Position;
 			FinishFullToken(out TriviaList leading, out TriviaList trailing);
-			TokenNode token = new(SyntaxKind.StringLiteral, lexeme, new(start, Text.EndPosition), leading, trailing, value);
+			TokenNode token = new(SyntaxKind.StringLiteral, lexeme, new(start, end), leading, trailing, value);
 			Tokens.Add(token);
 
 			return true;
@@ -95,8 +96,9 @@ public sealed class Lexer : BaseLexer
 			string lexeme = GetLexeme();
 			string value = GetValue();
 
+			IndexedLinePosition end = Text.Position;
 			FinishFullToken(out TriviaList leading, out TriviaList trailing);
-			TokenNode token = new(SyntaxKind.Identifier, lexeme, new(start, Text.EndPosition), leading, trailing, value);
+			TokenNode token = new(SyntaxKind.Identifier, lexeme, new(start, end), leading, trailing, value);
 			Tokens.Add(token);
 
 			return true;
@@ -131,7 +133,7 @@ public sealed class Lexer : BaseLexer
 			string lexeme = GetLexeme();
 			string value = GetValue().Trim();
 
-			return new TriviaNode<string>(SyntaxKind.Comment, new(start, Text.EndPosition), lexeme, value);
+			return new TriviaNode<string>(SyntaxKind.Comment, new(start, Text.Position), lexeme, value);
 		}
 		#endregion
 
