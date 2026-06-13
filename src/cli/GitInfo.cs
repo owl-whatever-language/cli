@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace OwlDomain.Owl.CLI;
 
 public static class GitInfo

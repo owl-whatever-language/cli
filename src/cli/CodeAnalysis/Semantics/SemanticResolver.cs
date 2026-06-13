@@ -224,7 +224,7 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 				Id = "argument_count_mismatch",
 
 				Location = new DiagnosticSourceLocation(Tree.Source, position),
-				Message = $"The function expected {expected:n0} arguments but it received {actual:n0}.",
+				Message = $"The function expected {expected:n0} argument(s) but it received {actual:n0}.",
 			});
 		}
 		protected override void ReportAmbiguousSymbolTargets(IReadOnlyCollection<ISymbolTarget> targets, IndexedPositionRange position)

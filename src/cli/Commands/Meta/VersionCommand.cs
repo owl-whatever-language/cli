@@ -1,8 +1,8 @@
-using Spectre.Console;
+namespace OwlDomain.Owl.CLI.Commands.Meta;
 
-namespace OwlDomain.Owl.CLI;
-
-public class VersionCommand : Command
+[DisplayName("version")]
+[Description("Provides more detailed version information than --version")]
+public sealed class VersionCommand : Command
 {
 	#region Methods
 	protected override int Execute(CommandContext context, CancellationToken cancellationToken)

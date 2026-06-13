@@ -60,6 +60,24 @@ public readonly partial struct ClassificationKind :
 			.Select(s => new ClassificationKind(s))
 			.ToArray();
 	}
+
+	/// <summary>Iterates through all of the scopes that make up the current classification.</summary>
+	/// <returns>The classification scopes that make up the current classification.</returns>
+	public IReadOnlyList<ClassificationKind> Iterate()
+	{
+		List<ClassificationKind> kinds = [this];
+		string current = Name;
+
+		while (current.Contains('.'))
+		{
+			int index = current.LastIndexOf('.');
+			current = current[..index];
+
+			kinds.Add(new(current));
+		}
+
+		return kinds;
+	}
 	#endregion
 
 	#region Operators

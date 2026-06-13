@@ -7,7 +7,8 @@ app.Configure(config =>
 
 	config
 		.SetApplicationName("owl")
-		.AddCommand<VersionCommand>("version").WithDescription("Provides more detailed version information than --version");
+		.AddCommandWithMeta<VersionCommand>()
+		.AddCommandWithMeta<AnalyseCommand>();
 
 #if DEBUG
 	config
