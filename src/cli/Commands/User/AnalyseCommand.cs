@@ -130,7 +130,8 @@ public sealed class AnalyseCommand : Command<AnalyseCommand.Settings>
 
 		IDiagnostic? GetDiagnosticForLine(int line)
 		{
-			List<IDiagnostic> candidates = [];
+			IDiagnostic? highest = null;
+			int highestLevel = 0;
 
 			foreach (IDiagnostic diagnostic in diagnostics)
 			{
@@ -142,19 +143,15 @@ public sealed class AnalyseCommand : Command<AnalyseCommand.Settings>
 
 				if (location.Position?.Start.Line == line)
 				{
-					if (diagnostic.Kind == DiagnosticKind.Error)
-						return diagnostic;
-
-					candidates.Add(diagnostic);
+					if (highest is null || diagnostic.Kind.Level > highestLevel)
+					{
+						highest = diagnostic;
+						highestLevel = diagnostic.Kind.Level;
+					}
 				}
 			}
 
-			if (candidates.Count is 0)
-				return null;
-
-			return
-				diagnostics.FirstOrDefault(d => d.Kind == DiagnosticKind.Warning) ??
-				diagnostics.FirstOrDefault();
+			return highest;
 		}
 		void CompleteLine()
 		{
@@ -205,7 +202,7 @@ public sealed class AnalyseCommand : Command<AnalyseCommand.Settings>
 		if (currentLine.Count > 0)
 			CompleteLine();
 
-		if (lines.Count > 0 && lines.Last().IsWhiteSpace())
+		while (lines.Count > 0 && lines.Last().IsWhiteSpace())
 			lines.RemoveAt(lines.Count - 1);
 
 		int maxLineNumberLength = lines.Count.ToString("n0").Length;
@@ -232,7 +229,7 @@ public sealed class AnalyseCommand : Command<AnalyseCommand.Settings>
 			.ShowRowSeparators()
 			.AddColumns("Severity", "Provider", "Message", "File", "Position");
 
-		foreach (IDiagnostic diagnostic in diagnostics.OrderBy(d => d.Kind.Name))
+		foreach (IDiagnostic diagnostic in diagnostics.OrderByDescending(d => d.Kind.Level))
 		{
 			string file = "", position = "";
 			Style style = SemanticColors.GetStyle(diagnostic.Kind);
@@ -272,6 +269,7 @@ public sealed class AnalyseCommand : Command<AnalyseCommand.Settings>
 			.UseValueFormatter(value => $"{value:n3}s");
 
 		int colorIndex = 0;
+		TimeSpan totalDuration = TimeSpan.FromSeconds(results.Sum(r => r.Duration.TotalSeconds));
 		foreach (IGrouping<string, IStageResult> group in results.GroupBy(result => result.Name))
 		{
 			Color color = colors[colorIndex];
@@ -283,8 +281,12 @@ public sealed class AnalyseCommand : Command<AnalyseCommand.Settings>
 			colorIndex = (colorIndex + 1) % colors.Count;
 		}
 
-		Panel panel = new Panel(new Rows(Text.Empty, bar, Text.Empty, breakdown))
-			.Header("[bold] Stage performance [/]", Justify.Center);
+		Rows rows = new(
+			Text.Empty, bar,
+			Text.Empty, breakdown);
+
+		Panel panel = new Panel(rows)
+			.Header($"[bold] Stage performance ({totalDuration.TotalSeconds:n3}s) [/]", Justify.Center);
 
 		panel.Width = width;
 
