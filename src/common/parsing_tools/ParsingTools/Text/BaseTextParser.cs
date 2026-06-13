@@ -10,6 +10,9 @@ public abstract class BaseTextParser : ITextParser
 	public abstract IndexedLinePosition Position { get; }
 
 	/// <inheritdoc/>
+	public IndexedLinePosition EndPosition { get; private set; } = new(1, 1, 2);
+
+	/// <inheritdoc/>
 	public TextElement Current => Peek(0);
 
 	/// <inheritdoc/>
@@ -53,12 +56,20 @@ public abstract class BaseTextParser : ITextParser
 			if (current == '\r' || current == '\n' || current == "\r\n")
 			{
 				AdvanceByOne();
+
+				IndexedLinePosition pos = Position;
+				EndPosition = new(pos.Index + 1, pos.Line, pos.Column);
+
 				Line++;
 				Column = 1;
 			}
 			else
 			{
 				AdvanceByOne();
+
+				IndexedLinePosition pos = Position;
+				EndPosition = new(pos.Index + 1, pos.Line, pos.Column + 1);
+
 				Column++;
 			}
 

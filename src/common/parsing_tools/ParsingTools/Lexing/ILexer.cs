@@ -130,7 +130,7 @@ public abstract class BaseLexer : ILexer
 			string lexeme = Text.Current.Value;
 			Text.Advance();
 
-			IndexedPositionRange position = new(start, Text.Position);
+			IndexedPositionRange position = new(start, Text.EndPosition);
 			FinishFullToken(out TriviaList leading, out TriviaList trailing);
 
 			TokenNode bad = new(SyntaxKind.BadCharacter, lexeme, position, leading, trailing, null);
@@ -281,7 +281,7 @@ public abstract class BaseLexer : ILexer
 			Text.Advance(sequence.Length);
 
 			FinishFullToken(out TriviaList leading, out TriviaList trailing);
-			TokenNode token = new(kind, sequence, new(start, Text.Position), leading, trailing, null);
+			TokenNode token = new(kind, sequence, new(start, Text.EndPosition), leading, trailing, null);
 			Tokens.Add(token);
 
 			return true;
@@ -329,7 +329,7 @@ public abstract class BaseLexer : ILexer
 			IndexedLinePosition start = Text.Position;
 
 			if (Text.MatchAny(["\r", "\n", "\r\n"], out string? match))
-				return new TriviaNode(SyntaxKind.LineBreak, new(start, Text.Position), match);
+				return new TriviaNode(SyntaxKind.LineBreak, new(start, Text.EndPosition), match);
 
 			if (Text.IsAtStartOfLine)
 			{
@@ -355,7 +355,7 @@ public abstract class BaseLexer : ILexer
 
 			string lexeme = GetLexeme();
 
-			return new TriviaNode(SyntaxKind.Indentation, new(start, Text.Position), lexeme);
+			return new TriviaNode(SyntaxKind.Indentation, new(start, Text.EndPosition), lexeme);
 		}
 		private ITriviaNode LexWhiteSpace()
 		{
@@ -369,7 +369,7 @@ public abstract class BaseLexer : ILexer
 
 			string lexeme = GetLexeme();
 
-			return new TriviaNode(SyntaxKind.WhiteSpace, new(start, Text.Position), lexeme);
+			return new TriviaNode(SyntaxKind.WhiteSpace, new(start, Text.EndPosition), lexeme);
 		}
 		#endregion
 
