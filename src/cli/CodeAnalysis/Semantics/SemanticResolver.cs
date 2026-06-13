@@ -42,20 +42,16 @@ public sealed class SemanticResolver : BaseSemanticResolver<SemanticResolutionIn
 			if (symbol is null)
 				return new SemanticSyntaxToken(token, symbol);
 
-			List<ClassificationKind> classifications = [.. token.Classification];
+			ClassificationKind? newClassification = symbol.Target switch
+			{
+				ILocalVariableTarget => ClassificationKind.Variable,
+				IFunctionInfo => ClassificationKind.Function,
+				ITypeInfo => ClassificationKind.Type,
 
-			ISymbolTarget target = symbol.Target;
+				_ => null
+			};
 
-			if (target is ILocalVariableTarget)
-				classifications.Add(ClassificationKind.Variable);
-
-			if (target is IFunctionInfo)
-				classifications.Add(ClassificationKind.Function);
-
-			if (target is ITypeInfo)
-				classifications.Add(ClassificationKind.Type);
-
-			return new SemanticSyntaxToken(token, symbol, new ClassificationList(classifications));
+			return new SemanticSyntaxToken(token, symbol, newClassification);
 		}
 		#endregion
 

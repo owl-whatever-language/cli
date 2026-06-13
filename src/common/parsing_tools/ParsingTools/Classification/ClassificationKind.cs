@@ -46,9 +46,29 @@ public readonly partial struct ClassificationKind :
 
 	/// <inheritdoc/>
 	public override string ToString() => Name;
+
+	/// <summary>Splits the current classification into its components.</summary>
+	/// <returns>The classifications that make up the current classification.</returns>
+	public IReadOnlyList<ClassificationKind> Split()
+	{
+		if (Name.IndexOf('.') < 0)
+			return [this];
+
+		return Name
+			.Split('.')
+			.Reverse() // Most specific one should always be checked first, so might as well reverse it here.
+			.Select(s => new ClassificationKind(s))
+			.ToArray();
+	}
 	#endregion
 
 	#region Operators
+	/// <summary>Combines the given <see langword="string"/> with the current classification.</summary>
+	/// <param name="left">The current classification.</param>
+	/// <param name="right">The new <see langword="string"/> addition.</param>
+	/// <returns>A combination of the current classification with the new <see langword="string"/> value.</returns>
+	public static ClassificationKind operator +(ClassificationKind left, string right) => new(left.Name + "." + right);
+
 	/// <inheritdoc/>
 	public static bool operator ==(ClassificationKind left, ClassificationKind right) => left.Equals(right);
 

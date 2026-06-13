@@ -30,7 +30,7 @@ public class SemanticSyntaxToken : ConcreteSyntaxToken, ISemanticSyntaxToken
 	/// <param name="trailingTrivia">The list of the trailing trivia nodes.</param>
 	/// <param name="value">The value of the token.</param>
 	/// <param name="isFabricated">Whether the token is fabricated.</param>
-	/// <param name="classification">The classifications for the token.</param>
+	/// <param name="classification">The classification for the token.</param>
 	/// <param name="symbol">The symbol that the token is referencing.</param>
 	/// <exception cref="ArgumentException">Thrown if the given syntax <paramref name="kind"/> is not a token.</exception>
 	public SemanticSyntaxToken(
@@ -41,7 +41,7 @@ public class SemanticSyntaxToken : ConcreteSyntaxToken, ISemanticSyntaxToken
 		TriviaList trailingTrivia,
 		object? value,
 		bool isFabricated,
-		ClassificationList classification,
+		ClassificationKind? classification,
 		ISymbol? symbol)
 		: base(kind, lexeme, position, leadingTrivia, trailingTrivia, value, isFabricated, classification)
 	{
@@ -51,16 +51,16 @@ public class SemanticSyntaxToken : ConcreteSyntaxToken, ISemanticSyntaxToken
 	/// <summary>Creates a new <see cref="ConcreteSyntaxToken"/> instance.</summary>
 	/// <param name="concrete">The concrete token to inherit the values from.</param>
 	/// <param name="symbol">The symbol that the token is referencing.</param>
-	/// <param name="classification">The classifications for the token.</param>
-	public SemanticSyntaxToken(IConcreteSyntaxToken concrete, ISymbol? symbol, ClassificationList? classification = null) : base(concrete, classification)
+	/// <param name="classification">The classification for the token.</param>
+	public SemanticSyntaxToken(IConcreteSyntaxToken concrete, ISymbol? symbol, ClassificationKind? classification = null) : base(concrete, classification)
 	{
 		Symbol = symbol;
 	}
 
 	/// <summary>Copies the values from the given <paramref name="token"/>.</summary>
 	/// <param name="token">The token to copy the values from.</param>
-	/// <param name="classification">The classifications for the token.</param>
-	protected SemanticSyntaxToken(ISemanticSyntaxToken token, ClassificationList? classification = null) : base(token, classification)
+	/// <param name="classification">The classification for the token.</param>
+	protected SemanticSyntaxToken(ISemanticSyntaxToken token, ClassificationKind? classification = null) : base(token, classification)
 	{
 		Symbol = token.Symbol;
 	}
