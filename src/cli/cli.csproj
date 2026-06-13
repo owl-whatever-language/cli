@@ -29,4 +29,25 @@
 		<PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
 	</ItemGroup>
 
+	<!-- Embed git information -->
+	<Target Name="EmbedGitInfo" BeforeTargets="GetAssemblyAttributes">
+		<Exec Command="git branch --show-current" ConsoleToMSBuild="true"><Output TaskParameter="ConsoleOutput" PropertyName="GitBranch" /></Exec>
+		<Exec Command="git status --porcelain" ConsoleToMSBuild="true"><Output TaskParameter="ConsoleOutput" PropertyName="GitUncommitted" /></Exec>
+		<Exec Command="git rev-parse HEAD" ConsoleToMSBuild="true"><Output TaskParameter="ConsoleOutput" PropertyName="GitCommitHash" /></Exec>
+		<Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true"><Output TaskParameter="ConsoleOutput" PropertyName="GitCommitHashShort" /></Exec>
+		<Exec Command="git log -1 --format=%s" ConsoleToMSBuild="true"><Output TaskParameter="ConsoleOutput" PropertyName="GitCommitSubject" /></Exec>
+		<Exec Command="git log -1 --format=%b" ConsoleToMSBuild="true"><Output TaskParameter="ConsoleOutput" PropertyName="GitCommitBody" /></Exec>
+		<Exec Command="git log -1 --format=%ci" ConsoleToMSBuild="true"><Output TaskParameter="ConsoleOutput" PropertyName="GitCommitDate" /></Exec>
+
+		<ItemGroup>
+			<AssemblyMetadata Include="git.branch" Value="$(GitBranch)" />
+			<AssemblyMetadata Include="git.uncommitted" Value="$(GitUncommitted)" />
+			<AssemblyMetadata Include="git.commit.hash" Value="$(GitCommitHash)" />
+			<AssemblyMetadata Include="git.commit.hash.short" Value="$(GitCommitHashShort)" />
+			<AssemblyMetadata Include="git.commit.subject" Value="$(GitCommitSubject)" />
+			<AssemblyMetadata Include="git.commit.body" Value="$(GitCommitBody)" />
+			<AssemblyMetadata Include="git.commit.date" Value="$(GitCommitDate)" />
+		</ItemGroup>
+	</Target>
+
 </Project>

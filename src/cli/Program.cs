@@ -1,34 +1,19 @@
-﻿using System.Reflection;
-
-CommandApp app = new();
+﻿CommandApp app = new();
 
 app.Configure(config =>
 {
+	if (GitInfo.Version is not null)
+		config.SetApplicationVersion(GitInfo.Version);
+
 	config
 		.SetApplicationName("owl")
-		.SetApplicationVersion(GetVersion());
+		.AddCommand<VersionCommand>("version").WithDescription("Provides more detailed version information than --version");
+
+#if DEBUG
+	config
+		.PropagateExceptions()
+		.ValidateExamples();
+#endif
 });
 
 return await app.RunAsync(args);
-
-static string GetVersion()
-{
-	AssemblyInformationalVersionAttribute? attribute = Assembly
-		.GetExecutingAssembly()
-		.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-
-	if (attribute is null)
-		return "dev";
-
-	string version = attribute.InformationalVersion;
-	int index = version.IndexOf('+');
-
-	if (index < 0 || index + 1 == version.Length)
-		return $"dev";
-
-	const int shortLength = 7;
-	string commitHash = version[(index + 1)..];
-	string shortHash = commitHash.Length < shortLength ? commitHash : commitHash[..shortLength];
-
-	return $"dev-{shortHash}";
-}

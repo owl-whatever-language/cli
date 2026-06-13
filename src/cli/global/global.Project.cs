@@ -21,6 +21,7 @@ global using OwlDomain.ParsingTools.Classification;
 global using OwlDomain.ParsingTools.Finalisation;
 global using OwlDomain.ParsingTools.Finalisation.Nodes;
 
+global using OwlDomain.Owl.CLI;
 global using OwlDomain.Owl.CLI.CodeAnalysis.Lexing;
 global using OwlDomain.Owl.CLI.CodeAnalysis.Parsing;
 global using OwlDomain.Owl.CLI.CodeAnalysis.Parsing.Nodes;
