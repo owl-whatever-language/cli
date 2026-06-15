@@ -7,3 +7,5 @@ global using OwlDomain.ParsingTools.Positioning;
 global using OwlDomain.ParsingTools.Positioning.Ranges;
 global using OwlDomain.ParsingTools.Text;
 global using OwlDomain.ParsingTools.Sources;
+global using OwlDomain.ParsingTools.Syntax;
+global using OwlDomain.ParsingTools.Trivia;

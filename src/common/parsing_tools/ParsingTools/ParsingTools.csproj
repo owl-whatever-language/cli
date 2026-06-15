@@ -11,6 +11,7 @@
 		<Version>1.0.0</Version>
 
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<NoWarn>CS1591</NoWarn>
 		<Deterministic>true</Deterministic>
 
 		<EnableNETAnalyzers>true</EnableNETAnalyzers>
