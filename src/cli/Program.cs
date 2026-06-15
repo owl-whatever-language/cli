@@ -7,8 +7,7 @@ app.Configure(config =>
 
 	config
 		.SetApplicationName("owl")
-		.AddCommandWithMeta<VersionCommand>()
-		.AddCommandWithMeta<AnalyseCommand>();
+		.AddCommandWithMeta<VersionCommand>();
 
 #if DEBUG
 	config
