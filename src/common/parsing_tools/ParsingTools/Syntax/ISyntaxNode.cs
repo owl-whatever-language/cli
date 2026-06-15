@@ -12,6 +12,21 @@ public interface ISyntaxNode
 	#endregion
 }
 
+public abstract class BaseSyntaxNode : ISyntaxNode
+{
+	#region Properties
+	/// <inheritdoc/>
+	public IndexedPositionRange Position => GetChildren().GetPosition();
+
+	/// <inheritdoc/>
+	public IndexedPositionRange FullPosition => GetChildren().GetFullPosition();
+	#endregion
+
+	#region Methods
+	public abstract IEnumerable<ISyntaxNode> GetChildren();
+	#endregion
+}
+
 public static class ISyntaxNodeExtensions
 {
 	extension(IEnumerable<ISyntaxNode> enumerable)
