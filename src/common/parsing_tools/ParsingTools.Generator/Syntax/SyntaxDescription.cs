@@ -20,7 +20,10 @@ internal sealed record class TypeDescription(Name Type) : ITypeDescription
 	{
 		get
 		{
-			if (Type.Original is "string" or "string?")
+			if (Type.Original.EndsWith("?") && Name.Keywords.Contains(Type.Original.Substring(0, Type.Original.Length - 1)))
+				return false;
+
+			if (Name.Keywords.Contains(Type.Original))
 				return false;
 
 			return Type.Original == Type.Original.ToLower();

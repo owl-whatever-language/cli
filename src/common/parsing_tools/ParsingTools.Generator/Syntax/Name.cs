@@ -3,6 +3,14 @@ namespace OwlDomain.ParsingTools.Generator.Syntax;
 public sealed class Name(string original) : IEquatable<Name>
 {
 	#region Properties
+	public static IReadOnlyCollection<string> Keywords { get; } =
+	[
+		"byte", "sbyte", "ushort", "short", "uint", "int", "ulong", "long",
+		"float", "double", "decimal", "char",
+		"char", "string",
+		"bool", "true", "false",
+		"base", "operator", "this", "if", "else", "while", "for", "return"
+	];
 	public string Original { get; } = original;
 	public IReadOnlyList<string> Parts => Original.Split(['_'], StringSplitOptions.RemoveEmptyEntries);
 	public string PascalCase => ToPascalCase(Parts);
@@ -11,7 +19,7 @@ public sealed class Name(string original) : IEquatable<Name>
 		get
 		{
 			string camel = ToCamelCase(Parts);
-			if (camel is "decimal" or "int" or "string" or "float" or "bool" or "operator")
+			if (Keywords.Contains(camel))
 				return "@" + camel;
 
 			return camel;

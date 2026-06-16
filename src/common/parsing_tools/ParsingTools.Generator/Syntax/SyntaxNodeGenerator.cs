@@ -22,11 +22,22 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		if (text is null)
 			return;
 
-		SyntaxDescriptionFile? description = SyntaxDescriptionFile.Parse(text);
-		if (description is null)
-			return;
+		try
+		{
+			SyntaxDescriptionFile? description = SyntaxDescriptionFile.Parse(text);
+			if (description is null)
+				return;
 
-		Generate(context, description);
+			Generate(context, description);
+		}
+		catch (Exception exception)
+		{
+			string message = $"Type: {exception.GetType()}\nMessage: \"{exception.Message.Trim()}\"\nStack: {exception.StackTrace}";
+#pragma warning disable RS1035 // Do not use APIs banned for analyzers
+			File.WriteAllText("/mnt/data/projects/owldomain/projects/owl/cli/error.txt", message);
+#pragma warning restore RS1035 // Do not use APIs banned for analyzers
+			throw;
+		}
 	}
 	private static void Generate(SourceProductionContext context, SyntaxDescriptionFile description)
 	{
@@ -50,7 +61,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				return;
 
 			SyntaxTreeInfo? last = order.LastOrDefault();
-			SyntaxTreeInfo info = new(rootNamespace, name, tree, token, last, tree.Members, [], []);
+			SyntaxTreeInfo info = new(rootNamespace, name, tree, token, last, tree.Members, [], [], []);
 
 			order.Add(info);
 			lookup.Add(info.Kind.Original, info);
@@ -65,7 +76,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 				MemberDescriptionList members = group.Members.Concat(modifier is not null ? modifier.Members : []).ToArray();
 
-				SyntaxGroupInfo groupInfo = new(info, info.Kind, group.Name, shadowed, members);
+				SyntaxGroupInfo groupInfo = new(info, info.Kind, group.Name, shadowed, members, []);
 				info.Groups.Add(group.Name.Original, groupInfo);
 			}
 		}
@@ -80,7 +91,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 					.FirstOrDefault(d => d.Name == node.Name && d.Kind == info.Kind);
 
 				SyntaxGroupInfo? group = info.Groups.GetValueOrDefault(node.Kind.Original);
-				SyntaxNodeInfo? shadowed = info.Shadowed?.Nodes.GetValueOrDefault(node.Name);
+				SyntaxNodeInfo? shadowed = info.Shadowed?.LookupNodes.GetValueOrDefault(node.Name);
 
 				MemberDescriptionList members = node.Members
 					.Concat(modifier is not null ? modifier.Members : [])
@@ -89,7 +100,16 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 					.ToArray();
 
 				SyntaxNodeInfo nodeInfo = new(info, group, info.Kind, node.Name, shadowed, members);
-				info.Nodes.Add(nodeInfo.Name.Original, nodeInfo);
+
+				if (group is null)
+					info.LookupNodes.Add(nodeInfo.Name.Original, nodeInfo);
+				else
+				{
+					info.LookupNodes.Add(nodeInfo.Name + "_" + group.Name.Original, nodeInfo);
+					group.Nodes.Add(nodeInfo.Name.Original, nodeInfo);
+				}
+
+				info.Nodes.Add(nodeInfo);
 			}
 		}
 
@@ -103,7 +123,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			foreach (SyntaxGroupInfo group in info.Groups.Values)
 				GenerateGroup(context, group);
 
-			foreach (SyntaxNodeInfo node in info.Nodes.Values)
+			foreach (SyntaxNodeInfo node in info.Nodes)
 				GenerateNode(context, node);
 		}
 		GenerateSyntaxBundle(context, order);
@@ -121,11 +141,11 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				writer.WriteLine($"public partial interface {info.ITokenName} : {info.INodeName}, {(info.Shadowed is null ? "ISyntaxToken" : info.Shadowed.ITokenName)}");
 				using (writer.Braced())
 				{
-					if (info.OnlyTokenMembers.Any())
+					if (info.TokenInterfaceMembers.Any())
 					{
 						using (writer.Region("Properties"))
 						{
-							foreach (MemberDescription member in info.OnlyTokenMembers)
+							foreach (MemberDescription member in info.TokenInterfaceMembers)
 								writer.WriteLine($"{member.Type.TargetType} {member.Name.PascalCase} {{ get; }}");
 						}
 					}
@@ -137,11 +157,11 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				writer.WriteLine($"public sealed partial class {info.TokenName} : BaseSyntaxToken, {info.ITokenName}");
 				using (writer.Braced())
 				{
-					if (info.AllTokenMembers.Any())
+					if (info.TokenClassMembers.Any())
 					{
 						using (writer.Region("Properties"))
 						{
-							foreach (MemberDescription member in info.AllTokenMembers)
+							foreach (MemberDescription member in info.TokenClassMembers)
 								writer.WriteLine($"public {member.Type.TargetType} {member.Name.PascalCase} {{ get; }}");
 						}
 						writer.WriteLine();
@@ -158,7 +178,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		TriviaList leadingTrivia,
 		TriviaList trailingTrivia");
 
-						foreach (MemberDescription member in info.AllTokenMembers)
+						foreach (MemberDescription member in info.TokenClassMembers)
 						{
 							writer.WriteLine(",");
 							writer.Write($"\t{member.Type.TargetType} {member.Name.CamelCase}");
@@ -166,14 +186,14 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 						writer.WriteLine(")");
 						writer.Write("\t: base(kind, position, lexeme, value, leadingTrivia, trailingTrivia)");
-						if (info.AllTokenMembers.Any() is false)
+						if (info.TokenClassMembers.Any() is false)
 							writer.WriteLine(" {}");
 						else
 						{
 							writer.WriteLine();
 							using (writer.Braced())
 							{
-								foreach (MemberDescription member in info.AllTokenMembers)
+								foreach (MemberDescription member in info.TokenClassMembers)
 									writer.WriteLine($"{member.Name.PascalCase} = {member.Name.CamelCase};");
 							}
 						}
@@ -184,7 +204,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		SyntaxKind kind,
 		IndexedPositionRange position");
 
-						foreach (MemberDescription member in info.AllTokenMembers)
+						foreach (MemberDescription member in info.TokenClassMembers)
 						{
 							writer.WriteLine(",");
 							writer.Write($"\t{member.Type.TargetType} {member.Name.CamelCase}");
@@ -192,14 +212,14 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 						writer.WriteLine(")");
 						writer.Write("\t: base(kind, position)");
-						if (info.AllTokenMembers.Any() is false)
+						if (info.TokenClassMembers.Any() is false)
 							writer.WriteLine(" {}");
 						else
 						{
 							writer.WriteLine();
 							using (writer.Braced())
 							{
-								foreach (MemberDescription member in info.AllTokenMembers)
+								foreach (MemberDescription member in info.TokenClassMembers)
 									writer.WriteLine($"{member.Name.PascalCase} = {member.Name.CamelCase};");
 							}
 						}
@@ -306,11 +326,11 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 				using (writer.Braced())
 				{
-					if (info.Members.Any())
+					if (info.InterfaceMembers.Any())
 					{
 						using (writer.Region("Properties"))
 						{
-							foreach (MemberDescription member in info.Members)
+							foreach (MemberDescription member in info.InterfaceMembers)
 								writer.WriteLine($"{member.Type.TargetType} {member.Name.PascalCase} {{ get; }}");
 						}
 					}
@@ -338,21 +358,21 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 				using (writer.Braced())
 				{
-					if (info.Members.Any())
+					if (info.InterfaceMembers.Any())
 					{
 						using (writer.Region("Properties"))
 						{
 							if (info.Shadowed is null)
 							{
-								foreach (MemberDescription member in info.Members)
+								foreach (MemberDescription member in info.InterfaceMembers)
 									writer.WriteLine($"{member.Type.GetTargetType(info)} {member.Name.PascalCase} {{ get; }}");
 							}
 							else
 							{
-								for (int i = 0; i < info.Members.Count; i++)
+								for (int i = 0; i < info.InterfaceMembers.Count; i++)
 								{
-									MemberDescription member = info.Members[i];
-									MemberDescription? shadowed = info.Shadowed.Members.FirstOrDefault(m => m.Name == member.Name);
+									MemberDescription member = info.InterfaceMembers[i];
+									MemberDescription? shadowed = info.Shadowed.InterfaceMembers.FirstOrDefault(m => m.Name == member.Name);
 
 									if (shadowed is not null && shadowed.Type.IsSyntaxType is false)
 										continue;
@@ -379,36 +399,36 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				writer.WriteLine($"public sealed partial class {info.ClassName} : {info.Tree.BaseNodeName}, {info.InterfaceName}");
 				using (writer.Braced())
 				{
-					if (info.AllMembers.Any())
+					if (info.ClassMembers.Any())
 					{
 						using (writer.Region("Properties"))
 						{
-							foreach (MemberDescription member in info.AllMembers)
+							foreach (MemberDescription member in info.ClassMembers)
 								writer.WriteLine($"public {member.Type.GetTargetType(info)} {member.Name.PascalCase} {{ get; }}");
 						}
 						writer.WriteLine();
 						using (writer.Region("Constructors"))
 						{
-							if (info.AllMembers.Count is 1)
+							if (info.ClassMembers.Count is 1)
 								writer.Write($"public {info.ClassName}(");
 							else
 								writer.WriteLine($"public {info.ClassName}(");
 
-							for (int i = 0; i < info.AllMembers.Count; i++)
+							for (int i = 0; i < info.ClassMembers.Count; i++)
 							{
 								if (i > 0)
 									writer.WriteLine(",");
 
-								if (info.AllMembers.Count is not 1)
+								if (info.ClassMembers.Count is not 1)
 									writer.Write("\t");
 
-								MemberDescription member = info.AllMembers[i];
+								MemberDescription member = info.ClassMembers[i];
 								writer.Write($"{member.Type.GetTargetType(info)} {member.Name.CamelCase}");
 							}
 							writer.WriteLine(")");
 							using (writer.Braced())
 							{
-								foreach (MemberDescription member in info.AllMembers)
+								foreach (MemberDescription member in info.ClassMembers)
 									writer.WriteLine($"{member.Name.PascalCase} = {member.Name.CamelCase};");
 							}
 						}

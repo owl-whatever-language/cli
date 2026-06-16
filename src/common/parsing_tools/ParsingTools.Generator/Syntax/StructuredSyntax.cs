@@ -8,7 +8,8 @@ internal sealed record class SyntaxTreeInfo(
 	SyntaxTreeInfo? Shadowed,
 	MemberDescriptionList Members,
 	Dictionary<string, SyntaxGroupInfo> Groups,
-	Dictionary<string, SyntaxNodeInfo> Nodes)
+	Dictionary<string, SyntaxNodeInfo> LookupNodes,
+	List<SyntaxNodeInfo> Nodes)
 {
 	#region Properties
 	public string Namespace => $"{RootNamespace}.{PascalKind}";
@@ -26,9 +27,11 @@ internal sealed record class SyntaxTreeInfo(
 	public string BaseNodePath => $"{Directory}/{BaseNodeName}.g.cs";
 	public string TokenPath => $"{Directory}/{TokenName}.g.cs";
 	public IReadOnlyList<string> Namespaces => GetAllNamespaces().Distinct().OrderBy(n => n).ToArray();
-	public SyntaxNodeInfo Document => Nodes["document"];
-	public MemberDescriptionList OnlyTokenMembers => Token.Members;
-	public MemberDescriptionList AllTokenMembers => Shadowed is not null ? [.. Shadowed.AllTokenMembers, .. Members, .. Token.Members] : [.. Members, .. Token.Members];
+	public SyntaxNodeInfo Document => LookupNodes["document"];
+	public MemberDescriptionList BaseNodeInterfaceMembers => Members;
+	public MemberDescriptionList BaseNodeClassMembers => Shadowed is not null ? [.. Shadowed.BaseNodeClassMembers, .. Members] : Members;
+	public MemberDescriptionList TokenInterfaceMembers => Token.Members;
+	public MemberDescriptionList TokenClassMembers => Shadowed is not null ? [.. Shadowed.TokenClassMembers, .. BaseNodeClassMembers, .. Token.Members] : [.. BaseNodeClassMembers, .. Token.Members];
 	#endregion
 
 	#region Functions
@@ -37,13 +40,16 @@ internal sealed record class SyntaxTreeInfo(
 		if (key is "token")
 			return ITokenName;
 
-		if (key is "string" or "string?")
+		if (key.EndsWith("?") && Name.Keywords.Contains(key.Substring(0, key.Length - 1)))
+			return key;
+
+		if (Name.Keywords.Contains(key))
 			return key;
 
 		if (Groups.TryGetValue(key, out SyntaxGroupInfo group))
 			return group.InterfaceName;
 
-		return Nodes[key].InterfaceName;
+		return LookupNodes[key].InterfaceName;
 	}
 	private IEnumerable<string> GetAllNamespaces()
 	{
@@ -53,7 +59,7 @@ internal sealed record class SyntaxTreeInfo(
 		foreach (SyntaxGroupInfo group in Groups.Values)
 			yield return group.Namespace;
 
-		foreach (SyntaxNodeInfo node in Nodes.Values)
+		foreach (SyntaxNodeInfo node in Nodes)
 			yield return node.Namespace;
 
 		if (Shadowed is not null)
@@ -70,7 +76,8 @@ internal sealed record class SyntaxGroupInfo(
 	Name Kind,
 	Name Name,
 	SyntaxGroupInfo? Shadowed,
-	MemberDescriptionList Members)
+	MemberDescriptionList Members,
+	Dictionary<string, SyntaxNodeInfo> Nodes)
 {
 	#region Properties
 	public string PascalKind => Kind.PascalCase;
@@ -79,6 +86,8 @@ internal sealed record class SyntaxGroupInfo(
 	public string InterfaceName => $"I{PascalKind}{PascalName}Syntax";
 	public string Directory => $"{Tree.Directory}/Nodes/{PascalName}s";
 	public string InterfacePath => $"{Directory}/{InterfaceName}.g.cs";
+	public MemberDescriptionList InterfaceMembers => Members;
+	public MemberDescriptionList ClassMembers => Shadowed is not null ? [.. Shadowed.ClassMembers, .. Members] : Members;
 	#endregion
 }
 
@@ -100,7 +109,8 @@ internal sealed record class SyntaxNodeInfo(
 	public string Directory => Group is not null ? Group.Directory : $"{PascalKind}/Nodes";
 	public string Path => $"{Directory}/{ClassName}.g.cs";
 	public string BaseInterfaceName => Group is not null ? Group.InterfaceName : Tree.INodeName;
-	public MemberDescriptionList AllMembers => [.. Tree.Members, .. Members, .. Group is not null ? Group.Members : [], .. Group?.Shadowed is not null ? Group.Shadowed.Members : []];
-	public MemberDescriptionList SyntaxMembers => AllMembers.Where(m => m.Type.IsSyntaxType).ToArray();
+	public MemberDescriptionList InterfaceMembers => Members;
+	public MemberDescriptionList ClassMembers => [.. Tree.BaseNodeClassMembers, .. Members, .. Group?.ClassMembers ?? []];
+	public MemberDescriptionList SyntaxMembers => ClassMembers.Where(m => m.Type.IsSyntaxType).ToArray();
 	#endregion
 }

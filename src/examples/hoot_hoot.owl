@@ -6,3 +6,12 @@ print("Hoot Hoot!");
 // From variable
 text output = "Hoot Hoot (from variable)!";
 print(output);
+
+// From function
+HootTheUser("<user>");
+
+// 'fun' is only required for local / top-level function declarations
+fun HootTheUser(text user)
+{
+	print($"Hoot Hoot {user}!");
+}
