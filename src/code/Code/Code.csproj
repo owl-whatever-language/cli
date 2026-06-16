@@ -6,8 +6,8 @@
 		<LangVersion>14</LangVersion>
 		<Nullable>enable</Nullable>
 
-		<AssemblyName>OwlDomain.OWL.Code.Syntax</AssemblyName>
-		<RootNamespace>OwlDomain.OWL.Code.Syntax</RootNamespace>
+		<AssemblyName>OwlDomain.OWL.Code</AssemblyName>
+		<RootNamespace>OwlDomain.OWL.Code</RootNamespace>
 		<Version>1.0.0</Version>
 
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>

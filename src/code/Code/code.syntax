@@ -1,4 +1,4 @@
-namespace : OwlDomain.Owl.CodeAnalysis.Syntax
+namespace : OwlDomain.Owl.Code.CodeAnalysis.Syntax
 
 # Define the shadowing
 shadow : concrete semantic final
