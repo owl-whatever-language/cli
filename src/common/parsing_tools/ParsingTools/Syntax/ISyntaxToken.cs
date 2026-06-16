@@ -22,8 +22,8 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 	{
 		get
 		{
-			ISyntaxNode? first = LeadingTrivia.GetFirstWithFullPosition();
-			ISyntaxNode? last = TrailingTrivia.GetLastFirstWithFullPosition();
+			ISyntaxNode? first = LeadingTrivia.GetFirstWithAnyPosition();
+			ISyntaxNode? last = TrailingTrivia.GetLastFirstWithAnyPosition();
 
 			IndexedLinePosition start = first?.Position.Start ?? Position.Start;
 			IndexedLinePosition end = last?.Position.End ?? Position.End;

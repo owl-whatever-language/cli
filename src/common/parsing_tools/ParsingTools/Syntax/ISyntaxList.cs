@@ -1,13 +1,13 @@
 namespace OwlDomain.ParsingTools.Syntax;
 
-public interface ISyntaxList<TValue> : ISyntaxNode, IReadOnlyList<TValue>
-	where TValue : notnull, ISyntaxNode
+public interface ISyntaxList<out TValue> : ISyntaxNode, IReadOnlyList<TValue>
+	where TValue : class, ISyntaxNode
 {
 }
 
-public interface ISyntaxList<TValue, TSeparator> : ISyntaxNode
-	where TValue : notnull, ISyntaxNode
-	where TSeparator : notnull, ISyntaxNode
+public interface ISyntaxList<out TValue, out TSeparator> : ISyntaxNode
+	where TValue : class, ISyntaxNode
+	where TSeparator : class, ISyntaxNode
 {
 	#region Properties
 	IReadOnlyList<ISyntaxNode> Nodes { get; }
@@ -55,8 +55,8 @@ public class SyntaxList<TValue> : ISyntaxList<TValue>
 }
 
 public class SyntaxList<TValue, TSeparator> : ISyntaxList<TValue, TSeparator>
-	where TValue : notnull, ISyntaxNode
-	where TSeparator : notnull, ISyntaxNode
+	where TValue : class, ISyntaxNode
+	where TSeparator : class, ISyntaxNode
 {
 	#region Properties
 	/// <inheritdoc/>

@@ -1,6 +1,10 @@
 <Solution>
+	<Folder Name="/code_syntax/">
+		<Project Path="code_syntax/Code.Syntax/Code.Syntax.csproj" />
+	</Folder>
 	<Folder Name="/common/" />
 	<Folder Name="/common/parsing_tools/">
+		<Project Path="common/parsing_tools/ParsingTools.Generator/ParsingTools.Generator.csproj" />
 		<Project Path="common/parsing_tools/ParsingTools.Tests/ParsingTools.Tests.csproj" />
 		<Project Path="common/parsing_tools/ParsingTools/ParsingTools.csproj" />
 	</Folder>

@@ -1,0 +1,39 @@
+namespace : OwlDomain.Owl.CodeAnalysis.Syntax
+
+# Define the shadowing
+shadow : concrete semantic final
+
+# Define what's on the tokens
+token concrete : ClassificationKind classification
+token semantic
+token final
+
+# Define the trees, and what each node in that tree can have
+tree concrete
+tree semantic
+tree final
+
+# Define groups, these will be turned into base interfaces for grouping
+group expression
+group statement
+group function_argument
+group type_name
+
+# Modify a group/type on a specific tree
+expression @ semantic
+
+# Defines the root node of the tree
+document : list<statement> statements, token end_of_input
+
+## Type names
+simple type_name : token name
+
+## Statements
+expression statement : expression expression, token terminator
+variable_declaration statement : type_name type, token name, token assignment, expression value, token terminator
+
+## Expressions
+function_call expression : token open_bracket, list<function_argument, token> arguments, token close_bracket
+
+### Functions
+direct function_argument : expression expression

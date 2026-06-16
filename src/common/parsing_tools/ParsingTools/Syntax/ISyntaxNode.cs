@@ -34,8 +34,8 @@ public static class ISyntaxNodeExtensions
 		#region Methods
 		public ISyntaxNode? GetFirstWithPosition() => enumerable.FirstOrDefault(s => s.Position != default);
 		public ISyntaxNode? GetLastFirstWithPosition() => enumerable.LastOrDefault(s => s.Position != default);
-		public ISyntaxNode? GetFirstWithFullPosition() => enumerable.FirstOrDefault(s => s.FullPosition != default);
-		public ISyntaxNode? GetLastFirstWithFullPosition() => enumerable.LastOrDefault(s => s.FullPosition != default);
+		public ISyntaxNode? GetFirstWithAnyPosition() => enumerable.FirstOrDefault(s => s.FullPosition != default || s.Position != default);
+		public ISyntaxNode? GetLastFirstWithAnyPosition() => enumerable.LastOrDefault(s => s.FullPosition != default || s.Position != default);
 		public IndexedPositionRange GetPosition()
 		{
 			ISyntaxNode? first = GetFirstWithPosition(enumerable);
@@ -48,11 +48,11 @@ public static class ISyntaxNodeExtensions
 		}
 		public IndexedPositionRange GetFullPosition()
 		{
-			ISyntaxNode? first = GetFirstWithFullPosition(enumerable);
+			ISyntaxNode? first = GetFirstWithAnyPosition(enumerable);
 			if (first is null)
 				return default;
 
-			ISyntaxNode? last = GetLastFirstWithFullPosition(enumerable) ?? first;
+			ISyntaxNode? last = GetLastFirstWithAnyPosition(enumerable) ?? first;
 
 			return new(first.FullPosition.Start, last.FullPosition.End);
 		}
