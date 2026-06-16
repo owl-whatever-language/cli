@@ -449,6 +449,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				{
 					using (writer.Region("Properties"))
 					{
+						writer.WriteLine("ISourceFile Source { get; }");
 						foreach (SyntaxTreeInfo tree in order)
 							writer.WriteLine($"{tree.ITreeName}? {tree.PascalKind} {{ get; }}");
 					}
@@ -462,6 +463,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				{
 					using (writer.Region("Properties"))
 					{
+						writer.WriteLine("public ISourceFile Source { get; }");
 						foreach (SyntaxTreeInfo tree in order)
 						{
 							if (tree.Shadowed is null)
@@ -482,6 +484,11 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 								}
 							}
 						}
+					}
+					writer.WriteLine();
+					using (writer.Region("Constructors"))
+					{
+						writer.WriteLine($"public SyntaxTreeBundle(ISourceFile source) => Source = source;");
 					}
 				}
 			}
