@@ -114,7 +114,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		{
 			using (writer.TypePreamble())
 			{
-				writer.WriteLine($"public interface {info.ITokenName} : {info.INodeName}, {(info.Shadowed is null ? "ISyntaxToken" : info.Shadowed.ITokenName)}");
+				writer.WriteLine($"public partial interface {info.ITokenName} : {info.INodeName}, {(info.Shadowed is null ? "ISyntaxToken" : info.Shadowed.ITokenName)}");
 				using (writer.Braced())
 				{
 					if (info.OnlyTokenMembers.Any())
@@ -130,7 +130,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 			using (writer.TypePreamble())
 			{
-				writer.WriteLine($"public sealed class {info.TokenName} : BaseSyntaxToken, {info.ITokenName}");
+				writer.WriteLine($"public sealed partial class {info.TokenName} : BaseSyntaxToken, {info.ITokenName}");
 				using (writer.Braced())
 				{
 					if (info.AllTokenMembers.Any())
@@ -217,7 +217,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		{
 			using (writer.TypePreamble())
 			{
-				writer.WriteLine($"public interface {info.INodeName} : {(info.Shadowed is null ? "ISyntaxNode" : info.Shadowed.INodeName)}");
+				writer.WriteLine($"public partial interface {info.INodeName} : {(info.Shadowed is null ? "ISyntaxNode" : info.Shadowed.INodeName)}");
 				using (writer.Braced())
 				{
 				}
@@ -225,7 +225,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 			using (writer.TypePreamble())
 			{
-				writer.WriteLine($"public abstract class {info.BaseNodeName} : BaseSyntaxNode, {info.INodeName}");
+				writer.WriteLine($"public abstract partial class {info.BaseNodeName} : BaseSyntaxNode, {info.INodeName}");
 				using (writer.Braced())
 				{
 				}
@@ -244,7 +244,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		{
 			using (writer.TypePreamble())
 			{
-				writer.WriteLine($"public interface {info.ITreeName} : {(info.Shadowed is null ? "ISyntaxTree" : info.Shadowed.ITreeName)}");
+				writer.WriteLine($"public partial interface {info.ITreeName} : {(info.Shadowed is null ? "ISyntaxTree" : info.Shadowed.ITreeName)}");
 				using (writer.Braced())
 				{
 					using (writer.Region("Properties"))
@@ -264,7 +264,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 			using (writer.TypePreamble())
 			{
-				writer.WriteLine($"public sealed class {info.TreeName} : BaseSyntaxTree, {info.ITreeName}");
+				writer.WriteLine($"public sealed partial class {info.TreeName} : BaseSyntaxTree, {info.ITreeName}");
 				using (writer.Braced())
 				{
 					using (writer.Region("Properties"))
@@ -294,7 +294,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		{
 			using (writer.TypePreamble())
 			{
-				writer.Write($"public interface {info.InterfaceName} : {info.Tree.INodeName}");
+				writer.Write($"public partial interface {info.InterfaceName} : {info.Tree.INodeName}");
 				if (info.Shadowed is not null)
 					writer.WriteLine($", {info.Shadowed.InterfaceName}");
 
@@ -316,7 +316,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		{
 			using (writer.TypePreamble())
 			{
-				writer.Write($"public interface {info.InterfaceName} : {info.BaseInterfaceName}");
+				writer.Write($"public partial interface {info.InterfaceName} : {info.BaseInterfaceName}");
 				if (info.Shadowed is not null)
 					writer.WriteLine($", {info.Shadowed.InterfaceName}");
 				else
@@ -358,7 +358,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 			using (writer.TypePreamble())
 			{
-				writer.WriteLine($"public sealed class {info.ClassName} : {info.Tree.BaseNodeName}, {info.InterfaceName}");
+				writer.WriteLine($"public sealed partial class {info.ClassName} : {info.Tree.BaseNodeName}, {info.InterfaceName}");
 				using (writer.Braced())
 				{
 					if (info.AllMembers.Any())
@@ -435,7 +435,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		{
 			using (writer.TypePreamble())
 			{
-				writer.WriteLine($"public interface ISyntaxTreeBundle");
+				writer.WriteLine($"public partial interface ISyntaxTreeBundle");
 				using (writer.Braced())
 				{
 					using (writer.Region("Properties"))
@@ -448,7 +448,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 			using (writer.TypePreamble())
 			{
-				writer.WriteLine($"public sealed class SyntaxTreeBundle : ISyntaxTreeBundle");
+				writer.WriteLine($"public sealed partial class SyntaxTreeBundle : ISyntaxTreeBundle");
 				using (writer.Braced())
 				{
 					using (writer.Region("Properties"))
