@@ -297,6 +297,8 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				writer.Write($"public partial interface {info.InterfaceName} : {info.Tree.INodeName}");
 				if (info.Shadowed is not null)
 					writer.WriteLine($", {info.Shadowed.InterfaceName}");
+				else
+					writer.WriteLine();
 
 				using (writer.Braced())
 				{
@@ -371,14 +373,21 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 						writer.WriteLine();
 						using (writer.Region("Constructors"))
 						{
-							writer.WriteLine($"public {info.ClassName}(");
+							if (info.AllMembers.Count is 1)
+								writer.Write($"public {info.ClassName}(");
+							else
+								writer.WriteLine($"public {info.ClassName}(");
+
 							for (int i = 0; i < info.AllMembers.Count; i++)
 							{
 								if (i > 0)
 									writer.WriteLine(",");
 
+								if (info.AllMembers.Count is not 1)
+									writer.Write("\t");
+
 								MemberDescription member = info.AllMembers[i];
-								writer.Write($"\t{member.Type.GetTargetType(info)} {member.Name.CamelCase}");
+								writer.Write($"{member.Type.GetTargetType(info)} {member.Name.CamelCase}");
 							}
 							writer.WriteLine(")");
 							using (writer.Braced())
