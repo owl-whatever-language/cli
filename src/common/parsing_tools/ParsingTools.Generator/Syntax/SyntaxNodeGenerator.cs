@@ -102,6 +102,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			foreach (SyntaxNodeInfo node in info.Nodes.Values)
 				GenerateNode(context, node);
 		}
+		GenerateSyntaxBundle(context, order);
 	}
 
 	static void GenerateToken(SourceProductionContext context, SyntaxTreeInfo info)
@@ -424,6 +425,61 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 		string source = stringWriter.ToString();
 		context.AddSource("global.Syntax.g.cs", source);
+	}
+	static void GenerateSyntaxBundle(SourceProductionContext context, IReadOnlyList<SyntaxTreeInfo> order)
+	{
+		StringWriter stringWriter = new();
+		IndentedTextWriter writer = new(stringWriter, "\t");
+
+		using (writer.Preamble(order.First().RootNamespace))
+		{
+			using (writer.TypePreamble())
+			{
+				writer.WriteLine($"public interface ISyntaxTreeBundle");
+				using (writer.Braced())
+				{
+					using (writer.Region("Properties"))
+					{
+						foreach (SyntaxTreeInfo tree in order)
+							writer.WriteLine($"{tree.ITreeName}? {tree.PascalKind} {{ get; }}");
+					}
+				}
+			}
+
+			using (writer.TypePreamble())
+			{
+				writer.WriteLine($"public sealed class SyntaxTreeBundle : ISyntaxTreeBundle");
+				using (writer.Braced())
+				{
+					using (writer.Region("Properties"))
+					{
+						foreach (SyntaxTreeInfo tree in order)
+						{
+							if (tree.Shadowed is null)
+							{
+								writer.WriteLine($"public {tree.ITreeName}? {tree.PascalKind} {{ get; set; }}");
+								continue;
+							}
+
+							writer.WriteLine($"public {tree.ITreeName}? {tree.PascalKind}");
+							using (writer.Braced())
+							{
+								writer.WriteLine("get => field;");
+								writer.WriteLine("set");
+								using (writer.Braced())
+								{
+									writer.WriteLine("field = value;");
+									writer.WriteLine($"{tree.Shadowed.PascalKind} = value;");
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		string source = stringWriter.ToString();
+		context.AddSource("SyntaxTreeBundle.g.cs", source);
 	}
 	#endregion
 }
