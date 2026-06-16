@@ -15,9 +15,17 @@ internal interface ITypeDescription
 }
 internal sealed record class TypeDescription(Name Type) : ITypeDescription
 {
-	public string TargetType => Type.PascalCase;
-	public bool IsSyntaxType => Type.Original == Type.Original.ToLower();
+	public string TargetType => Type.Original;
+	public bool IsSyntaxType
+	{
+		get
+		{
+			if (Type.Original is "string" or "string?")
+				return false;
 
+			return Type.Original == Type.Original.ToLower();
+		}
+	}
 	public string GetTargetType(SyntaxNodeInfo node)
 	{
 		if (IsSyntaxType is false)

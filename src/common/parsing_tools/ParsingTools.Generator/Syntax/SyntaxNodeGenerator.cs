@@ -74,14 +74,18 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		{
 			foreach (NodeDescription node in description.OfType<NodeDescription>())
 			{
-				OnKindDescription? modifier = description.OfType<OnKindDescription>().FirstOrDefault(d => d.Name == node.Name && d.Kind == info.Kind);
+				OnKindDescription? modifier = description
+					.OfType<OnKindDescription>()
+					.Where(d => info.Groups.GetValueOrDefault(d.Name) is null)
+					.FirstOrDefault(d => d.Name == node.Name && d.Kind == info.Kind);
+
 				SyntaxGroupInfo? group = info.Groups.GetValueOrDefault(node.Kind.Original);
 				SyntaxNodeInfo? shadowed = info.Shadowed?.Nodes.GetValueOrDefault(node.Name);
 
 				MemberDescriptionList members = node.Members
 					.Concat(modifier is not null ? modifier.Members : [])
-					.Concat(group is not null ? group.Members : [])
-					.Concat(group?.Shadowed is not null ? group.Shadowed.Members : [])
+					//.Concat(group is not null ? group.Members : [])
+					//.Concat(group?.Shadowed is not null ? group.Shadowed.Members : [])
 					.ToArray();
 
 				SyntaxNodeInfo nodeInfo = new(info, group, info.Kind, node.Name, shadowed, members);
@@ -302,6 +306,14 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 				using (writer.Braced())
 				{
+					if (info.Members.Any())
+					{
+						using (writer.Region("Properties"))
+						{
+							foreach (MemberDescription member in info.Members)
+								writer.WriteLine($"{member.Type.TargetType} {member.Name.PascalCase} {{ get; }}");
+						}
+					}
 				}
 			}
 		}
@@ -339,11 +351,15 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 							{
 								for (int i = 0; i < info.Members.Count; i++)
 								{
+									MemberDescription member = info.Members[i];
+									MemberDescription? shadowed = info.Shadowed.Members.FirstOrDefault(m => m.Name == member.Name);
+
+									if (shadowed is not null && shadowed.Type.IsSyntaxType is false)
+										continue;
+
 									if (i > 0)
 										writer.WriteLine();
 
-									MemberDescription member = info.Members[i];
-									MemberDescription? shadowed = info.Shadowed.Members.FirstOrDefault(m => m.Name == member.Name);
 									if (shadowed is null)
 										writer.WriteLine($"{member.Type.GetTargetType(info)} {member.Name.PascalCase} {{ get; }}");
 									else

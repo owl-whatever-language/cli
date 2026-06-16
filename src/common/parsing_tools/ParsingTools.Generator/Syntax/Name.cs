@@ -6,7 +6,17 @@ public sealed class Name(string original) : IEquatable<Name>
 	public string Original { get; } = original;
 	public IReadOnlyList<string> Parts => Original.Split(['_'], StringSplitOptions.RemoveEmptyEntries);
 	public string PascalCase => ToPascalCase(Parts);
-	public string CamelCase => ToCamelCase(Parts);
+	public string CamelCase
+	{
+		get
+		{
+			string camel = ToCamelCase(Parts);
+			if (camel is "decimal" or "int" or "string" or "float" or "bool" or "operator")
+				return "@" + camel;
+
+			return camel;
+		}
+	}
 	#endregion
 
 	#region Methods

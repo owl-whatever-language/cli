@@ -37,6 +37,9 @@ internal sealed record class SyntaxTreeInfo(
 		if (key is "token")
 			return ITokenName;
 
+		if (key is "string" or "string?")
+			return key;
+
 		if (Groups.TryGetValue(key, out SyntaxGroupInfo group))
 			return group.InterfaceName;
 
@@ -97,7 +100,7 @@ internal sealed record class SyntaxNodeInfo(
 	public string Directory => Group is not null ? Group.Directory : $"{PascalKind}/Nodes";
 	public string Path => $"{Directory}/{ClassName}.g.cs";
 	public string BaseInterfaceName => Group is not null ? Group.InterfaceName : Tree.INodeName;
-	public MemberDescriptionList AllMembers => [.. Tree.Members, .. Members];
+	public MemberDescriptionList AllMembers => [.. Tree.Members, .. Members, .. Group is not null ? Group.Members : [], .. Group?.Shadowed is not null ? Group.Shadowed.Members : []];
 	public MemberDescriptionList SyntaxMembers => AllMembers.Where(m => m.Type.IsSyntaxType).ToArray();
 	#endregion
 }

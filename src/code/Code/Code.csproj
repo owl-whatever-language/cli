@@ -25,6 +25,11 @@
 		<ProjectReference Include="../../common/parsing_tools/ParsingTools/ParsingTools.csproj" />
 	</ItemGroup>
 
+	<!-- Package references -->
+	<ItemGroup Label="packages">
+		<PackageReference Include="CommunityToolkit.Diagnostics" Version="8.4.2" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<AdditionalFiles Include="code.syntax" />
 	</ItemGroup>
