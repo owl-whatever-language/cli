@@ -497,26 +497,32 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				writer.WriteLine($"public sealed partial class SyntaxTreeBundle : ISyntaxTreeBundle");
 				using (writer.Braced())
 				{
+					using (writer.Region("Fields"))
+					{
+						foreach (SyntaxTreeInfo tree in order)
+							writer.WriteLine($"private {tree.ITreeName}? _{tree.CamelKind};");
+					}
+					writer.WriteLine();
 					using (writer.Region("Properties"))
 					{
 						writer.WriteLine("public ISourceFile Source { get; }");
-						foreach (SyntaxTreeInfo tree in order)
+						for (int i = 0; i < order.Count; i++)
 						{
-							if (tree.Shadowed is null)
-							{
-								writer.WriteLine($"public {tree.ITreeName}? {tree.PascalKind} {{ get; set; }}");
-								continue;
-							}
-
+							SyntaxTreeInfo tree = order[i];
 							writer.WriteLine($"public {tree.ITreeName}? {tree.PascalKind}");
 							using (writer.Braced())
 							{
-								writer.WriteLine("get => field;");
+								writer.WriteLine($"get => _{tree.CamelKind};");
 								writer.WriteLine("set");
 								using (writer.Braced())
 								{
-									writer.WriteLine("field = value;");
-									writer.WriteLine($"{tree.Shadowed.PascalKind} = value;");
+									writer.WriteLine($"_{tree.CamelKind} = value;");
+
+									if (i > 0)
+										writer.WriteLine($"_{order[i - 1].CamelKind} = value; // re-use current as lower tree;");
+
+									if (i < order.Count - 1)
+										writer.WriteLine($"_{order[i + 1].CamelKind} = null; // invalidate richer tree;");
 								}
 							}
 						}

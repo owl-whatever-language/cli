@@ -14,6 +14,7 @@ internal sealed record class SyntaxTreeInfo(
 	#region Properties
 	public string Namespace => $"{RootNamespace}.{PascalKind}";
 	public string PascalKind => Kind.PascalCase;
+	public string CamelKind => Kind.CamelCase;
 	public string TreeName => $"{PascalKind}SyntaxTree";
 	public string NodeName => $"{PascalKind}SyntaxNode";
 	public string BaseNodeName => "Base" + NodeName;
