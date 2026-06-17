@@ -2,7 +2,7 @@ using OwlDomain.ParsingTools.Text;
 
 namespace OwlDomain.Owl.Code.CodeAnalysis.Parsing;
 
-public sealed class LexerResult : StageResult
+public sealed class LexerResult : SourceStageResult
 {
 	#region Properties
 	public override string Stage => "lexing";
@@ -10,7 +10,7 @@ public sealed class LexerResult : StageResult
 	#endregion
 
 	#region Constructors
-	public LexerResult(IDiagnosticBag diagnostics, IPerformanceResult performance, IReadOnlyList<ISyntaxToken> tokens) : base(diagnostics, performance)
+	public LexerResult(IDiagnosticBag diagnostics, IPerformanceResult performance, ISourceFile source, IReadOnlyList<ISyntaxToken> tokens) : base(diagnostics, performance, source)
 	{
 		Tokens = tokens;
 	}
@@ -43,11 +43,10 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 		{
 			lexer.Lex();
 
-			return new LexerResult(lexer.Diagnostics, performance, lexer.Tokens);
+			return new LexerResult(lexer.Diagnostics, performance, source, lexer.Tokens);
 		}
 	}
 	#endregion
-
 
 	#region Methods
 	protected override bool LexTokens()
@@ -353,13 +352,11 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 	private void ReportUnclosedString(IndexedPositionRange position)
 	{
 	}
-
 	private void ReportUnclosedStringInterpolation(IndexedPositionRange position)
 	{
 	}
 	private void ReportUnknownEscapeSequence(IndexedPositionRange position)
 	{
-
 	}
 	#endregion
 }
