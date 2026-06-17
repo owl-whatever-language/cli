@@ -21,21 +21,6 @@ public readonly struct SyntaxCategory :
 	/// <summary>A syntax category for trivia nodes.</summary>
 	public static SyntaxCategory Trivia { get; } = new("trivia");
 
-	/// <summary>A syntax category for statement nodes.</summary>
-	public static SyntaxCategory Statement { get; } = new("statement");
-
-	/// <summary>A syntax category for expression nodes.</summary>
-	public static SyntaxCategory Expression { get; } = new("expression");
-
-	/// <summary>A syntax category for declaration nodes.</summary>
-	public static SyntaxCategory Declaration { get; } = new("declaration");
-
-	/// <summary>A syntax category for root document nodes.</summary>
-	public static SyntaxCategory Document { get; } = new("document");
-
-	/// <summary>A syntax category for general syntax lists.</summary>
-	public static SyntaxCategory SyntaxList { get; } = new("syntax_list");
-
 	/// <summary>The name of the syntax category.</summary>
 	public string Name => _name ?? "unknown";
 	#endregion
@@ -91,15 +76,6 @@ public static class SyntaxCategoryExtensions
 
 		/// <summary>Whether the syntax category represents a trivia node.</summary>
 		public bool IsTrivia => category == SyntaxCategory.Trivia;
-
-		/// <summary>Whether the syntax category represents a statement node.</summary>
-		public bool IsStatement => category == SyntaxCategory.Statement;
-
-		/// <summary>Whether the syntax category represents an expression node.</summary>
-		public bool IsExpression => category == SyntaxCategory.Expression;
-
-		/// <summary>Whether the syntax category represents a declaration node.</summary>
-		public bool IsDeclaration => category == SyntaxCategory.Declaration;
 		#endregion
 	}
 }
