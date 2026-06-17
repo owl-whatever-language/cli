@@ -1,4 +1,4 @@
-namespace OwlDomain.Owl.Code.Semantics.Types;
+namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 
 public interface INamedTypeInfo : ITypeInfo
 {

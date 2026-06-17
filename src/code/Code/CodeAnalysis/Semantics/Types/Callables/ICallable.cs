@@ -1,4 +1,4 @@
-namespace OwlDomain.Owl.Code.Semantics.Types.Callables;
+namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callables;
 
 public interface ICallable : ITypeInfo
 {

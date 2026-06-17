@@ -1,4 +1,4 @@
-namespace OwlDomain.Owl.Code.Semantics.Functions;
+namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions;
 
 public interface IFunction : ISymbolTarget
 {
