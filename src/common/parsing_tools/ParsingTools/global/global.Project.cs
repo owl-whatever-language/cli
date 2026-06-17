@@ -9,3 +9,4 @@ global using OwlDomain.ParsingTools.Text;
 global using OwlDomain.ParsingTools.Sources;
 global using OwlDomain.ParsingTools.Syntax;
 global using OwlDomain.ParsingTools.Trivia;
+global using OwlDomain.ParsingTools.Diagnostics;
