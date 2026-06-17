@@ -84,6 +84,9 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 					info.Shadowed?.LookupNodes.GetValueOrDefault(node.Name) ??
 					info.Shadowed?.LookupNodes.GetValueOrDefault(node.Name + "_" + group.Name.Original);
 
+				if (shadowed is null && info.Shadowed is not null)
+					throw new InvalidOperationException($"Couldn't find a shadow node for '{info.Kind.Original}_{node.Name.Original}_{node.Kind.Original}'.");
+
 				MemberDescriptionList members = node.Members
 					.Concat(modifier is not null ? modifier.Members : [])
 					//.Concat(group is not null ? group.Members : [])
@@ -118,6 +121,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				GenerateNode(context, node);
 		}
 		GenerateSyntaxBundle(context, order);
+		GenerateShadowValidation(context, order);
 	}
 
 	static void GenerateToken(SourceProductionContext context, SyntaxTreeInfo info)
@@ -529,6 +533,52 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 		string source = stringWriter.ToString();
 		context.AddSource("SyntaxTreeBundle.g.cs", source);
+	}
+	static void GenerateShadowValidation(SourceProductionContext context, IReadOnlyList<SyntaxTreeInfo> order)
+	{
+		StringWriter stringWriter = new();
+		IndentedTextWriter writer = new(stringWriter, "\t");
+
+		using (writer.Preamble())
+		{
+			writer.WriteLine("#if DEBUG");
+			writer.WriteLine("#pragma warning disable CS0219 // Unused variable.");
+			writer.WriteLine();
+			using (writer.TypePreamble())
+			{
+				writer.WriteLine("file static class ShadowValidation");
+				using (writer.Braced())
+				{
+					using (writer.Region("Functions"))
+					{
+						foreach (SyntaxTreeInfo tree in order)
+						{
+							if (tree.Shadowed is null)
+								continue;
+
+							writer.WriteLine($"private static void Validate{tree.PascalKind}To{tree.Shadowed.PascalKind}()");
+							using (writer.Braced())
+							{
+								writer.WriteLine($"{tree.Shadowed.ITokenName}? n0 = ({tree.ITokenName}?)null;");
+								for (int i = 0; i < tree.Nodes.Count; i++)
+								{
+									SyntaxNodeInfo node = tree.Nodes[i];
+									Debug.Assert(node.Shadowed is not null);
+
+									writer.WriteLine($"{node.Shadowed?.InterfaceName}? n{i + 1} = ({node.InterfaceName}?)null;");
+								}
+							}
+						}
+					}
+				}
+			}
+			writer.WriteLine("#pragma warning restore CS0219 // Unused variable.");
+			writer.WriteLine("#endif");
+			writer.WriteLine();
+		}
+
+		string source = stringWriter.ToString();
+		context.AddSource("ShadowingValidation.g.cs", source);
 	}
 	#endregion
 }
