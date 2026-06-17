@@ -27,7 +27,7 @@ public sealed class SyntaxTrivia : ISyntaxTrivia
 	#endregion
 
 	#region Constructors
-	public SyntaxTrivia(SyntaxKind kind, IndexedPositionRange position, string lexeme, object? value)
+	public SyntaxTrivia(SyntaxKind kind, IndexedPositionRange position, string lexeme, object? value = null)
 	{
 		Guard.IsOfCategory(kind, SyntaxCategory.Trivia);
 

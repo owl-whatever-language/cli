@@ -202,7 +202,7 @@ public abstract class BaseTextParser : ITextParser
 		{
 			if (Current == attempt)
 			{
-				match = attempt;
+				match = attempt.TryIntern();
 				Advance();
 
 				return true;

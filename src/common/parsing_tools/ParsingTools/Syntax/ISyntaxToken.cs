@@ -78,3 +78,23 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 	public IEnumerable<ISyntaxNode> GetChildren() => [LeadingTrivia, TrailingTrivia];
 	#endregion
 }
+
+public sealed class SyntaxToken : BaseSyntaxToken
+{
+	#region Constructors
+	public SyntaxToken(
+		SyntaxKind kind,
+		IndexedPositionRange position,
+		string? lexeme,
+		object? value,
+		TriviaList leadingTrivia,
+		TriviaList trailingTrivia)
+		: base(kind, position, lexeme, value, leadingTrivia, trailingTrivia)
+	{
+	}
+
+	public SyntaxToken(SyntaxKind kind, IndexedPositionRange position) : base(kind, position)
+	{
+	}
+	#endregion
+}
