@@ -1,6 +1,6 @@
 namespace OwlDomain.ParsingTools.Trivia;
 
-public sealed class TriviaList : SyntaxList<ITriviaNode>
+public sealed class TriviaList : SyntaxList<ISyntaxTrivia>
 {
 	#region Properties
 	public static TriviaList Empty { get; } = [];
@@ -8,6 +8,6 @@ public sealed class TriviaList : SyntaxList<ITriviaNode>
 
 	#region Constructors
 	public TriviaList() { }
-	public TriviaList(IReadOnlyList<ITriviaNode> trivia) : base(trivia) { }
+	public TriviaList(IReadOnlyList<ISyntaxTrivia> trivia) : base(trivia) { }
 	#endregion
 }
