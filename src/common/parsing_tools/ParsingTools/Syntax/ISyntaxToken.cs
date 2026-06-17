@@ -8,6 +8,7 @@ public interface ISyntaxToken : ISyntaxPart
 	#endregion
 }
 
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public abstract class BaseSyntaxToken : ISyntaxToken
 {
 	#region Properties
@@ -77,6 +78,10 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 	#region Methods
 	public IEnumerable<ISyntaxNode> GetChildren() => [LeadingTrivia, TrailingTrivia];
 	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"Token {{ Kind = ({Kind}), Lexeme = ({Lexeme}) }}";
+	#endregion
 }
 
 public sealed class SyntaxToken : BaseSyntaxToken
@@ -90,6 +95,15 @@ public sealed class SyntaxToken : BaseSyntaxToken
 		TriviaList leadingTrivia,
 		TriviaList trailingTrivia)
 		: base(kind, position, lexeme, value, leadingTrivia, trailingTrivia)
+	{
+	}
+
+	public SyntaxToken(
+		SyntaxKind kind,
+		IndexedPositionRange position,
+		string? lexeme,
+		object? value)
+		: base(kind, position, lexeme, value, TriviaList.Empty, TriviaList.Empty)
 	{
 	}
 

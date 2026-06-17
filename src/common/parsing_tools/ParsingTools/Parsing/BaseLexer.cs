@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Lexing;
+namespace OwlDomain.ParsingTools.Parsing;
 
 public abstract class BaseLexer
 {
@@ -62,29 +62,7 @@ public abstract class BaseLexer
 	protected void Lex()
 	{
 		while (Text.HasRemaining)
-		{
-			ThrowIfLexemeBuilderNotCleared();
-			ThrowIfValueBuilderNotCleared();
-
-			IndexedLinePosition start = Text.Position;
-			LexLeadingTrivia();
-
-			if (Text.IsAtEnd)
-				break;
-
-			if (LexTokens())
-			{
-				if (Text.Position == start)
-					ThrowHelper.ThrowInvalidOperationException("Expected the text parser to be advanced to a later position.");
-
-				continue;
-			}
-
-			LexBadCharacter();
-
-			if (Text.Position == start)
-				ThrowHelper.ThrowInvalidOperationException("Expected the text parser to be advanced to a later position.");
-		}
+			LexTokenSequence();
 
 		FinishFullToken(out TriviaList leading, out TriviaList trailing);
 		if (trailing.Any())
@@ -93,13 +71,38 @@ public abstract class BaseLexer
 		LexEndOfInput(leading);
 	}
 
+	protected void LexTokenSequence()
+	{
+		ThrowIfLexemeBuilderNotCleared();
+		ThrowIfValueBuilderNotCleared();
+
+		IndexedLinePosition start = Text.Position;
+		LexLeadingTrivia();
+
+		if (Text.IsAtEnd)
+			return;
+
+		if (LexTokens())
+		{
+			if (Text.Position == start)
+				ThrowHelper.ThrowInvalidOperationException("Expected the text parser to be advanced to a later position.");
+
+			return;
+		}
+
+		LexBadCharacter();
+
+		if (Text.Position == start)
+			ThrowHelper.ThrowInvalidOperationException("Expected the text parser to be advanced to a later position.");
+	}
+
 	protected abstract bool LexTokens();
 	#endregion
 
 	#region Token methods
 	/// <summary>Creates the final end of input token.</summary>
 	/// <param name="leading">The list of the leading trivia nodes.</param>
-	protected virtual void LexEndOfInput(TriviaList leading)
+	protected void LexEndOfInput(TriviaList leading)
 	{
 		SyntaxToken token = new(SyntaxKind.EndOfInput, new(Text.Position, Text.Position), lexeme: null, value: null, leading, TriviaList.Empty);
 		Tokens.Add(token);
@@ -107,7 +110,7 @@ public abstract class BaseLexer
 
 	/// <summary>Lexes the bad character at the current position.</summary>
 	/// <returns>The lexed bad character.</returns>
-	protected virtual void LexBadCharacter()
+	protected void LexBadCharacter()
 	{
 		IndexedLinePosition start = Text.Position;
 		string lexeme = Text.Current.Value;
@@ -156,10 +159,9 @@ public abstract class BaseLexer
 	/// <summary>Performs the necessary steps to finish a full token.</summary>
 	/// <param name="leadingTrivia">The final list of the leading trivia nodes.</param>
 	/// <param name="trailingTrivia">The final list of the trailing trivia nodes.</param>
-	protected virtual void FinishFullToken(out TriviaList leadingTrivia, out TriviaList trailingTrivia)
+	protected void FinishFullToken(out TriviaList leadingTrivia, out TriviaList trailingTrivia)
 	{
 		LexTrailingTrivia();
-
 		ReportCurrentBadCharacters();
 
 		leadingTrivia = new(LeadingTrivia);
@@ -172,8 +174,7 @@ public abstract class BaseLexer
 	/// <summary>Performs the necessary steps to finish an infix token.</summary>
 	/// <param name="leadingTrivia">The final list of the leading trivia nodes.</param>
 	/// <exception cref="InvalidOperationException">Thrown if any trailing trivia nodes have already been accumulated.</exception>
-	/// <remarks>This can be used for prefix and infix tokens, basically any token that isn't meant to have trailing trivia.</remarks>
-	protected virtual void FinishInfixToken(out TriviaList leadingTrivia)
+	protected void FinishPrefixToken(out TriviaList leadingTrivia)
 	{
 		if (TrailingTrivia.Any())
 			ThrowHelper.ThrowInvalidOperationException("Some trailing trivia has already been accumulated.");
@@ -184,6 +185,27 @@ public abstract class BaseLexer
 		LeadingTrivia = new(InitialLeadingTriviaCapacity);
 	}
 
+	protected void FinishSuffixToken(out TriviaList trailingTrivia)
+	{
+		if (LeadingTrivia.Any())
+			ThrowHelper.ThrowInvalidOperationException("Some leading trivia has already been accumulated.");
+
+		LexTrailingTrivia();
+		ReportCurrentBadCharacters();
+
+		trailingTrivia = new(TrailingTrivia);
+		TrailingTrivia = new(InitialTrailingTriviaCapacity);
+	}
+
+	protected void FinishInfixToken()
+	{
+		if (LeadingTrivia.Any())
+			ThrowHelper.ThrowInvalidOperationException("Some leading trivia has already been accumulated.");
+
+		if (TrailingTrivia.Any())
+			ThrowHelper.ThrowInvalidOperationException("Some trailing trivia has already been accumulated.");
+	}
+
 	private void ReportCurrentBadCharacters()
 	{
 		foreach (ISyntaxTrivia trivia in LeadingTrivia)
@@ -192,14 +214,13 @@ public abstract class BaseLexer
 				ReportBadCharacters(trivia);
 		}
 	}
-
 	protected abstract void ReportBadCharacters(ISyntaxTrivia badGroup);
 	#endregion
 
 	#region Trivia methods
 	protected virtual void LexLeadingTrivia()
 	{
-		if (LeadingTrivia.Any())
+		if (LeadingTrivia.Any(static t => t.Kind != SyntaxKind.BadCharactersTrivia))
 			ThrowHelper.ThrowInvalidOperationException("Tried to lex leading trivia nodes when the previously lexed ones still weren't used.");
 
 		ISyntaxTrivia? node = LexTrivia();

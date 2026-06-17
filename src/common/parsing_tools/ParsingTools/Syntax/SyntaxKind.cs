@@ -41,6 +41,11 @@ public readonly partial struct SyntaxKind :
 		_name = name;
 		Category = category;
 	}
+
+	/// <summary>Creates a new syntax kind with the given information.</summary>
+	/// <param name="name">The name of the syntax kind.</param>
+	/// <remarks>This assumes that the syntax kind refers to a token.</remarks>
+	public SyntaxKind(string name) : this(name, SyntaxCategory.Token) { }
 	#endregion
 
 	#region Methods

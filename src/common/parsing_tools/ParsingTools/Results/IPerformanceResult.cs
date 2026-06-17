@@ -13,12 +13,16 @@ public interface IPerformanceResult
 internal sealed class PerformanceResultScope : IPerformanceResult
 {
 	#region Fields
-	private readonly TimeSpan _systemTimeAtStart;
-	private readonly TimeSpan _userTimeAtStart;
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	private readonly TimeSpan _systemTimeAtStart, _userTimeAtStart;
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	private readonly long _memoryAtStart;
 
-	private TimeSpan? _systemTimeAtEnd;
-	private TimeSpan? _userTimeAtEnd;
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	private TimeSpan? _systemTimeAtEnd, _userTimeAtEnd;
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	private long? _memoryAtEnd;
 	#endregion
 
@@ -122,6 +126,31 @@ public static class IPerformanceResultExtensions
 			}
 
 			return new PerformanceResult(systemTime, userTime, duration, memoryUsed);
+		}
+		#endregion
+	}
+
+	extension(IPerformanceResult result)
+	{
+		#region Properties
+		public string MemoryUsedFormatted => AsMemory(result.MemoryUsed);
+		#endregion
+
+		#region Helpers
+		private static string AsMemory(long bytes)
+		{
+			ReadOnlySpan<string> suffixes = ["B", "KiB", "MiB", "GiB"];
+
+
+			int i = 0;
+			double value = bytes;
+			while (value > 1024 && i < suffixes.Length - 1)
+			{
+				value /= 1024;
+				i++;
+			}
+
+			return i is 0 ? $"{bytes} B" : $"{value:n2} {suffixes[i]}";
 		}
 		#endregion
 	}

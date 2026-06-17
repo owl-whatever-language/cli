@@ -5,16 +5,12 @@ namespace OwlDomain.ParsingTools.Diagnostics;
 /// </summary>
 public interface IDiagnosticBag : IReadOnlyCollection<IDiagnostic>
 {
-	#region Properties
-	/// <summary>Whether any errors are present.</summary>
-	/// <remarks>This checks for <see cref="DiagnosticKind.Error"/>.</remarks>
-	bool HasErrors { get; }
-	#endregion
 }
 
 /// <summary>
 /// 	Represents a mutable collection of diagnostics.
 /// </summary>
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public sealed class DiagnosticBag : IDiagnosticBag, ICollection<IDiagnostic>
 {
 	#region Fields
@@ -27,9 +23,6 @@ public sealed class DiagnosticBag : IDiagnosticBag, ICollection<IDiagnostic>
 
 	/// <inheritdoc/>
 	bool ICollection<IDiagnostic>.IsReadOnly => false;
-
-	/// <inheritdoc/>
-	public bool HasErrors => _diagnostics.Any(d => d.Kind == DiagnosticKind.Error);
 	#endregion
 
 	#region Methods
@@ -52,4 +45,20 @@ public sealed class DiagnosticBag : IDiagnosticBag, ICollection<IDiagnostic>
 	public IEnumerator<IDiagnostic> GetEnumerator() => _diagnostics.GetEnumerator();
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"{nameof(DiagnosticBag)} {{ Count = ({Count:n0}), Errors = ({this.ErrorCount:n0}) }}";
+	#endregion
+}
+
+public static class IDiagnosticBagExtensions
+{
+	extension(IDiagnosticBag bag)
+	{
+		#region Properties
+		public bool HasErrors => bag.Any(d => d.Kind >= DiagnosticKind.Error);
+		public int ErrorCount => bag.Count(d => d.Kind >= DiagnosticKind.Error);
+		public int WarningCount => bag.Count(d => d.Kind >= DiagnosticKind.Warning && d.Kind < DiagnosticKind.Error);
+		#endregion
+	}
 }

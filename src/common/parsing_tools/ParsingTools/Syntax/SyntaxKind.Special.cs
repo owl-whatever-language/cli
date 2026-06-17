@@ -4,7 +4,7 @@ partial struct SyntaxKind
 {
 	#region Properties
 	/// <summary>Represents a syntax kind for the token that represents the end of the input.</summary>
-	public static SyntaxKind EndOfInput { get; } = new("end_of_input", SyntaxCategory.Token);
+	public static SyntaxKind EndOfInput { get; } = new("end_of_input");
 
 	/// <summary>Represents a syntax kind for a collection of invalid characters that have been converted to a trivia node.</summary>
 	public static SyntaxKind BadCharactersTrivia { get; } = new("bad_characters", SyntaxCategory.Trivia);
