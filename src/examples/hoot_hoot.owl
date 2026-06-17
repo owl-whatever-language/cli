@@ -13,5 +13,10 @@ HootTheUser("<user>");
 // 'fun' is only required for local / top-level function declarations
 fun HootTheUser(text user)
 {
-	print($"Hoot Hoot {user}!");
+	// Using named parameter
+	text output = GetHootText(target: user);
+	print(output);
 }
+
+// Showing off function body shorthand syntax.
+fun GetHootText(text target): text => $"Hoot Hoot {target}!";
