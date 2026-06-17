@@ -1,4 +1,4 @@
-namespace OwlDomain.OWL.Code.Semantics.Types.Callables;
+namespace OwlDomain.Owl.Code.Semantics.Types.Callables;
 
 public interface ICallableReturn
 {

@@ -1,4 +1,4 @@
-namespace OwlDomain.OWL.Code.Semantics.Symbols;
+namespace OwlDomain.Owl.Code.Semantics.Symbols;
 
 public interface ISymbolTarget
 {

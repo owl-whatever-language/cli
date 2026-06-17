@@ -1,4 +1,4 @@
-namespace OwlDomain.OWL.Code.Semantics.Types;
+namespace OwlDomain.Owl.Code.Semantics.Types;
 
 public static class SpecialTypes
 {
