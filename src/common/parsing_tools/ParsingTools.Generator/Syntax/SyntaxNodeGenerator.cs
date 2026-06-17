@@ -22,22 +22,11 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		if (text is null)
 			return;
 
-		try
-		{
-			SyntaxDescriptionFile? description = SyntaxDescriptionFile.Parse(text);
-			if (description is null)
-				return;
+		SyntaxDescriptionFile? description = SyntaxDescriptionFile.Parse(text);
+		if (description is null)
+			return;
 
-			Generate(context, description);
-		}
-		catch (Exception exception)
-		{
-			string message = $"Type: {exception.GetType()}\nMessage: \"{exception.Message.Trim()}\"\nStack: {exception.StackTrace}";
-#pragma warning disable RS1035 // Do not use APIs banned for analyzers
-			File.WriteAllText("/mnt/data/projects/owldomain/projects/owl/cli/error.txt", message);
-#pragma warning restore RS1035 // Do not use APIs banned for analyzers
-			throw;
-		}
+		Generate(context, description);
 	}
 	private static void Generate(SourceProductionContext context, SyntaxDescriptionFile description)
 	{
@@ -91,7 +80,9 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 					.FirstOrDefault(d => d.Name == node.Name && d.Kind == info.Kind);
 
 				SyntaxGroupInfo? group = info.Groups.GetValueOrDefault(node.Kind.Original);
-				SyntaxNodeInfo? shadowed = info.Shadowed?.LookupNodes.GetValueOrDefault(node.Name);
+				SyntaxNodeInfo? shadowed =
+					info.Shadowed?.LookupNodes.GetValueOrDefault(node.Name) ??
+					info.Shadowed?.LookupNodes.GetValueOrDefault(node.Name + "_" + group.Name.Original);
 
 				MemberDescriptionList members = node.Members
 					.Concat(modifier is not null ? modifier.Members : [])
