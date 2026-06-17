@@ -339,24 +339,35 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 	#region Diagnostic methods
 	protected override void ReportBadCharacters(ISyntaxTrivia badGroup)
 	{
-		Diagnostics.Add(new Diagnostic()
-		{
-			Provider = this,
-			Kind = DiagnosticKind.Error,
-			Id = "bad_characters",
-
-			Location = new DiagnosticSourceLocation(Source, badGroup.Position),
-			Message = "Unexpected characters found."
-		});
+		AddError("bad_characters", badGroup.Position, "Unexpected characters found.");
 	}
 	private void ReportUnclosedString(IndexedPositionRange position)
 	{
+		AddError("unclosed_string", position, "Line breaks are not allowed in string fragments. Use a '\"' to close the string.");
 	}
 	private void ReportUnclosedStringInterpolation(IndexedPositionRange position)
 	{
+		AddError("unclosed_string_interpolation", position, "String value interpolation was not closed. Use a '}' to end the interpolation.");
 	}
 	private void ReportUnknownEscapeSequence(IndexedPositionRange position)
 	{
+		AddError("unknown_escape_sequence", position, "Unknown escape sequence.");
+	}
+	#endregion
+
+	#region Helpers
+	private void AddError(string id, IndexedPositionRange position, string message) => AddDiagnostic(DiagnosticKind.Error, id, position, message);
+	private void AddDiagnostic(DiagnosticKind kind, string id, IndexedPositionRange position, string message)
+	{
+		Diagnostics.Add(new Diagnostic()
+		{
+			Provider = this,
+			Kind = kind,
+			Id = id,
+
+			Location = new DiagnosticSourceLocation(Source, position),
+			Message = message
+		});
 	}
 	#endregion
 }
