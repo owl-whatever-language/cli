@@ -19,6 +19,9 @@ partial struct ClassificationKind
 
 	/// <summary>Represents a classification for strings.</summary>
 	public static ClassificationKind String { get; } = Literal + "string";
+
+	/// <summary>Represents a classification for escape sequences in strings.</summary>
+	public static ClassificationKind StringEscape { get; } = String + "escape";
 	#endregion
 
 	#region Identifiers

@@ -6,6 +6,5 @@ public interface ISyntaxPart : ISyntaxNode
 	SyntaxKind Kind { get; }
 	string? Lexeme { get; }
 	object? Value { get; }
-	bool IsFabricated { get; }
 	#endregion
 }

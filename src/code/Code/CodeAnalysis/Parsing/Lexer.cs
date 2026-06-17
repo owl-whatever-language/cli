@@ -36,11 +36,11 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 	#region Functions
 	public static LexingResult Lex(ISourceFile source)
 	{
-		ITextParser text = source.CreateParser();
-		Lexer lexer = new(source, text);
-
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
+			ITextParser text = source.CreateParser();
+			Lexer lexer = new(source, text);
+
 			lexer.Lex();
 
 			return new LexingResult(lexer.Diagnostics, performance, source, lexer.Tokens);
@@ -52,6 +52,7 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 	protected override bool LexTokens()
 	{
 		return
+			TryLexSimpleToken("=>", SyntaxKind.EqualArrow) ||
 			TryLexSimpleToken("==", SyntaxKind.DoubleEqualSign) ||
 			TryLexSimpleToken("=", SyntaxKind.EqualSign) ||
 			TryLexSimpleToken("{", SyntaxKind.OpenBrace) ||

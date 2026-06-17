@@ -111,4 +111,14 @@ public sealed class SyntaxToken : BaseSyntaxToken
 	{
 	}
 	#endregion
+
+	#region Methods
+	/// <summary>Creates a new token with the same properties, but with the <paramref name="newLeadingTrivia"/> list instead.</summary>
+	/// <param name="newLeadingTrivia">The new leading trivia list.</param>
+	/// <returns>A duplicate of the current token with the <paramref name="newLeadingTrivia"/> list.</returns>
+	public SyntaxToken ReplaceLeadingTrivia(TriviaList newLeadingTrivia)
+	{
+		return new(Kind, Position, Lexeme, Value, newLeadingTrivia, TrailingTrivia);
+	}
+	#endregion
 }

@@ -45,5 +45,9 @@ public static class SyntaxKindExtensions
 		public static SyntaxKind StringHexSequence => new("string_hex_sequence");
 		public static SyntaxKind StringEnd => new("string_end");
 		#endregion
+
+		#region Punctuation
+		public static SyntaxKind EqualArrow => new("equal_arrow");
+		#endregion
 	}
 }
