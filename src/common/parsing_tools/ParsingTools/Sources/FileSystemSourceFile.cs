@@ -5,6 +5,7 @@ namespace OwlDomain.ParsingTools.Sources;
 /// <summary>
 /// 	Represents information about a source file that exists on the file system.
 /// </summary>
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public sealed class FileSystemSourceFile : ISourceFile
 {
 	#region Properties
@@ -35,5 +36,9 @@ public sealed class FileSystemSourceFile : ISourceFile
 		string text = FileInfo.OpenText().ReadToEnd();
 		return new StringTextParser(text);
 	}
+	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"Source({SimpleName}): {Path}";
 	#endregion
 }

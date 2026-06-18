@@ -7,6 +7,7 @@ public interface ISyntaxTree
 	#endregion
 }
 
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public abstract class BaseSyntaxTree : ISyntaxTree
 {
 	#region Properties
@@ -18,5 +19,9 @@ public abstract class BaseSyntaxTree : ISyntaxTree
 	{
 		Source = source;
 	}
+	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"{GetType().Name}({Source.SimpleName})";
 	#endregion
 }

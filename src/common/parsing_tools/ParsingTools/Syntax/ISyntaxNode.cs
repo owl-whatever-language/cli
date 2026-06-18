@@ -13,6 +13,7 @@ public interface ISyntaxNode
 	#endregion
 }
 
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public abstract class BaseSyntaxNode : ISyntaxNode
 {
 	#region Properties
@@ -28,6 +29,11 @@ public abstract class BaseSyntaxNode : ISyntaxNode
 
 	#region Methods
 	public abstract IEnumerable<ISyntaxNode> GetChildren();
+	public override string ToString() => this.Print();
+	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"{GetType().Name}: {this.Print(false)}";
 	#endregion
 }
 
@@ -66,6 +72,7 @@ public static class ISyntaxNodeExtensions
 	extension(ISyntaxNode node)
 	{
 		#region Methods
+		public IReadOnlyList<ISyntaxToken> Flatten() => Flatten<ISyntaxToken>(node);
 		public IReadOnlyList<T> Flatten<T>() where T : notnull, ISyntaxNode
 		{
 			List<T> target = [];
@@ -83,6 +90,39 @@ public static class ISyntaxNodeExtensions
 
 			foreach (ISyntaxNode child in current.GetChildren())
 				Flatten(target, child);
+		}
+		public string Print(bool includeStartAndEndTrivia = true)
+		{
+			StringBuilder builder = new();
+
+			ISyntaxToken? last = null;
+
+			foreach (ISyntaxToken token in Flatten(node))
+			{
+				if (last is not null)
+				{
+					foreach (ISyntaxTrivia trivia in last.TrailingTrivia)
+						builder.Append(trivia.Lexeme);
+				}
+
+				if (includeStartAndEndTrivia || last != null)
+				{
+					foreach (ISyntaxTrivia trivia in token.LeadingTrivia)
+						builder.Append(trivia.Lexeme);
+				}
+
+				builder.Append(token.Lexeme);
+				last = token;
+			}
+
+			if (includeStartAndEndTrivia && last is not null)
+			{
+				foreach (ISyntaxTrivia trivia in last.TrailingTrivia)
+					builder.Append(trivia.Lexeme);
+			}
+
+			string text = builder.ToString();
+			return text;
 		}
 		#endregion
 	}

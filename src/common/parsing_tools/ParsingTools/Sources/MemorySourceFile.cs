@@ -3,6 +3,7 @@ namespace OwlDomain.ParsingTools.Sources;
 /// <summary>
 /// 	Represents information for a source file that only exists in memory.
 /// </summary>
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public sealed class MemorySourceFile : ISourceFile
 {
 	#region Properties
@@ -33,5 +34,9 @@ public sealed class MemorySourceFile : ISourceFile
 	#region Methods
 	/// <inheritdoc/>
 	public ITextParser CreateParser() => new StringTextParser(Text);
+	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"Source({SimpleName}): <memory>";
 	#endregion
 }

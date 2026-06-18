@@ -313,6 +313,11 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 						using (writer.Braced())
 							writer.WriteLine($"{info.Document.PascalName} = {info.Document.CamelName};");
 					}
+					writer.WriteLine();
+					using (writer.Region("Methods"))
+					{
+						writer.WriteLine($"public override string ToString() => {info.Document.PascalName}.Print();");
+					}
 				}
 			}
 		}

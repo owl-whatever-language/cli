@@ -16,10 +16,12 @@ public interface ISyntaxList<out TValue, out TSeparator> : ISyntaxNode
 	#endregion
 }
 
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public class SyntaxList<TValue> : ISyntaxList<TValue>
 	where TValue : class, ISyntaxNode
 {
 	#region Fields
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	private readonly IReadOnlyList<TValue> _values;
 	#endregion
 
@@ -53,8 +55,13 @@ public class SyntaxList<TValue> : ISyntaxList<TValue>
 	public IEnumerator<TValue> GetEnumerator() => _values.GetEnumerator();
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"SyntaxList<{typeof(TValue).Name}> {{ Count = ({Count:n0}) }}";
+	#endregion
 }
 
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public class SyntaxList<TValue, TSeparator> : ISyntaxList<TValue, TSeparator>
 	where TValue : class, ISyntaxNode
 	where TSeparator : class, ISyntaxNode
@@ -97,5 +104,9 @@ public class SyntaxList<TValue, TSeparator> : ISyntaxList<TValue, TSeparator>
 	#region Methods
 	/// <inheritdoc/>
 	public IEnumerable<ISyntaxNode> GetChildren() => Nodes;
+	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"SyntaxList<{typeof(TValue).Name},{typeof(TSeparator).Name}> {{ Values = ({Values.Count:n0}), Separators = ({Separators.Count:n0}) }}";
 	#endregion
 }

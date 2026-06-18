@@ -77,6 +77,7 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 
 	#region Methods
 	public IEnumerable<ISyntaxNode> GetChildren() => [LeadingTrivia, TrailingTrivia];
+	public override string ToString() => this.Print(false);
 	#endregion
 
 	#region Helpers
