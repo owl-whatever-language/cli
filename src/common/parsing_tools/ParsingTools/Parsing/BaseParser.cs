@@ -175,6 +175,9 @@ public abstract class BaseParser
 	}
 	protected void SkipCurrent()
 	{
+		if (Current is null || Current.Kind == SyntaxKind.EndOfInput)
+			return;
+
 		if (Next is null)
 			ThrowHelper.ThrowInvalidOperationException("The very last token (which should be the special end of input token) cannot be skipped as it is required for error recovery.");
 
@@ -196,7 +199,8 @@ public abstract class BaseParser
 		SyntaxTrivia newTrivia = new(badSyntax);
 		TriviaList newList = new([newTrivia, .. Current.LeadingTrivia]);
 
-		_tokens[_index] = Current;
+		SyntaxToken typed = (SyntaxToken)Current;
+		_tokens[_index] = typed.ReplaceLeadingTrivia(newList);
 	}
 	protected abstract ISyntaxNode? TryParseBadSyntax();
 

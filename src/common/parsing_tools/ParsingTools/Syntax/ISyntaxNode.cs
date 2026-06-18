@@ -78,15 +78,17 @@ public static class ISyntaxNodeExtensions
 			List<T> target = [];
 			Flatten(target, node);
 
+			// Note(Nightowl):
+			// I think sorting is required because adding them in the correct order is far
+			// too annoying on account of bad syntax in nested trivia vs node locality;
+			target.Sort((a, b) => a.Position.Start.CompareTo(b.Position.Start));
+
 			return target;
 		}
 		private static void Flatten<T>(List<T> target, ISyntaxNode current)
 		{
 			if (current is T typed)
-			{
 				target.Add(typed);
-				return;
-			}
 
 			foreach (ISyntaxNode child in current.GetChildren())
 				Flatten(target, child);
@@ -123,6 +125,30 @@ public static class ISyntaxNodeExtensions
 
 			string text = builder.ToString();
 			return text;
+		}
+		public TextFragmentCollection ToTextFragments()
+		{
+			List<TextFragment> fragments = [];
+
+			foreach (ISyntaxToken token in Flatten(node))
+			{
+				foreach (ISyntaxTrivia trivia in token.LeadingTrivia)
+				{
+					if (trivia.Lexeme is not null)
+						fragments.Add(new(trivia.Lexeme, trivia.Classification));
+				}
+
+				if (token.Lexeme is not null)
+					fragments.Add(new(token.Lexeme, token.Classification));
+
+				foreach (ISyntaxTrivia trivia in token.TrailingTrivia)
+				{
+					if (trivia.Lexeme is not null)
+						fragments.Add(new(trivia.Lexeme, trivia.Classification));
+				}
+			}
+
+			return new(fragments);
 		}
 		#endregion
 	}

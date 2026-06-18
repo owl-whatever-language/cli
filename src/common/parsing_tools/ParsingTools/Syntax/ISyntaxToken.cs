@@ -47,10 +47,20 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 
 	/// <inheritdoc/>
 	public bool IsFabricated { get; }
+
+	/// <inheritdoc/>
+	public ClassificationKind? Classification { get; }
 	#endregion
 
 	#region Constructors
-	protected BaseSyntaxToken(SyntaxKind kind, IndexedPositionRange position, string? lexeme, object? value, TriviaList leadingTrivia, TriviaList trailingTrivia)
+	protected BaseSyntaxToken(
+		SyntaxKind kind,
+		IndexedPositionRange position,
+		string? lexeme,
+		object? value,
+		TriviaList leadingTrivia,
+		TriviaList trailingTrivia,
+		ClassificationKind? classification)
 	{
 		Guard.IsOfCategory(kind, SyntaxCategory.Token);
 
@@ -60,6 +70,7 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 		Value = value;
 		LeadingTrivia = leadingTrivia;
 		TrailingTrivia = trailingTrivia;
+		Classification = classification;
 		IsFabricated = false;
 	}
 	protected BaseSyntaxToken(SyntaxKind kind, IndexedPositionRange position)
@@ -95,7 +106,7 @@ public sealed class SyntaxToken : BaseSyntaxToken
 		object? value,
 		TriviaList leadingTrivia,
 		TriviaList trailingTrivia)
-		: base(kind, position, lexeme, value, leadingTrivia, trailingTrivia)
+		: base(kind, position, lexeme, value, leadingTrivia, trailingTrivia, null)
 	{
 	}
 
@@ -104,7 +115,7 @@ public sealed class SyntaxToken : BaseSyntaxToken
 		IndexedPositionRange position,
 		string? lexeme,
 		object? value)
-		: base(kind, position, lexeme, value, TriviaList.Empty, TriviaList.Empty)
+		: base(kind, position, lexeme, value, TriviaList.Empty, TriviaList.Empty, null)
 	{
 	}
 

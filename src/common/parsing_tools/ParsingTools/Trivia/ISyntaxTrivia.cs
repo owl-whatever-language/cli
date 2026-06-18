@@ -2,11 +2,9 @@ namespace OwlDomain.ParsingTools.Trivia;
 
 public interface ISyntaxTrivia : ISyntaxPart
 {
-	#region Properties
-	ClassificationKind? Classification { get; }
-	#endregion
 }
 
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public sealed class SyntaxTrivia : ISyntaxTrivia
 {
 	#region Properties
@@ -62,6 +60,7 @@ public sealed class SyntaxTrivia : ISyntaxTrivia
 
 		Position = badSyntax.Position;
 		FullPosition = badSyntax.FullPosition;
+		Value = badSyntax;
 
 		IsFabricated = true;
 	}
@@ -75,5 +74,9 @@ public sealed class SyntaxTrivia : ISyntaxTrivia
 
 		return [];
 	}
+	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"Trivia({Kind}): {Lexeme}";
 	#endregion
 }

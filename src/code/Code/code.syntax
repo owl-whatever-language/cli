@@ -4,7 +4,7 @@ namespace : OwlDomain.Owl.Code.CodeAnalysis.Syntax
 shadow : concrete semantic final
 
 # Define what's on the tokens
-token concrete : ClassificationKind? classification
+token concrete
 token semantic : ISymbol? symbol
 token final
 

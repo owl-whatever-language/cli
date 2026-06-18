@@ -171,7 +171,8 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		string? lexeme,
 		object? value,
 		TriviaList leadingTrivia,
-		TriviaList trailingTrivia");
+		TriviaList trailingTrivia,
+		ClassificationKind? classification");
 
 						foreach (MemberDescription member in info.TokenClassMembers)
 						{
@@ -180,7 +181,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 						}
 
 						writer.WriteLine(")");
-						writer.Write("\t: base(kind, position, lexeme, value, leadingTrivia, trailingTrivia)");
+						writer.Write("\t: base(kind, position, lexeme, value, leadingTrivia, trailingTrivia, classification)");
 						if (info.TokenClassMembers.Any() is false)
 							writer.WriteLine(" {}");
 						else
