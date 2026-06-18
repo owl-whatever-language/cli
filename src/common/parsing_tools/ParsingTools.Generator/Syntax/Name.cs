@@ -25,6 +25,7 @@ public sealed class Name(string original) : IEquatable<Name>
 			return camel;
 		}
 	}
+	public Name Plural => new(ToPlural(Original));
 	#endregion
 
 	#region Methods
@@ -82,6 +83,13 @@ public sealed class Name(string original) : IEquatable<Name>
 		string remainder = part.Substring(1);
 
 		return ch + remainder;
+	}
+	private static string ToPlural(string name)
+	{
+		if (name.EndsWith("body"))
+			return name.Substring(0, name.Length - 4) + "bodies";
+
+		return name + "s";
 	}
 	#endregion
 

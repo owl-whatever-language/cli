@@ -83,9 +83,9 @@ internal sealed record class SyntaxGroupInfo(
 	#region Properties
 	public string PascalKind => Kind.PascalCase;
 	public string PascalName => Name.PascalCase;
-	public string Namespace => $"{Tree.Namespace}.{PascalName}s";
+	public string Namespace => $"{Tree.Namespace}.{Name.Plural.PascalCase}";
 	public string InterfaceName => $"I{PascalKind}{PascalName}Syntax";
-	public string Directory => $"{Tree.Directory}/Nodes/{PascalName}s";
+	public string Directory => $"{Tree.Directory}/Nodes/{Name.Plural.PascalCase}";
 	public string InterfacePath => $"{Directory}/{InterfaceName}.g.cs";
 	public MemberDescriptionList InterfaceMembers => Members;
 	public MemberDescriptionList ClassMembers => Shadowed is not null ? [.. Shadowed.ClassMembers, .. Members] : Members;
