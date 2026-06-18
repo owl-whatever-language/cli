@@ -43,6 +43,81 @@ public sealed class LexingAndParsingResult : SourceStageResult
 	#endregion
 }
 
+public sealed class ParallelParsingResult : StageResult
+{
+	#region Properties
+	public override string Stage => "parallel_parsing";
+	public IReadOnlyDictionary<ISourceFile, LexingAndParsingResult> ByFile { get; }
+	#endregion
+
+	#region Constructors
+	public ParallelParsingResult(
+		IPerformanceResult performance,
+		IReadOnlyList<LexingAndParsingResult> results) : base(new DiagnosticBag(), performance, results, ResultKind.Parallel)
+	{
+		ByFile = results.ToDictionary(r => r.Source);
+	}
+	#endregion
+
+	#region Methods
+	public IReadOnlyDictionary<string, IPerformanceResult> GetStageBreakdown()
+	{
+		// Note(Nightowl):
+		// I have absolutely no idea how mathematically sound this approach is for getting an estimate of parallelised results.
+		// The approach that I'm taking here is to calculate the total values as if the result wasn't parallelised
+		// in order to get a % share of the performance for a particular stage, and then I use that % on the true
+		// parallelised performance result.
+
+		IEnumerable<IGrouping<string, IStageResult>> stages = SubResults.SelectMany(r => r.SubResults).GroupBy(s => s.Stage);
+		Dictionary<string, IPerformanceResult> totals = [];
+
+		long totalMemory = 0;
+		TimeSpan totalSystem = default, totalUser = default;
+
+		foreach (IGrouping<string, IStageResult> group in stages)
+		{
+			long memory = 0;
+			TimeSpan system = default, user = default;
+
+			foreach (IStageResult result in group)
+			{
+				memory += result.Performance.MemoryUsed;
+				system += result.Performance.SystemTime;
+				user += result.Performance.UserTime;
+			}
+
+			totalMemory += memory;
+			totalSystem += system;
+			totalUser += user;
+
+			PerformanceResult total = new(system, user, system + user, memory);
+			totals.Add(group.Key, total);
+		}
+
+		TimeSpan totalDuration = totalSystem + totalUser;
+
+		Dictionary<string, IPerformanceResult> breakdowns = [];
+		foreach (KeyValuePair<string, IPerformanceResult> pair in totals)
+		{
+			double systemShare = pair.Value.SystemTime / totalSystem;
+			double userShare = pair.Value.UserTime / totalUser;
+			double durationShare = pair.Value.Duration / totalDuration;
+			double memoryShare = pair.Value.MemoryUsed / (double)totalMemory;
+
+			TimeSpan system = systemShare * Performance.SystemTime;
+			TimeSpan user = userShare * Performance.UserTime;
+			TimeSpan duration = durationShare * Performance.Duration;
+			long memory = (long)(memoryShare * Performance.MemoryUsed);
+
+			PerformanceResult estimate = new(system, user, duration, memory);
+			breakdowns.Add(pair.Key, pair.Value);
+		}
+
+		return breakdowns;
+	}
+	#endregion
+}
+
 public sealed class Parser : BaseParser, IDiagnosticProvider
 {
 	#region Properties
@@ -78,6 +153,29 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			ParsingResult parsing = Parse(source, lexing.Tokens);
 
 			return new(performance, lexing, parsing);
+		}
+	}
+
+	public static ParallelParsingResult Parse(params IReadOnlyCollection<ISourceFile> files)
+	{
+		using (PerformanceResult.Scope(out IPerformanceResult performance))
+		{
+			if (files.Count is 1)
+			{
+				LexingAndParsingResult result = Parse(files.Single());
+				return new(performance, [result]);
+			}
+
+			LexingAndParsingResult[] results = new LexingAndParsingResult[files.Count];
+			ParallelOptions options = new() { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+			Parallel.ForEach(files, options, (source, _, index) =>
+			{
+				LexingAndParsingResult result = Parse(source);
+				results[index] = result;
+			});
+
+			return new(performance, results);
 		}
 	}
 	#endregion
