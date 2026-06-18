@@ -20,6 +20,9 @@ public interface IDiagnostic
 
 	/// <summary>The diagnostic message.</summary>
 	string Message { get; }
+
+	/// <summary>An optional stack trace.</summary>
+	StackTrace? StackTrace { get; }
 	#endregion
 }
 
@@ -43,6 +46,9 @@ public sealed class Diagnostic : IDiagnostic
 
 	/// <inheritdoc/>
 	public required string Message { get; init; }
+
+	/// <inheritdoc/>
+	public StackTrace? StackTrace { get; init; }
 	#endregion
 
 	#region Methods

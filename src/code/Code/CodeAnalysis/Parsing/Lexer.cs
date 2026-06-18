@@ -119,10 +119,13 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 
 		while (Text.HasRemaining)
 		{
+			if (Text.Current.IsLineBreak)
+				break;
+
 			if (TryLexStringEnd())
 				return true;
 
-			if (TryLexStringEscape() || TryLexStringText('"', '\\'))
+			if (TryLexStringEscape() || TryLexStringText(false, '"', '\\'))
 				continue;
 		}
 
@@ -136,10 +139,13 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 
 		while (Text.HasRemaining)
 		{
+			if (Text.Current.IsLineBreak)
+				break;
+
 			if (TryLexStringEnd())
 				return true;
 
-			if (TryLexStringInterpolation() || TryLexStringEscape() || TryLexStringText('"', '\\', '{'))
+			if (TryLexStringInterpolation() || TryLexStringEscape() || TryLexStringText(false, '"', '\\', '{'))
 				continue;
 		}
 
@@ -225,11 +231,15 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 		ReportUnknownEscapeSequence(new(start, Text.Position));
 		return true;
 	}
-	private bool TryLexStringText(params ReadOnlySpan<char> stopAt)
+	private bool TryLexStringText(bool allowLineBreak, params ReadOnlySpan<char> stopAt)
 	{
 		bool IsAtStop(ReadOnlySpan<char> stopAt)
 		{
 			TextElement current = Text.Current;
+
+			if (allowLineBreak is false && current.IsLineBreak)
+				return true;
+
 			foreach (char stop in stopAt)
 			{
 				if (current == stop)
@@ -267,6 +277,9 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 
 		while (Text.HasRemaining)
 		{
+			if (Text.Current.IsLineBreak)
+				break;
+
 			if (TryLexStringInterpolationEnd())
 				return true;
 

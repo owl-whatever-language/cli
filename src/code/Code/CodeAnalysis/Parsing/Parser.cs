@@ -369,9 +369,9 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		List<IConcreteTypeSyntax> arguments = [];
 		List<IConcreteToken> separators = [];
 
-		void Body()
+		while (RealisticHasRemaining && Current.Kind != SyntaxKind.CloseAngleBracket)
 		{
-			Debug.Assert(Current is not null);
+			using LoopGuardScope _ = LoopGuard();
 
 			IConcreteTypeSyntax? argument = TryParseType();
 			if (argument is not null)
@@ -384,17 +384,14 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 
 			if (RealisticHasRemaining && Current.Kind != SyntaxKind.CloseAngleBracket)
 			{
-				if (Match(SyntaxKind.Comma, ClassificationKind.Punctuation, out IConcreteToken? comma))
-				{
-					nodes.Add(comma);
-					separators.Add(comma);
-				}
-				else
-					ReportExpectedFunctionArgumentSeparator(Current.Position);
+				if (Match(SyntaxKind.Comma, ClassificationKind.Punctuation, out IConcreteToken? comma) is false)
+					break;
+
+				nodes.Add(comma);
+				separators.Add(comma);
 			}
 		}
 
-		LoopGuard(() => RealisticHasRemaining && Current.Kind != SyntaxKind.CloseAngleBracket, Body);
 		IConcreteToken end = Expect(SyntaxKind.CloseAngleBracket, ClassificationKind.Punctuation, "Expecting a closing angle bracket '>' to end a generic type.");
 
 		return new ConcreteGenericTypeSyntax(
@@ -486,9 +483,9 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		List<IConcreteFunctionArgumentSyntax> arguments = [];
 		List<IConcreteToken> separators = [];
 
-		void Body()
+		while (RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket)
 		{
-			Debug.Assert(Current is not null);
+			using LoopGuardScope _ = LoopGuard();
 
 			IConcreteFunctionArgumentSyntax? argument = TryParseFunctionArgument();
 			if (argument is not null)
@@ -504,17 +501,14 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 
 			if (RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket)
 			{
-				if (Match(SyntaxKind.Comma, ClassificationKind.Punctuation, out IConcreteToken? comma))
-				{
-					nodes.Add(comma);
-					separators.Add(comma);
-				}
-				else
-					ReportExpectedFunctionArgumentSeparator(Current.Position);
+				if (Match(SyntaxKind.Comma, ClassificationKind.Punctuation, out IConcreteToken? comma) is false)
+					break;
+
+				nodes.Add(comma);
+				separators.Add(comma);
 			}
 		}
 
-		LoopGuard(() => RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket, Body);
 		IConcreteToken end = Expect(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, "Expecting a closing bracket ')' to end the function call.");
 
 		return new(
@@ -563,8 +557,6 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 
 		while (RealisticHasRemaining && Current.Kind != SyntaxKind.StringEnd)
 		{
-			using LoopGuardScope _ = LoopGuard();
-
 			IConcreteStringFragmentSyntax? fragment = TryParseBasicStringFragments(out string? value);
 			if (fragment is null)
 				break; // Unclosed string, error reported by lexer.
@@ -590,8 +582,6 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 
 		while (RealisticHasRemaining && Current.Kind != SyntaxKind.StringEnd)
 		{
-			using LoopGuardScope _ = LoopGuard();
-
 			IConcreteStringFragmentSyntax? fragment = TryParseBasicStringFragments(out string? _) ?? TryParseStringInterpolation();
 			if (fragment is null)
 				break; // Unclosed string, error reported by lexer.
@@ -771,10 +761,12 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	}
 	protected override void ReportInfiniteLoop(IndexedPositionRange position)
 	{
-		AddError("infinite_parsing_loop", position, "An unaccounted for infinite loop occurred during parsing, this is likely an error with the OWL parser. Feel free to scold me.");
-#if DEBUG
-		//		ThrowHelper.ThrowInvalidOperationException($"Infinite loop during parsing at ({position}).");
-#endif
+		StackTrace trace = new();
+		AddError(
+			"infinite_parsing_loop",
+			position,
+			"An unaccounted for infinite loop occurred during parsing, this is likely an error with the OWL parser. Feel free to scold me.",
+			trace);
 	}
 	private void ReportExpectedStatement(IndexedPositionRange position)
 	{
@@ -811,14 +803,18 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	#endregion
 
 	#region Helpers
-	private void AddError(string id, IndexedPositionRange position, string message) => AddDiagnostic(DiagnosticKind.Error, id, position, message);
-	private void AddDiagnostic(DiagnosticKind kind, string id, IndexedPositionRange position, string message)
+	private void AddError(string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
+	{
+		AddDiagnostic(DiagnosticKind.Error, id, position, message, stackTrace);
+	}
+	private void AddDiagnostic(DiagnosticKind kind, string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
 	{
 		Diagnostics.Add(new Diagnostic()
 		{
 			Provider = this,
 			Kind = kind,
 			Id = id,
+			StackTrace = stackTrace,
 
 			Location = new DiagnosticSourceLocation(Source, position),
 			Message = message
