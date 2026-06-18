@@ -22,6 +22,27 @@ public sealed class ParsingResult : SourceStageResult
 	#endregion
 }
 
+public sealed class LexingAndParsingResult : SourceStageResult
+{
+	#region Properties
+	public override string Stage => "lexing_and_parsing";
+	public LexingResult Lexing { get; }
+	public ParsingResult Parsing { get; }
+	#endregion
+
+	#region Constructors
+	public LexingAndParsingResult(
+		IPerformanceResult performance,
+		LexingResult lexing,
+		ParsingResult parsing)
+		: base(new DiagnosticBag(), performance, lexing.Source, [lexing, parsing])
+	{
+		Lexing = lexing;
+		Parsing = parsing;
+	}
+	#endregion
+}
+
 public sealed class Parser : BaseParser, IDiagnosticProvider
 {
 	#region Properties
@@ -46,7 +67,17 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			Parser parser = new(source, tokens);
 			ConcreteSyntaxTree tree = parser.Parse();
 
-			return new ParsingResult(parser.Diagnostics, performance, source, tree);
+			return new(parser.Diagnostics, performance, source, tree);
+		}
+	}
+	public static LexingAndParsingResult Parse(ISourceFile source)
+	{
+		using (PerformanceResult.Scope(out IPerformanceResult performance))
+		{
+			LexingResult lexing = Lexer.Lex(source);
+			ParsingResult parsing = Parse(source, lexing.Tokens);
+
+			return new(performance, lexing, parsing);
 		}
 	}
 	#endregion
