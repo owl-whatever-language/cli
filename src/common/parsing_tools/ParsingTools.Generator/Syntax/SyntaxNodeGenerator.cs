@@ -249,6 +249,22 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				{
 				}
 			}
+
+			using (writer.TypePreamble())
+			{
+				writer.WriteLine($"public static partial class {info.INodeName}Extensions");
+				using (writer.Braced())
+				{
+					writer.WriteLine($"extension({info.INodeName} node)");
+					using (writer.Braced())
+					{
+						using (writer.Region("Methods"))
+						{
+							writer.WriteLine($"public IReadOnlyList<{info.ITokenName}> Flatten() => node.Flatten<{info.ITokenName}>();");
+						}
+					}
+				}
+			}
 		}
 
 		string source = stringWriter.ToString();
@@ -343,7 +359,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 		using (writer.Preamble(info.Namespace))
 		{
-			using (writer.TypePreamble())
+			using (writer.TypePreamble()) // interface
 			{
 				writer.Write($"public partial interface {info.InterfaceName} : {info.BaseInterfaceName}");
 				if (info.Shadowed is not null)
@@ -389,7 +405,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				}
 			}
 
-			using (writer.TypePreamble())
+			using (writer.TypePreamble()) // class
 			{
 				writer.WriteLine($"public sealed partial class {info.ClassName} : {info.Tree.BaseNodeName}, {info.InterfaceName}");
 				using (writer.Braced())

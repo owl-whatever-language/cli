@@ -35,7 +35,7 @@ public static class ISyntaxNodeExtensions
 {
 	extension(IEnumerable<ISyntaxNode> enumerable)
 	{
-		#region Methods
+		#region Position methods
 		public ISyntaxNode? GetFirstWithPosition() => enumerable.FirstOrDefault(s => s.Position != default);
 		public ISyntaxNode? GetLastFirstWithPosition() => enumerable.LastOrDefault(s => s.Position != default);
 		public ISyntaxNode? GetFirstWithAnyPosition() => enumerable.FirstOrDefault(s => s.FullPosition != default || s.Position != default);
@@ -59,6 +59,30 @@ public static class ISyntaxNodeExtensions
 			ISyntaxNode? last = GetLastFirstWithAnyPosition(enumerable) ?? first;
 
 			return new(first.FullPosition.Start, last.FullPosition.End);
+		}
+		#endregion
+	}
+
+	extension(ISyntaxNode node)
+	{
+		#region Methods
+		public IReadOnlyList<T> Flatten<T>() where T : notnull, ISyntaxNode
+		{
+			List<T> target = [];
+			Flatten(target, node);
+
+			return target;
+		}
+		private static void Flatten<T>(List<T> target, ISyntaxNode current)
+		{
+			if (current is T typed)
+			{
+				target.Add(typed);
+				return;
+			}
+
+			foreach (ISyntaxNode child in current.GetChildren())
+				Flatten(target, child);
 		}
 		#endregion
 	}
