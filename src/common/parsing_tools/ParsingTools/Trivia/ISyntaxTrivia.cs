@@ -2,6 +2,9 @@ namespace OwlDomain.ParsingTools.Trivia;
 
 public interface ISyntaxTrivia : ISyntaxPart
 {
+	#region Properties
+	ClassificationKind? Classification { get; }
+	#endregion
 }
 
 public sealed class SyntaxTrivia : ISyntaxTrivia
@@ -24,10 +27,13 @@ public sealed class SyntaxTrivia : ISyntaxTrivia
 
 	/// <inheritdoc/>
 	public bool IsFabricated { get; }
+
+	/// <inheritdoc/>
+	public ClassificationKind? Classification { get; }
 	#endregion
 
 	#region Constructors
-	public SyntaxTrivia(SyntaxKind kind, IndexedPositionRange position, string lexeme, object? value = null)
+	public SyntaxTrivia(SyntaxKind kind, IndexedPositionRange position, string lexeme, ClassificationKind? classification = null, object? value = null)
 	{
 		Guard.IsOfCategory(kind, SyntaxCategory.Trivia);
 
@@ -36,6 +42,7 @@ public sealed class SyntaxTrivia : ISyntaxTrivia
 		FullPosition = position;
 
 		Lexeme = lexeme;
+		Classification = classification;
 		Value = value;
 		IsFabricated = false;
 	}

@@ -10,6 +10,29 @@ partial struct ClassificationKind
 	public static ClassificationKind Keyword { get; } = new("keyword");
 	#endregion
 
+	#region Trivia
+	/// <summary>Represents a classification for trivia.</summary>
+	public static ClassificationKind Trivia { get; } = new("trivia");
+
+	/// <summary>Represents a classification for whitespace.</summary>
+	public static ClassificationKind Whitespace { get; } = Trivia + "whitespace";
+
+	/// <summary>Represents a classification for indentation whitespace.</summary>
+	public static ClassificationKind Indentation { get; } = Whitespace + "indentation";
+
+	/// <summary>Represents a classification for line-break whitespace.</summary>
+	public static ClassificationKind LineBreak { get; } = Whitespace + "line_break";
+
+	/// <summary>Represents a classification for comments.</summary>
+	public static ClassificationKind Comment { get; } = Trivia + "comment";
+
+	/// <summary>Represents a classification for single-line comments.</summary>
+	public static ClassificationKind SinglelineComment { get; } = Comment + "single_line";
+
+	/// <summary>Represents a classification for multi-line comments.</summary>
+	public static ClassificationKind MultilineComment { get; } = Comment + "multi_line";
+	#endregion
+
 	#region Literals
 	/// <summary>Represents a classification for literals.</summary>
 	public static ClassificationKind Literal { get; } = new("literal");

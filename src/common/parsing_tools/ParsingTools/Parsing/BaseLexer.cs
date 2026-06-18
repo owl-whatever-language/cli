@@ -254,7 +254,7 @@ public abstract class BaseLexer
 			IndexedLinePosition end = new(start.Index + 1, start.Line, start.Column + 1);
 			IndexedPositionRange position = new(start, end);
 
-			return new SyntaxTrivia(SyntaxKind.LineBreak, position, match);
+			return new SyntaxTrivia(SyntaxKind.LineBreak, position, match, ClassificationKind.LineBreak);
 		}
 
 		if (Text.IsAtStartOfLine)
@@ -285,7 +285,7 @@ public abstract class BaseLexer
 
 		string lexeme = GetLexeme().TryIntern();
 
-		return new SyntaxTrivia(SyntaxKind.WhiteSpace, new(start, Text.Position), lexeme);
+		return new SyntaxTrivia(SyntaxKind.WhiteSpace, new(start, Text.Position), lexeme, ClassificationKind.Indentation);
 	}
 	private ISyntaxTrivia LexWhiteSpace()
 	{
@@ -301,7 +301,7 @@ public abstract class BaseLexer
 
 		string lexeme = GetLexeme().TryIntern();
 
-		return new SyntaxTrivia(SyntaxKind.WhiteSpace, new(start, Text.Position), lexeme);
+		return new SyntaxTrivia(SyntaxKind.WhiteSpace, new(start, Text.Position), lexeme, ClassificationKind.Whitespace);
 	}
 	#endregion
 

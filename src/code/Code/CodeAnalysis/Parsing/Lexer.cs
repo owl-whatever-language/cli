@@ -346,7 +346,7 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 		string lexeme = GetLexeme();
 		string value = GetValue().Trim();
 
-		return new SyntaxTrivia(SyntaxKind.Comment, new(start, Text.Position), lexeme, value);
+		return new SyntaxTrivia(SyntaxKind.Comment, new(start, Text.Position), lexeme, ClassificationKind.SinglelineComment, value);
 	}
 	#endregion
 

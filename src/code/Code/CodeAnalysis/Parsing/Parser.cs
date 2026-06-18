@@ -192,7 +192,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		if (current is not null)
 			Advance();
 
-		return Convert(Current);
+		return Convert(current);
 	}
 	private ConcreteDocumentSyntax ParseDocument()
 	{
