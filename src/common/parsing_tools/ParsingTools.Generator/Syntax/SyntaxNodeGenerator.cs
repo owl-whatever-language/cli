@@ -44,6 +44,9 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 			foreach (SyntaxNodeInfo node in info.Nodes)
 				GenerateNode(context, node);
+
+			if (info.Shadowed is not null)
+				GenerateTreeConverter(context, info.Shadowed, info);
 		}
 		GenerateSyntaxBundle(context, order);
 		GenerateShadowValidation(context, order);
@@ -472,6 +475,96 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 		string source = result.ToString();
 		context.AddSource(info.Path, source);
+	}
+	static void GenerateTreeConverter(SourceProductionContext context, SyntaxTreeInfo from, SyntaxTreeInfo to)
+	{
+		Debug.Assert(to.ConverterName is not null);
+
+		IndentedTextWriter writer = GetWriter(out StringWriter result);
+
+		static void Generate(IndentedTextWriter writer, SyntaxNodeInfo from, SyntaxNodeInfo to)
+		{
+			string variable = from!.Kind.CamelCase;
+
+			if (to.ClassMembers.Count is 0 && from.ClassMembers.Count is 0)
+			{
+				writer.WriteLine($"protected virtual {to.ClassName} Convert({from.InterfaceName} {variable}) => new();");
+				return;
+			}
+
+			writer.WriteLine($"protected abstract {to.ClassName} Convert({from.InterfaceName} {variable});");
+		}
+
+		using (writer.Preamble(to.Namespace))
+		{
+			using (writer.TypePreamble())
+			{
+				writer.WriteLine($"public abstract partial class {to.ConverterName}");
+				using (writer.Braced())
+				{
+					using (writer.Region("Methods"))
+					{
+						writer.WriteLine($"protected virtual {to.TreeName} Convert({from.ITreeName} tree)");
+						using (writer.Braced())
+						{
+							writer.WriteLine($"{to.Document.ClassName} {to.Document.CamelName} = Convert(tree.{from.Document.PascalName});");
+							writer.WriteLine($"return new(tree.Source, {to.Document.CamelName});");
+						}
+
+						foreach (SyntaxNodeInfo target in to.Nodes.Where(n => n.Group is null).OrderBy(n => n.ClassMembers.Count))
+						{
+							SyntaxNodeInfo? origin = target.Shadowed;
+							Debug.Assert(origin is not null);
+
+							Generate(writer, origin!, target);
+						}
+					}
+					if (to.Groups.Any())
+					{
+						foreach (SyntaxGroupInfo group in to.Groups.Values)
+						{
+							writer.WriteLine();
+
+							string groupKind = group.Kind.CamelCase;
+							string lastName = new Name(group.Name.Parts.Last()).CamelCase;
+
+							SyntaxGroupInfo? targetGroup = group.Shadowed;
+							Debug.Assert(targetGroup is not null);
+
+							using (writer.Region($"{group.Name.PascalNatural} methods"))
+							{
+								writer.WriteLine($"protected virtual {targetGroup!.InterfaceName} Convert({group.InterfaceName} {groupKind})");
+								using (writer.Braced())
+								{
+									writer.WriteLine($"return {groupKind} switch");
+									using (writer.Braced(terminate: true))
+									{
+										foreach (SyntaxNodeInfo target in group.Nodes.Values.OrderBy(n => n.ClassMembers.Count))
+										{
+											Debug.Assert(target.Shadowed is not null);
+											writer.WriteLine($"{target.Shadowed!.InterfaceName} {lastName} => Convert({lastName}),");
+										}
+
+										writer.WriteLine();
+										writer.WriteLine($"_ => throw new ArgumentException($\"Unknown {lastName} node type ({{{groupKind}.GetType().Name}}).\", nameof({groupKind}))");
+									}
+								}
+								foreach (SyntaxNodeInfo target in group.Nodes.Values.OrderBy(n => n.ClassMembers.Count))
+								{
+									SyntaxNodeInfo? origin = target.Shadowed;
+									Debug.Assert(origin is not null);
+
+									Generate(writer, origin!, target);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		string source = result.ToString();
+		context.AddSource($"{to.Directory}/{to.ConverterName}.g.cs", source);
 	}
 
 	static void GenerateGlobal(SourceProductionContext context, SyntaxTreeInfo lastTree)

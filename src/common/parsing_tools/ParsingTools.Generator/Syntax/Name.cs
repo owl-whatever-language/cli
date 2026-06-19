@@ -14,6 +14,7 @@ public sealed class Name(string original) : IEquatable<Name>
 	public string Original { get; } = original;
 	public IReadOnlyList<string> Parts => Original.Split(['_'], StringSplitOptions.RemoveEmptyEntries);
 	public string PascalCase => ToPascalCase(Parts);
+	public string PascalNatural => ToPascalNatural(Parts);
 	public string CamelCase
 	{
 		get
@@ -56,6 +57,19 @@ public sealed class Name(string original) : IEquatable<Name>
 		string pascal = ToPascalCase(parts.Skip(1));
 
 		return first + pascal;
+	}
+	private static string ToPascalNatural(IReadOnlyList<string> parts)
+	{
+		if (parts.Count is 0)
+			return "";
+
+		if (parts.Count is 1)
+			return ToPascal(parts[0]);
+
+		List<string> newParts = [ToPascal(parts[0])];
+		newParts.AddRange(parts.Skip(1).Select(ToCamel));
+
+		return string.Join(" ", newParts);
 	}
 
 	private static string ToPascal(string part)

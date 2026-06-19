@@ -5,12 +5,13 @@ namespace OwlDomain.ParsingTools.Generator;
 internal static class IndentedTextWriterExtensions
 {
 	#region Nested types
-	public readonly struct BraceScope(IndentedTextWriter writer) : IDisposable
+	public readonly struct BraceScope(IndentedTextWriter writer, bool terminate) : IDisposable
 	{
 		public void Dispose()
 		{
 			writer.Indent--;
-			writer.WriteLine("}");
+
+			writer.WriteLine(terminate ? "};" : "}");
 		}
 	}
 	public readonly struct IndentScope(IndentedTextWriter writer) : IDisposable
@@ -45,12 +46,12 @@ internal static class IndentedTextWriterExtensions
 			writer.Indent++;
 			return new(writer);
 		}
-		public BraceScope Braced()
+		public BraceScope Braced(bool terminate = false)
 		{
 			writer.WriteLine("{");
 			writer.Indent++;
 
-			return new(writer);
+			return new(writer, terminate);
 		}
 		public PreambleScope Preamble(string? @namespace = null)
 		{

@@ -16,12 +16,14 @@ internal sealed record class SyntaxTreeInfo(
 	public string PascalKind => Kind.PascalCase;
 	public string CamelKind => Kind.CamelCase;
 	public string TreeName => $"{PascalKind}SyntaxTree";
+	public Name TreeAcronym => $"{Kind.Original[0]}st";
 	public string NodeName => $"{PascalKind}SyntaxNode";
 	public string BaseNodeName => "Base" + NodeName;
 	public string TokenName => $"{PascalKind}Token";
 	public string ITreeName => "I" + TreeName;
 	public string INodeName => "I" + NodeName;
 	public string ITokenName => "I" + TokenName;
+	public string? ConverterName => Shadowed is null ? null : $"Base{Shadowed.PascalKind}To{PascalKind}TreeConverter";
 
 	public string Directory => PascalKind;
 	public string TreePath => $"{Directory}/{TreeName}.g.cs";
