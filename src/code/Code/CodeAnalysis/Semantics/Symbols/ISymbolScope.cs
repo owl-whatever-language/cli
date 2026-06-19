@@ -21,8 +21,13 @@ public sealed class SymbolScope : ISymbolScope
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	private readonly List<SymbolScope> _children = [];
 
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	private readonly List<ISymbol> _symbols = [];
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	private readonly Dictionary<string, SymbolGroup> _byName = [];
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	private readonly Dictionary<IConcreteSyntaxNode, ISymbol> _byNode = [];
 	#endregion
 
@@ -32,6 +37,8 @@ public sealed class SymbolScope : ISymbolScope
 
 	/// <inheritdoc/>
 	public IReadOnlyCollection<SymbolScope> Children => _children;
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	IReadOnlyCollection<ISymbolScope> ISymbolScope.Children => _children;
 
 	public int Count => _symbols.Count;
@@ -51,6 +58,7 @@ public sealed class SymbolScope : ISymbolScope
 		return child;
 	}
 
+	public void AddSymbol(ISymbolTarget target) => AddSymbol(target.Symbol);
 	public void AddSymbol(ISymbol symbol)
 	{
 		if (symbol is IDeclaredSymbol declared)
@@ -68,6 +76,8 @@ public sealed class SymbolScope : ISymbolScope
 
 			group.Add(symbol);
 		}
+
+		_symbols.Add(symbol);
 	}
 	public bool GetSymbol(string name, [NotNullWhen(true)] out ISymbolGroup? symbols)
 	{

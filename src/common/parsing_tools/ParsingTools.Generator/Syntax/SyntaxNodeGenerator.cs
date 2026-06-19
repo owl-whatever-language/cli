@@ -587,8 +587,17 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				{
 					using (writer.Region("Methods"))
 					{
-						writer.WriteLine($"protected virtual void Visit({tree.ITreeName} tree) => Visit(tree.{tree.Document.PascalName});");
-						writer.WriteLine($"protected virtual void Visit(ISyntaxNode node)");
+						writer.WriteLine($"protected virtual void Visit({tree.ITreeName} tree) => Dispatch(tree.{tree.Document.PascalName});");
+
+						writer.WriteLine($"protected virtual void VisitChildren(ISyntaxNode node)");
+						using (writer.Braced())
+						{
+							writer.WriteLine($"foreach (ISyntaxNode child in node.GetChildren())");
+							using (writer.Indented())
+								writer.WriteLine($"Dispatch(child);");
+						}
+
+						writer.WriteLine($"protected virtual void Dispatch(ISyntaxNode node)");
 						using (writer.Braced())
 						{
 							writer.WriteLine("bool visitChildren = node switch");
@@ -610,12 +619,8 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 							writer.WriteLine();
 							writer.WriteLine($"if (visitChildren)");
-							using (writer.Braced())
-							{
-								writer.WriteLine($"foreach (ISyntaxNode child in node.GetChildren())");
-								using (writer.Indented())
-									writer.WriteLine($"Visit(child);");
-							}
+							using (writer.Indented())
+								writer.WriteLine($"VisitChildren(node);");
 						}
 					}
 					writer.WriteLine();

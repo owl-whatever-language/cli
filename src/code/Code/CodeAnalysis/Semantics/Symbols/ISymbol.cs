@@ -15,6 +15,7 @@ public interface IDeclaredSymbol : ISymbol
 	#endregion
 }
 
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public sealed class Symbol : ISymbol
 {
 	#region Properties
@@ -32,8 +33,13 @@ public sealed class Symbol : ISymbol
 		Target = target;
 	}
 	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"Symbol({Name}) -> {Target.Kind}";
+	#endregion
 }
 
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public sealed class DeclaredSymbol : IDeclaredSymbol
 {
 	#region Properties
@@ -54,5 +60,9 @@ public sealed class DeclaredSymbol : IDeclaredSymbol
 		Target = target;
 		Declaration = declaration;
 	}
+	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"Symbol({Name}) -> {Target.Kind}";
 	#endregion
 }

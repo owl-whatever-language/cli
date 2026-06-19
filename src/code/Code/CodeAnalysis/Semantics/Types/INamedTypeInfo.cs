@@ -1,26 +1,17 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 
-public interface INamedTypeInfo : ITypeInfo
+public interface INamedTypeInfo : ITypeInfo, INamedSymbolTarget
 {
-	#region Properties
-	string? Name { get; }
-	#endregion
 }
 
-public sealed class NamedTypeInfo : BaseSymbolTarget, INamedTypeInfo
+public sealed class NamedTypeInfo : BaseNamedSymbolTarget, INamedTypeInfo
 {
 	#region Properties
 	public override string Kind => "type";
-	public string? Name
-	{
-		get;
-		set => Set(ref field, value);
-	}
 	#endregion
 
 	#region Constructors
-	public NamedTypeInfo() { }
-	public NamedTypeInfo(string name) => Name = name;
+	public NamedTypeInfo(string? name) : base(name) { }
 	#endregion
 
 	#region Methods

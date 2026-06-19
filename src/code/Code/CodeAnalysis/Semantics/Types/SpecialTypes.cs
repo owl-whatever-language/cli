@@ -6,4 +6,8 @@ public static class SpecialTypes
 	public static INamedTypeInfo Void { get; } = new NamedTypeInfo("void").WithSymbol("void").Locked();
 	public static INamedTypeInfo Text { get; } = new NamedTypeInfo("text").WithSymbol("text").Locked();
 	#endregion
+
+	#region Methods
+	public static IEnumerable<INamedTypeInfo> GetAll() => [Void, Text];
+	#endregion
 }

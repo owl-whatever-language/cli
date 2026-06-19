@@ -23,6 +23,7 @@ public class CompilationContext
 {
 	#region Fields
 	private readonly Dictionary<ISourceFile, SyntaxTreeBundle> _trees = [];
+	private readonly ISymbolScope _baseScope = CreateBaseScope();
 	#endregion
 
 	#region Properties
@@ -59,7 +60,32 @@ public class CompilationContext
 			bundle.Concrete = result.Parsing.Tree;
 		}
 
-		return new(performance, [parsingResult]);
+		SymbolCollectionResult symbolCollection = SymbolCollector.Collect(_baseScope, GetConcreteTrees());
+
+		return new(performance, [parsingResult, symbolCollection]);
+	}
+	#endregion
+
+	#region Helpers
+	private IEnumerable<IConcreteSyntaxTree> GetConcreteTrees()
+	{
+		foreach (ISyntaxTreeBundle bundle in _trees.Values)
+		{
+			if (bundle.Concrete is null)
+				ThrowHelper.ThrowInvalidOperationException("Expect the concrete tree to be set.");
+
+			yield return bundle.Concrete;
+		}
+	}
+	private static ISymbolScope CreateBaseScope()
+	{
+		SymbolScope root = new("root");
+		SymbolScope builtin = root.NestScope("builtin");
+
+		foreach (INamedTypeInfo type in SpecialTypes.GetAll())
+			builtin.AddSymbol(type);
+
+		return builtin;
 	}
 	#endregion
 }

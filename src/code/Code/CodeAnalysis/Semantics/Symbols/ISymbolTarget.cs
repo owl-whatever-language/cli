@@ -15,6 +15,15 @@ public interface ISymbolTarget
 	#endregion
 }
 
+public interface INamedSymbolTarget : ISymbolTarget
+{
+	#region Properties
+	/// <summary>The name of the target.</summary>
+	string? Name { get; }
+	#endregion
+}
+
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public abstract class BaseSymbolTarget : ISymbolTarget
 {
 	#region Fields
@@ -90,6 +99,26 @@ public abstract class BaseSymbolTarget : ISymbolTarget
 		field = value;
 	}
 	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"Symbol({Kind})";
+	#endregion
+}
+
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
+public abstract class BaseNamedSymbolTarget : BaseSymbolTarget, INamedSymbolTarget
+{
+	#region Properties
+	public string? Name { get; }
+	#endregion
+
+	#region Constructors
+	public BaseNamedSymbolTarget(string? name) => Name = name;
+	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"Symbol({Kind}) {{ Name = ({Name}) }}";
+	#endregion
 }
 
 public static class SymbolTargetExtensions
@@ -116,6 +145,17 @@ public static class SymbolTargetExtensions
 		public TTarget Locked()
 		{
 			target.IsMutable = false;
+			return target;
+		}
+		#endregion
+	}
+	extension<TTarget>(TTarget target) where TTarget : notnull, BaseNamedSymbolTarget
+	{
+		#region Methods
+		public TTarget WithSymbol(IConcreteSyntaxNode declaration)
+		{
+			target.Symbol = new DeclaredSymbol(target.Name, target, declaration);
+
 			return target;
 		}
 		#endregion
