@@ -1,17 +1,25 @@
-using OwlDomain.ParsingTools.Text;
-
 namespace OwlDomain.Owl.Code.CodeAnalysis.Parsing;
 
-public sealed class LexingResult : SourceStageResult
+public sealed class LexingResult : ISourceStageResult, IStageResultDiagnostics, IStageResultPerformance
 {
 	#region Properties
-	public override string Stage => "lexing";
+	public string Stage => "lexing";
+	public ISourceFile Source { get; }
+	public IDiagnosticBag Diagnostics { get; }
+	public IPerformanceResult Performance { get; }
 	public IReadOnlyList<ISyntaxToken> Tokens { get; }
 	#endregion
 
 	#region Constructors
-	public LexingResult(IDiagnosticBag diagnostics, IPerformanceResult performance, ISourceFile source, IReadOnlyList<ISyntaxToken> tokens) : base(diagnostics, performance, source)
+	public LexingResult(
+		ISourceFile source,
+		IDiagnosticBag diagnostics,
+		IPerformanceResult performance,
+		IReadOnlyList<ISyntaxToken> tokens)
 	{
+		Source = source;
+		Diagnostics = diagnostics;
+		Performance = performance;
 		Tokens = tokens;
 	}
 	#endregion
@@ -43,7 +51,7 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 
 			lexer.Lex();
 
-			return new LexingResult(lexer.Diagnostics, performance, source, lexer.Tokens);
+			return new LexingResult(source, lexer.Diagnostics, performance, lexer.Tokens);
 		}
 	}
 	#endregion

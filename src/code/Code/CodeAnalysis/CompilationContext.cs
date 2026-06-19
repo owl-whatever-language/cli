@@ -1,17 +1,20 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis;
 
-public sealed class CompilationUpdateResult : StageResult
+public sealed class CompilationUpdateResult : IStageResultPerformance, IStageResultParent
 {
 	#region Properties
-	public override string Stage => "compilation_update";
+	public string Stage => "compilation_update";
+	public IPerformanceResult Performance { get; }
+	public IReadOnlyCollection<IStageResult> Children { get; }
 	#endregion
 
 	#region Constructors
 	public CompilationUpdateResult(
 		IPerformanceResult performance,
-		IReadOnlyList<IStageResult> subResults)
-		: base(new DiagnosticBag(), performance, subResults)
+		IReadOnlyCollection<IStageResult> children)
 	{
+		Performance = performance;
+		Children = children;
 	}
 	#endregion
 }
@@ -50,7 +53,7 @@ public class CompilationContext
 		HashSet<ISourceFile> toReparse = [.. added, .. changed];
 
 		ParallelParsingResult parsingResult = Parser.Parse(toReparse);
-		foreach (LexingAndParsingResult result in parsingResult.ByFile.Values)
+		foreach (LexingAndParsingResult result in parsingResult.GetByFile().Values)
 		{
 			SyntaxTreeBundle bundle = _trees[result.Source];
 			bundle.Concrete = result.Parsing.Tree;

@@ -1,104 +1,148 @@
 namespace OwlDomain.ParsingTools.Results;
 
-public enum ResultKind
-{
-	Regular = 0,
-	Parallel,
-}
-
 public interface IStageResult
 {
 	#region Properties
 	string Stage { get; }
-	IDiagnosticBag Diagnostics { get; }
-	IPerformanceResult Performance { get; }
-	IReadOnlyList<IStageResult> SubResults { get; }
-	ResultKind Kind { get; }
 	#endregion
 }
 
-public abstract class StageResult : IStageResult
+public interface ISourceStageResult : IStageResult
 {
 	#region Properties
-	/// <inheritdoc/>
-	public abstract string Stage { get; }
-
-	/// <inheritdoc/>
-	public IDiagnosticBag Diagnostics { get; }
-
-	/// <inheritdoc/>
-	public IPerformanceResult Performance { get; }
-
-	/// <inheritdoc/>
-	public IReadOnlyList<IStageResult> SubResults { get; }
-
-	/// <inheritdoc/>
-	public ResultKind Kind { get; }
+	ISourceFile Source { get; }
 	#endregion
+}
 
-	#region Constructors
-	protected StageResult(
-		IDiagnosticBag diagnostics,
-		IPerformanceResult performance,
-		IReadOnlyList<IStageResult> subResults,
-		ResultKind kind)
-	{
-		Diagnostics = diagnostics;
-		Performance = performance;
-		SubResults = subResults;
-		Kind = kind;
-	}
+public interface IStageResultDiagnostics : IStageResult
+{
+	#region Properties
+	IDiagnosticBag Diagnostics { get; }
+	#endregion
+}
 
-	protected StageResult(
-		IDiagnosticBag diagnostics,
-		IPerformanceResult performance,
-		IReadOnlyList<IStageResult> subResults)
-		: this(diagnostics, performance, subResults, default) { }
+public interface IStageResultPerformance : IStageResult
+{
+	#region Properties
+	IPerformanceResult Performance { get; }
+	#endregion
+}
 
-	protected StageResult(
-		IDiagnosticBag diagnostics,
-		IPerformanceResult performance)
-		: this(diagnostics, performance, [], default) { }
+public interface IStageResultParent : IStageResult
+{
+	#region Properties
+	IReadOnlyCollection<IStageResult> Children { get; }
+	#endregion
+}
+
+public interface IStageResultParent<out T> : IStageResultParent
+	where T : class, IStageResult
+{
+	#region Properties
+	new IReadOnlyCollection<T> Children { get; }
+	IReadOnlyCollection<IStageResult> IStageResultParent.Children => Children;
+	#endregion
+}
+
+public interface IOrderedStageResultParent : IStageResultParent
+{
+	#region Properties
+	new IReadOnlyList<IStageResult> Children { get; }
+	IReadOnlyCollection<IStageResult> IStageResultParent.Children => Children;
+	#endregion
+}
+
+public interface IOrderedStageResultParent<out T> : IOrderedStageResultParent, IStageResultParent<T>
+	where T : class, IStageResult
+{
+	#region Properties
+	new IReadOnlyList<T> Children { get; }
+	IReadOnlyList<IStageResult> IOrderedStageResultParent.Children => Children;
+	IReadOnlyCollection<T> IStageResultParent<T>.Children => Children;
+	#endregion
+}
+
+public interface ICombinedStageResult : IOrderedStageResultParent
+{
+}
+
+public interface ICombinedStageResult<out T> : ICombinedStageResult, IOrderedStageResultParent<T>
+	where T : class, IStageResult
+{
+	#region Properties
+	new IReadOnlyList<T> Children { get; }
+	IReadOnlyCollection<IStageResult> IStageResultParent.Children => Children;
+	IReadOnlyList<T> IOrderedStageResultParent<T>.Children => Children;
+	IReadOnlyList<IStageResult> IOrderedStageResultParent.Children => Children;
+	#endregion
+}
+
+public interface IParallelStageResult : IStageResultParent, IStageResultPerformance
+{
+}
+
+public interface IParallelStageResult<out T> : IParallelStageResult, IStageResultParent<T>
+	where T : class, IStageResult
+{
+}
+
+public interface IStagePerformanceBreakdownResult : IStageResultPerformance
+{
+	#region Methods
+	IReadOnlyDictionary<string, IPerformanceResult> GetStagePerformanceBreakdown();
 	#endregion
 }
 
 public static class IStageResultExtensions
 {
-	#region Functions
-	private static void AppendDiagnostics(List<IDiagnostic> target, IStageResult current)
-	{
-		target.AddRange(current.Diagnostics);
-
-		foreach (IStageResult child in current.SubResults)
-			AppendDiagnostics(target, child);
-	}
-	#endregion
-
 	extension(IStageResult result)
 	{
 		#region Methods
-		public IReadOnlyCollection<IDiagnostic> GetAllDiagnostics()
+		private static void CollectDiagnostics(List<IDiagnostic> target, IStageResult current)
 		{
-			List<IDiagnostic> diagnostics = [];
-			AppendDiagnostics(diagnostics, result);
+			if (current is IStageResultDiagnostics diagnostics)
+				target.AddRange(diagnostics.Diagnostics);
 
-			return diagnostics;
+			if (current is IStageResultParent parent)
+			{
+				foreach (IStageResult child in parent.Children)
+					CollectDiagnostics(target, child);
+			}
+		}
+		public IDiagnosticBag GetAllDiagnostics()
+		{
+			List<IDiagnostic> target = [];
+			CollectDiagnostics(target, result);
+
+			return new DiagnosticBag(target);
+		}
+		public IEnumerable<IStageResult> TryGetChildren()
+		{
+			if (result is IStageResultParent parent)
+				return parent.Children;
+
+			return [];
 		}
 		#endregion
 	}
 
 	extension(IEnumerable<IStageResult> results)
 	{
-		#region Methods
-		public IReadOnlyCollection<IDiagnostic> GetAllDiagnostics()
+		public IDiagnosticBag GetAllDiagnostics()
 		{
-			List<IDiagnostic> diagnostics = [];
+			List<IDiagnostic> target = [];
 
-			foreach (IStageResult result in results)
-				AppendDiagnostics(diagnostics, result);
+			foreach (IStageResult current in results)
+				CollectDiagnostics(target, current);
 
-			return diagnostics;
+			return new DiagnosticBag(target);
 		}
+	}
+
+	extension<T>(IStageResultParent<T> result) where T : class, ICombinedStageResult, ISourceStageResult
+	{
+		#region Methods
+		public IReadOnlyDictionary<ISourceFile, T> GetByFile() => result.Children.ToDictionary(r => r.Source);
 		#endregion
 	}
 }

@@ -104,6 +104,45 @@ public sealed class PerformanceResult : IPerformanceResult
 
 		return new(scope);
 	}
+	public static IReadOnlyDictionary<string, IPerformanceResult> CalculateStageBreakdown(
+		IPerformanceResult parent,
+		IEnumerable<IStageResultPerformance> results)
+	{
+		// Note(Nightowl):
+		// I have absolutely no idea how mathematically sound this approach is for getting an estimate of parallelised results.
+		// The approach that I'm taking here is to calculate the total values as if the result wasn't parallelised
+		// in order to get a % share of the performance for a particular stage, and then I use that % on the true
+		// parallelised performance result.
+
+		Dictionary<string, IPerformanceResult> totals = [];
+
+		foreach (IGrouping<string, IStageResultPerformance> group in results.GroupBy(s => s.Stage))
+		{
+			IPerformanceResult stageTotal = group.Select(g => g.Performance).Sum();
+			totals.Add(group.Key, stageTotal);
+		}
+
+		IPerformanceResult total = totals.Values.Sum();
+
+		Dictionary<string, IPerformanceResult> breakdowns = [];
+		foreach (KeyValuePair<string, IPerformanceResult> pair in totals)
+		{
+			double systemShare = pair.Value.SystemTime / total.SystemTime;
+			double userShare = pair.Value.UserTime / total.UserTime;
+			double durationShare = pair.Value.Duration / total.Duration;
+			double memoryShare = pair.Value.MemoryUsed / (double)total.MemoryUsed;
+
+			TimeSpan system = systemShare * parent.SystemTime;
+			TimeSpan user = userShare * parent.UserTime;
+			TimeSpan duration = durationShare * parent.Duration;
+			long memory = (long)(memoryShare * parent.MemoryUsed);
+
+			PerformanceResult estimate = new(system, user, duration, memory);
+			breakdowns.Add(pair.Key, pair.Value);
+		}
+
+		return breakdowns;
+	}
 	#endregion
 }
 
@@ -134,6 +173,13 @@ public static class IPerformanceResultExtensions
 	{
 		#region Properties
 		public string MemoryUsedFormatted => AsMemory(result.MemoryUsed);
+		#endregion
+
+		#region Methods
+		public IReadOnlyDictionary<string, IPerformanceResult> CalculateStageBreakdown(IEnumerable<IStageResultPerformance> results)
+		{
+			return PerformanceResult.CalculateStageBreakdown(result, results);
+		}
 		#endregion
 
 		#region Helpers

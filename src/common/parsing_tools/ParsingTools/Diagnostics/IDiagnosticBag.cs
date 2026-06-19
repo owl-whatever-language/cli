@@ -14,7 +14,7 @@ public interface IDiagnosticBag : IReadOnlyCollection<IDiagnostic>
 public sealed class DiagnosticBag : IDiagnosticBag, ICollection<IDiagnostic>
 {
 	#region Fields
-	private readonly List<IDiagnostic> _diagnostics = [];
+	private readonly List<IDiagnostic> _diagnostics;
 	#endregion
 
 	#region Properties
@@ -23,6 +23,12 @@ public sealed class DiagnosticBag : IDiagnosticBag, ICollection<IDiagnostic>
 
 	/// <inheritdoc/>
 	bool ICollection<IDiagnostic>.IsReadOnly => false;
+	#endregion
+
+	#region Constructors
+	public DiagnosticBag() => _diagnostics = [];
+	public DiagnosticBag(IEnumerable<IDiagnostic> diagnostics) => _diagnostics = [.. diagnostics];
+	internal DiagnosticBag(List<IDiagnostic> diagnostics) => _diagnostics = diagnostics;
 	#endregion
 
 	#region Methods
