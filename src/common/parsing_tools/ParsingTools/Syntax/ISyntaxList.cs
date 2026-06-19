@@ -27,6 +27,20 @@ public class SyntaxList<TValue> : ISyntaxList<TValue>
 
 	#region Properties
 	/// <inheritdoc/>
+	[DisallowNull]
+	public virtual ISyntaxNode? Parent
+	{
+		get;
+		set
+		{
+			if (field is not null)
+				ThrowHelper.ThrowInvalidOperationException("The parent node has already been set.");
+
+			field = value;
+		}
+	}
+
+	/// <inheritdoc/>
 	public IndexedPositionRange Position => GetChildren().GetPosition();
 
 	/// <inheritdoc/>
@@ -44,10 +58,21 @@ public class SyntaxList<TValue> : ISyntaxList<TValue>
 
 	#region Constructors
 	public SyntaxList() => _values = [];
-	public SyntaxList(IReadOnlyList<TValue> values) => _values = values;
+	public SyntaxList(IReadOnlyList<TValue> values)
+	{
+		_values = values;
+
+		AssignParentToChildren();
+	}
 	#endregion
 
 	#region Methods
+	private void AssignParentToChildren()
+	{
+		foreach (ISyntaxNode child in GetChildren())
+			child.Parent = this;
+	}
+
 	/// <inheritdoc/>
 	public IEnumerable<ISyntaxNode> GetChildren() => _values;
 
@@ -67,6 +92,20 @@ public class SyntaxList<TValue, TSeparator> : ISyntaxList<TValue, TSeparator>
 	where TSeparator : class, ISyntaxNode
 {
 	#region Properties
+	/// <inheritdoc/>
+	[DisallowNull]
+	public ISyntaxNode? Parent
+	{
+		get;
+		set
+		{
+			if (field is not null)
+				ThrowHelper.ThrowInvalidOperationException("The parent node has already been set.");
+
+			field = value;
+		}
+	}
+
 	/// <inheritdoc/>
 	public IReadOnlyList<ISyntaxNode> Nodes { get; }
 
@@ -98,10 +137,18 @@ public class SyntaxList<TValue, TSeparator> : ISyntaxList<TValue, TSeparator>
 		Nodes = nodes;
 		Values = values;
 		Separators = separators;
+
+		AssignParentToChildren();
 	}
 	#endregion
 
 	#region Methods
+	private void AssignParentToChildren()
+	{
+		foreach (ISyntaxNode child in GetChildren())
+			child.Parent = this;
+	}
+
 	/// <inheritdoc/>
 	public IEnumerable<ISyntaxNode> GetChildren() => Nodes;
 	#endregion

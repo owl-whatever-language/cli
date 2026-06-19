@@ -16,6 +16,20 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 	public SyntaxKind Kind { get; }
 
 	/// <inheritdoc/>
+	[DisallowNull]
+	public ISyntaxNode? Parent
+	{
+		get;
+		set
+		{
+			if (field is not null)
+				ThrowHelper.ThrowInvalidOperationException("The parent node has already been set.");
+
+			field = value;
+		}
+	}
+
+	/// <inheritdoc/>
 	public IndexedPositionRange Position { get; }
 
 	/// <inheritdoc/>
@@ -72,6 +86,8 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 		TrailingTrivia = trailingTrivia;
 		Classification = classification;
 		IsFabricated = false;
+
+		AssignParentToChildren();
 	}
 	protected BaseSyntaxToken(SyntaxKind kind, IndexedPositionRange position)
 	{
@@ -87,6 +103,11 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 	#endregion
 
 	#region Methods
+	private void AssignParentToChildren()
+	{
+		foreach (ISyntaxNode child in GetChildren())
+			child.Parent = this;
+	}
 	public IEnumerable<ISyntaxNode> GetChildren() => [LeadingTrivia, TrailingTrivia];
 	public override string ToString() => this.Print(false);
 	#endregion

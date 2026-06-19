@@ -4,6 +4,10 @@ public sealed class TriviaList : SyntaxList<ISyntaxTrivia>
 {
 	#region Properties
 	public static TriviaList Empty { get; } = [];
+
+	/// <inheritdoc/>
+	[DisallowNull]
+	public override ISyntaxNode? Parent { get; set; }
 	#endregion
 
 	#region Constructors

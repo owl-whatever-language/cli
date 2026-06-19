@@ -452,6 +452,12 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 							{
 								foreach (MemberDescription member in info.ClassMembers)
 									writer.WriteLine($"{member.Name.PascalCase} = {member.Name.CamelCase};");
+
+								if (info.ClassMembers.Any())
+								{
+									writer.WriteLine();
+									writer.WriteLine("AssignParentToChildren();");
+								}
 							}
 						}
 					}

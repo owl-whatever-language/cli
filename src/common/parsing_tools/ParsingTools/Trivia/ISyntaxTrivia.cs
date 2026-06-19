@@ -12,6 +12,10 @@ public sealed class SyntaxTrivia : ISyntaxTrivia
 	public SyntaxKind Kind { get; }
 
 	/// <inheritdoc/>
+	[DisallowNull]
+	public ISyntaxNode? Parent { get; set; }
+
+	/// <inheritdoc/>
 	public IndexedPositionRange Position { get; }
 
 	/// <inheritdoc/>
@@ -63,6 +67,8 @@ public sealed class SyntaxTrivia : ISyntaxTrivia
 		Value = badSyntax;
 
 		IsFabricated = true;
+
+		// Note(Nightowl): We purposefully don't assign the badSyntax's parent because we won't be able to replace it;
 	}
 	#endregion
 

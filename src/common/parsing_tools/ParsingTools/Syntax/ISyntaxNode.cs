@@ -3,6 +3,8 @@ namespace OwlDomain.ParsingTools.Syntax;
 public interface ISyntaxNode
 {
 	#region Properties
+	[DisallowNull]
+	ISyntaxNode? Parent { get; set; }
 	IndexedPositionRange Position { get; }
 	IndexedPositionRange FullPosition { get; }
 	bool IsFabricated { get; }
@@ -18,6 +20,20 @@ public abstract class BaseSyntaxNode : ISyntaxNode
 {
 	#region Properties
 	/// <inheritdoc/>
+	[DisallowNull]
+	public ISyntaxNode? Parent
+	{
+		get;
+		set
+		{
+			if (field is not null)
+				ThrowHelper.ThrowInvalidOperationException("The parent node has already been set.");
+
+			field = value;
+		}
+	}
+
+	/// <inheritdoc/>
 	public IndexedPositionRange Position => GetChildren().GetPosition();
 
 	/// <inheritdoc/>
@@ -28,6 +44,11 @@ public abstract class BaseSyntaxNode : ISyntaxNode
 	#endregion
 
 	#region Methods
+	protected void AssignParentToChildren()
+	{
+		foreach (ISyntaxNode child in GetChildren())
+			child.Parent = this;
+	}
 	public abstract IEnumerable<ISyntaxNode> GetChildren();
 	public override string ToString() => this.Print();
 	#endregion
@@ -72,6 +93,14 @@ public static class ISyntaxNodeExtensions
 	extension(ISyntaxNode node)
 	{
 		#region Methods
+		public ISyntaxNode GetRoot()
+		{
+			while (node.Parent is not null)
+				node = node.Parent;
+
+			return node;
+		}
+
 		public IReadOnlyList<ISyntaxToken> Flatten() => Flatten<ISyntaxToken>(node);
 		public IReadOnlyList<T> Flatten<T>() where T : notnull, ISyntaxNode
 		{
