@@ -30,24 +30,45 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 	}
 	private static void Generate(SourceProductionContext context, SyntaxDescriptionFile description)
 	{
+		IReadOnlyList<SyntaxTreeInfo> order = GetTreeOrder(description);
+
+		GenerateGlobal(context, order.Last());
+		foreach (SyntaxTreeInfo info in order)
+		{
+			GenerateToken(context, info);
+			GenerateBaseNode(context, info);
+			GenerateTree(context, info);
+
+			foreach (SyntaxGroupInfo group in info.Groups.Values)
+				GenerateGroup(context, group);
+
+			foreach (SyntaxNodeInfo node in info.Nodes)
+				GenerateNode(context, node);
+		}
+		GenerateSyntaxBundle(context, order);
+		GenerateShadowValidation(context, order);
+	}
+	private static IReadOnlyList<SyntaxTreeInfo> GetTreeOrder(SyntaxDescriptionFile description)
+	{
+		List<SyntaxTreeInfo> order = [];
+
 		string? rootNamespace = description.OfType<NamespaceDescription>().FirstOrDefault().RootNamespace;
 		if (rootNamespace is null)
-			return;
+			return order;
 
 		ShadowingDescription? shadowing = description.OfType<ShadowingDescription>().FirstOrDefault();
 		if (shadowing is null || shadowing.Order.Count is 0)
-			return;
+			return order;
 
-		List<SyntaxTreeInfo> order = [];
 		Dictionary<string, SyntaxTreeInfo> lookup = [];
 
-		foreach (Name name in shadowing.Order)
+		foreach (Name name in shadowing.Order) // figure out the order
 		{
 			TreeDescription? tree = description.OfType<TreeDescription>().FirstOrDefault(t => t.Kind == name);
 			TokenDescription? token = description.OfType<TokenDescription>().FirstOrDefault(t => t.Kind == name);
 
 			if (tree is null || token is null)
-				return;
+				return order;
 
 			SyntaxTreeInfo? last = order.LastOrDefault();
 			SyntaxTreeInfo info = new(rootNamespace, name, tree, token, last, tree.Members, [], [], []);
@@ -56,7 +77,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			lookup.Add(info.Kind.Original, info);
 		}
 
-		foreach (SyntaxTreeInfo info in order)
+		foreach (SyntaxTreeInfo info in order) // figure out the groups
 		{
 			foreach (GroupDescription group in description.OfType<GroupDescription>())
 			{
@@ -70,7 +91,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			}
 		}
 
-		foreach (SyntaxTreeInfo info in order)
+		foreach (SyntaxTreeInfo info in order) // figure out the individual nodes
 		{
 			foreach (NodeDescription node in description.OfType<NodeDescription>())
 			{
@@ -107,31 +128,16 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			}
 		}
 
-		GenerateGlobal(context, order.Last());
-		foreach (SyntaxTreeInfo info in order)
-		{
-			GenerateToken(context, info);
-			GenerateBaseNode(context, info);
-			GenerateTree(context, info);
-
-			foreach (SyntaxGroupInfo group in info.Groups.Values)
-				GenerateGroup(context, group);
-
-			foreach (SyntaxNodeInfo node in info.Nodes)
-				GenerateNode(context, node);
-		}
-		GenerateSyntaxBundle(context, order);
-		GenerateShadowValidation(context, order);
+		return order;
 	}
 
 	static void GenerateToken(SourceProductionContext context, SyntaxTreeInfo info)
 	{
-		StringWriter stringWriter = new();
-		IndentedTextWriter writer = new(stringWriter, "\t");
+		IndentedTextWriter writer = GetWriter(out StringWriter result);
 
 		using (writer.Preamble(info.Namespace))
 		{
-			using (writer.TypePreamble())
+			using (writer.TypePreamble()) // interface
 			{
 				writer.WriteLine($"public partial interface {info.ITokenName} : {info.INodeName}, {(info.Shadowed is null ? "ISyntaxToken" : info.Shadowed.ITokenName)}");
 				using (writer.Braced())
@@ -147,7 +153,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				}
 			}
 
-			using (writer.TypePreamble())
+			using (writer.TypePreamble()) // class
 			{
 				writer.WriteLine($"public sealed partial class {info.TokenName} : BaseSyntaxToken, {info.ITokenName}");
 				using (writer.Braced())
@@ -225,17 +231,16 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			}
 		}
 
-		string source = stringWriter.ToString();
+		string source = result.ToString();
 		context.AddSource(info.TokenPath, source);
 	}
 	static void GenerateBaseNode(SourceProductionContext context, SyntaxTreeInfo info)
 	{
-		StringWriter stringWriter = new();
-		IndentedTextWriter writer = new(stringWriter, "\t");
+		IndentedTextWriter writer = GetWriter(out StringWriter result);
 
 		using (writer.Preamble(info.Namespace))
 		{
-			using (writer.TypePreamble())
+			using (writer.TypePreamble()) // interface
 			{
 				writer.WriteLine($"public partial interface {info.INodeName} : {(info.Shadowed is null ? "ISyntaxNode" : info.Shadowed.INodeName)}");
 				using (writer.Braced())
@@ -243,7 +248,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				}
 			}
 
-			using (writer.TypePreamble())
+			using (writer.TypePreamble()) // class
 			{
 				writer.WriteLine($"public abstract partial class {info.BaseNodeName} : BaseSyntaxNode, {info.INodeName}");
 				using (writer.Braced())
@@ -251,7 +256,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				}
 			}
 
-			using (writer.TypePreamble())
+			using (writer.TypePreamble()) // extensions
 			{
 				writer.WriteLine($"public static partial class {info.INodeName}Extensions");
 				using (writer.Braced())
@@ -268,17 +273,16 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			}
 		}
 
-		string source = stringWriter.ToString();
+		string source = result.ToString();
 		context.AddSource(info.BaseNodePath, source);
 	}
 	static void GenerateTree(SourceProductionContext context, SyntaxTreeInfo info)
 	{
-		StringWriter stringWriter = new();
-		IndentedTextWriter writer = new(stringWriter, "\t");
+		IndentedTextWriter writer = GetWriter(out StringWriter result);
 
 		using (writer.Preamble(info.Namespace))
 		{
-			using (writer.TypePreamble())
+			using (writer.TypePreamble()) // interface
 			{
 				writer.WriteLine($"public partial interface {info.ITreeName} : {(info.Shadowed is null ? "ISyntaxTree" : info.Shadowed.ITreeName)}");
 				using (writer.Braced())
@@ -298,7 +302,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				}
 			}
 
-			using (writer.TypePreamble())
+			using (writer.TypePreamble()) // class
 			{
 				writer.WriteLine($"public sealed partial class {info.TreeName} : BaseSyntaxTree, {info.ITreeName}");
 				using (writer.Braced())
@@ -323,17 +327,16 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			}
 		}
 
-		string source = stringWriter.ToString();
+		string source = result.ToString();
 		context.AddSource(info.TreePath, source);
 	}
 	static void GenerateGroup(SourceProductionContext context, SyntaxGroupInfo info)
 	{
-		StringWriter stringWriter = new();
-		IndentedTextWriter writer = new(stringWriter, "\t");
+		IndentedTextWriter writer = GetWriter(out StringWriter result);
 
 		using (writer.Preamble(info.Namespace))
 		{
-			using (writer.TypePreamble())
+			using (writer.TypePreamble()) // interface
 			{
 				writer.Write($"public partial interface {info.InterfaceName} : {info.Tree.INodeName}");
 				if (info.Shadowed is not null)
@@ -355,13 +358,12 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			}
 		}
 
-		string source = stringWriter.ToString();
+		string source = result.ToString();
 		context.AddSource(info.InterfacePath, source);
 	}
 	static void GenerateNode(SourceProductionContext context, SyntaxNodeInfo info)
 	{
-		StringWriter stringWriter = new();
-		IndentedTextWriter writer = new(stringWriter, "\t");
+		IndentedTextWriter writer = GetWriter(out StringWriter result);
 
 		using (writer.Preamble(info.Namespace))
 		{
@@ -468,13 +470,13 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			}
 		}
 
-		string source = stringWriter.ToString();
+		string source = result.ToString();
 		context.AddSource(info.Path, source);
 	}
+
 	static void GenerateGlobal(SourceProductionContext context, SyntaxTreeInfo lastTree)
 	{
-		StringWriter stringWriter = new();
-		IndentedTextWriter writer = new(stringWriter, "\t");
+		IndentedTextWriter writer = GetWriter(out StringWriter result);
 
 		using (writer.Preamble())
 		{
@@ -485,17 +487,17 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				writer.WriteLine();
 		}
 
-		string source = stringWriter.ToString();
+		string source = result.ToString();
 		context.AddSource("global.Syntax.g.cs", source);
 	}
+
 	static void GenerateSyntaxBundle(SourceProductionContext context, IReadOnlyList<SyntaxTreeInfo> order)
 	{
-		StringWriter stringWriter = new();
-		IndentedTextWriter writer = new(stringWriter, "\t");
+		IndentedTextWriter writer = GetWriter(out StringWriter result);
 
 		using (writer.Preamble(order.First().RootNamespace))
 		{
-			using (writer.TypePreamble())
+			using (writer.TypePreamble()) // interface
 			{
 				writer.WriteLine($"public partial interface ISyntaxTreeBundle");
 				using (writer.Braced())
@@ -509,7 +511,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				}
 			}
 
-			using (writer.TypePreamble())
+			using (writer.TypePreamble()) // class
 			{
 				writer.WriteLine($"public sealed partial class SyntaxTreeBundle : ISyntaxTreeBundle");
 				using (writer.Braced())
@@ -553,20 +555,20 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			}
 		}
 
-		string source = stringWriter.ToString();
+		string source = result.ToString();
 		context.AddSource("SyntaxTreeBundle.g.cs", source);
 	}
 	static void GenerateShadowValidation(SourceProductionContext context, IReadOnlyList<SyntaxTreeInfo> order)
 	{
-		StringWriter stringWriter = new();
-		IndentedTextWriter writer = new(stringWriter, "\t");
+		IndentedTextWriter writer = GetWriter(out StringWriter result);
 
 		using (writer.Preamble())
 		{
 			writer.WriteLine("#if DEBUG");
 			writer.WriteLine("#pragma warning disable CS0219 // Unused variable.");
 			writer.WriteLine();
-			using (writer.TypePreamble())
+
+			using (writer.TypePreamble()) // class
 			{
 				writer.WriteLine("file static class ShadowValidation");
 				using (writer.Braced())
@@ -594,13 +596,22 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 					}
 				}
 			}
+
 			writer.WriteLine("#pragma warning restore CS0219 // Unused variable.");
 			writer.WriteLine("#endif");
 			writer.WriteLine();
 		}
 
-		string source = stringWriter.ToString();
+		string source = result.ToString();
 		context.AddSource("ShadowingValidation.g.cs", source);
+	}
+	#endregion
+
+	#region Helpers
+	private static IndentedTextWriter GetWriter(out StringWriter result)
+	{
+		result = new();
+		return new(result, "\t");
 	}
 	#endregion
 }
