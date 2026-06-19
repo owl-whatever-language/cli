@@ -36,6 +36,8 @@ internal sealed record class SyntaxTreeInfo(
 	public MemberDescriptionList BaseNodeClassMembers => Shadowed is not null ? [.. Shadowed.BaseNodeClassMembers, .. Members] : Members;
 	public MemberDescriptionList TokenInterfaceMembers => Token.Members;
 	public MemberDescriptionList TokenClassMembers => Shadowed is not null ? [.. Shadowed.TokenClassMembers, .. BaseNodeClassMembers, .. Token.Members] : [.. BaseNodeClassMembers, .. Token.Members];
+	public IReadOnlyList<ListTypeDescription> ListTypes => GetListTypes();
+	public IReadOnlyList<SeparatedListTypeDescription> SeparatedListTypes => GetSeparatedListTypes();
 	#endregion
 
 	#region Functions
@@ -72,6 +74,24 @@ internal sealed record class SyntaxTreeInfo(
 				yield return used;
 		}
 	}
+	private IReadOnlyList<ListTypeDescription> GetListTypes()
+	{
+		return Nodes
+			.SelectMany(m => m.ClassMembers)
+			.Select(m => m.Type)
+			.OfType<ListTypeDescription>()
+			.Distinct(new ListTypeDescription.EqualityComparer())
+			.ToArray();
+	}
+	private IReadOnlyList<SeparatedListTypeDescription> GetSeparatedListTypes()
+	{
+		return Nodes
+			.SelectMany(m => m.ClassMembers)
+			.Select(m => m.Type)
+			.OfType<SeparatedListTypeDescription>()
+			.Distinct(new SeparatedListTypeDescription.EqualityComparer())
+			.ToArray();
+	}
 	#endregion
 }
 
@@ -101,7 +121,8 @@ internal sealed record class SyntaxNodeInfo(
 	Name Kind,
 	Name Name,
 	SyntaxNodeInfo? Shadowed,
-	MemberDescriptionList Members)
+	MemberDescriptionList Members,
+	MemberDescriptionList AttachedMembers)
 {
 	#region Properties
 	public string Namespace => Group is not null ? Group.Namespace : Tree.Namespace + ".Nodes";
@@ -114,7 +135,7 @@ internal sealed record class SyntaxNodeInfo(
 	public string Path => $"{Directory}/{ClassName}.g.cs";
 	public string BaseInterfaceName => Group is not null ? Group.InterfaceName : Tree.INodeName;
 	public MemberDescriptionList InterfaceMembers => Members;
-	public MemberDescriptionList ClassMembers => [.. Tree.BaseNodeClassMembers, .. Members, .. Group?.ClassMembers ?? []];
+	public MemberDescriptionList ClassMembers => [.. Tree.BaseNodeClassMembers, .. Members, .. Group?.ClassMembers ?? [], .. Shadowed?.AttachedMembers ?? []];
 	public MemberDescriptionList SyntaxMembers => ClassMembers.Where(m => m.Type.IsSyntaxType).ToArray();
 	#endregion
 }

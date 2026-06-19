@@ -119,7 +119,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 					//.Concat(group?.Shadowed is not null ? group.Shadowed.Members : [])
 					.ToArray();
 
-				SyntaxNodeInfo nodeInfo = new(info, group, info.Kind, node.Name, shadowed, members);
+				SyntaxNodeInfo nodeInfo = new(info, group, info.Kind, node.Name, shadowed, members, modifier?.Members ?? []);
 
 				if (group is null)
 					info.LookupNodes.Add(nodeInfo.Name.Original, nodeInfo);
@@ -489,8 +489,10 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		Debug.Assert(to.ConverterName is not null);
 
 		IndentedTextWriter writer = GetWriter(out StringWriter result);
+		bool canAutoImplementToken = to.TokenClassMembers.All(m => m.IsNullable);
 
-		static void Generate(IndentedTextWriter writer, SyntaxNodeInfo from, SyntaxNodeInfo to)
+		#region Generate node conversion
+		static void Generate(IndentedTextWriter writer, SyntaxNodeInfo from, SyntaxNodeInfo to, bool canAutoImplement)
 		{
 			string variable = from!.Kind.CamelCase;
 
@@ -500,8 +502,41 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				return;
 			}
 
+			if (canAutoImplement && to.ClassMembers.Count == from.ClassMembers.Count)
+			{
+				writer.WriteLine($"protected virtual {to.ClassName} Convert({from.InterfaceName} {variable})");
+				using (writer.Braced())
+				{
+					foreach (MemberDescription member in to.ClassMembers)
+					{
+						if (member.Type.IsSyntaxType)
+							writer.WriteLine($"{member.Type.GetTargetType(to)} {member.Name.CamelCase} = Convert({variable}.{member.Name.PascalCase});");
+						else
+							writer.WriteLine($"{member.Type.GetTargetType(to)} {member.Name.CamelCase} = {variable}.{member.Name.PascalCase};");
+					}
+
+					writer.WriteLine();
+					writer.WriteLine("return new(");
+					using (writer.Indented())
+					{
+						for (int i = 0; i < to.ClassMembers.Count; i++)
+						{
+							if (i > 0)
+								writer.WriteLine(",");
+
+							MemberDescription member = to.ClassMembers[i];
+							writer.Write(member.Name.CamelCase);
+						}
+					}
+					writer.WriteLine(");");
+				}
+
+				return;
+			}
+
 			writer.WriteLine($"protected abstract {to.ClassName} Convert({from.InterfaceName} {variable});");
 		}
+		#endregion
 
 		using (writer.Preamble(to.Namespace))
 		{
@@ -524,30 +559,128 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 							SyntaxNodeInfo? origin = target.Shadowed;
 							Debug.Assert(origin is not null);
 
-							Generate(writer, origin!, target);
+							Generate(writer, origin!, target, canAutoImplementToken);
 						}
 					}
+					writer.WriteLine();
+					using (writer.Region("Token methods"))
+					{
+						#region Full
+						writer.WriteLine($"protected virtual {to.TokenName} Convert(");
+						using (writer.Indented())
+						{
+							writer.WriteLine($"{from.ITokenName} token,");
+							writer.Write("ClassificationKind? classification");
+							foreach (MemberDescription member in to.TokenClassMembers)
+							{
+								writer.WriteLine(",");
+								writer.Write($"{member.Type.TargetType} {member.Name.CamelCase}");
+							}
+							writer.WriteLine(")");
+						}
+						using (writer.Braced())
+						{
+							writer.WriteLine("return new(");
+							using (writer.Indented())
+							{
+								writer.WriteLine("token.Kind,");
+								writer.WriteLine("token.Position,");
+								writer.WriteLine("token.Lexeme,");
+								writer.WriteLine("token.Value,");
+								writer.WriteLine("token.LeadingTrivia,");
+								writer.WriteLine("token.TrailingTrivia,");
+								writer.Write("classification");
+
+								foreach (MemberDescription member in to.TokenClassMembers)
+								{
+									writer.WriteLine(",");
+									writer.Write(member.Name.CamelCase);
+								}
+								writer.WriteLine(");");
+							}
+						}
+						#endregion
+
+						writer.WriteLine();
+
+						#region Inherit classification
+						writer.WriteLine($"protected virtual {to.TokenName} Convert(");
+						using (writer.Indented())
+						{
+							writer.Write($"{from.ITokenName} token");
+							foreach (MemberDescription member in to.TokenClassMembers)
+							{
+								writer.WriteLine(",");
+								writer.Write($"{member.Type.TargetType} {member.Name.CamelCase}");
+							}
+
+							writer.WriteLine(")");
+						}
+						using (writer.Braced())
+						{
+							writer.WriteLine("return Convert(");
+							using (writer.Indented())
+							{
+								writer.WriteLine("token,");
+								writer.Write("token.Classification");
+
+								foreach (MemberDescription member in to.TokenClassMembers)
+								{
+									writer.WriteLine(",");
+									writer.Write(member.Name.CamelCase);
+								}
+							}
+							writer.WriteLine(");");
+						}
+						#endregion
+
+						#region Auto implementation
+						if (canAutoImplementToken)
+						{
+							writer.WriteLine();
+							writer.WriteLine($"protected virtual {to.TokenName} Convert({from.ITokenName} token)");
+							using (writer.Braced())
+							{
+								writer.WriteLine("return Convert(");
+								using (writer.Indented())
+								{
+									writer.WriteLine("token,");
+									writer.Write("token.Classification");
+
+									for (int i = 0; i < to.TokenClassMembers.Count; i++)
+									{
+										MemberDescription member = to.TokenClassMembers[i];
+										writer.WriteLine(",");
+										writer.Write(i < from.TokenClassMembers.Count ? $"token.{member.Name.PascalCase}" : "default");
+									}
+								}
+								writer.WriteLine(");");
+							}
+						}
+						#endregion
+					}
+
 					if (to.Groups.Any())
 					{
-						foreach (SyntaxGroupInfo group in to.Groups.Values)
+						foreach (SyntaxGroupInfo targetGroup in to.Groups.Values)
 						{
 							writer.WriteLine();
 
-							string groupKind = group.Kind.CamelCase;
+							SyntaxGroupInfo? group = targetGroup.Shadowed;
+							Debug.Assert(group is not null);
+
+							string groupKind = group!.Kind.CamelCase;
 							string lastName = new Name(group.Name.Parts.Last()).CamelCase;
 
-							SyntaxGroupInfo? targetGroup = group.Shadowed;
-							Debug.Assert(targetGroup is not null);
-
-							using (writer.Region($"{group.Name.PascalNatural} methods"))
+							using (writer.Region($"{targetGroup.Name.PascalNatural} methods"))
 							{
-								writer.WriteLine($"protected virtual {targetGroup!.InterfaceName} Convert({group.InterfaceName} {groupKind})");
+								writer.WriteLine($"protected virtual {targetGroup.InterfaceName} Convert({group.InterfaceName} {groupKind})");
 								using (writer.Braced())
 								{
 									writer.WriteLine($"return {groupKind} switch");
 									using (writer.Braced(terminate: true))
 									{
-										foreach (SyntaxNodeInfo target in group.Nodes.Values.OrderBy(n => n.ClassMembers.Count))
+										foreach (SyntaxNodeInfo target in targetGroup.Nodes.Values.OrderBy(n => n.ClassMembers.Count))
 										{
 											Debug.Assert(target.Shadowed is not null);
 											writer.WriteLine($"{target.Shadowed!.InterfaceName} {lastName} => Convert({lastName}),");
@@ -557,12 +690,93 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 										writer.WriteLine($"_ => throw new ArgumentException($\"Unknown {lastName} node type ({{{groupKind}.GetType().Name}}).\", nameof({groupKind}))");
 									}
 								}
-								foreach (SyntaxNodeInfo target in group.Nodes.Values.OrderBy(n => n.ClassMembers.Count))
+								foreach (SyntaxNodeInfo target in targetGroup.Nodes.Values.OrderBy(n => n.ClassMembers.Count))
 								{
 									SyntaxNodeInfo? origin = target.Shadowed;
 									Debug.Assert(origin is not null);
 
-									Generate(writer, origin!, target);
+									Generate(writer, origin!, target, canAutoImplementToken);
+								}
+							}
+						}
+					}
+
+					IReadOnlyList<ListTypeDescription> listTypes = to.ListTypes;
+					IReadOnlyList<SeparatedListTypeDescription> separatedListTypes = to.SeparatedListTypes;
+
+					if (listTypes.Any() || separatedListTypes.Any())
+					{
+						using (writer.Region("List methods"))
+						{
+							foreach (ListTypeDescription listType in listTypes)
+							{
+								string fromType = listType.GetTargetType(from);
+								string toType = listType.GetImplementationType(to);
+
+								string fromValueType = from.GetTargetName(listType.ValueType.Original);
+								string targetValueType = to.GetTargetName(listType.ValueType.Original);
+
+								writer.WriteLine($"protected virtual {toType} Convert({fromType} list)");
+								using (writer.Braced())
+								{
+									writer.WriteLine($"{targetValueType}[] values = new {targetValueType}[list.Count];");
+									writer.WriteLine();
+									writer.WriteLine($"for (int i = 0; i < list.Count; i++)");
+									using (writer.Indented())
+										writer.WriteLine($"values[i] = Convert(list[i]);");
+									writer.WriteLine();
+									writer.WriteLine("return new(values);");
+								}
+							}
+
+							if (listTypes.Any() && separatedListTypes.Any())
+								writer.WriteLine();
+
+							foreach (SeparatedListTypeDescription listType in separatedListTypes)
+							{
+								string fromType = listType.GetTargetType(from);
+								string toType = listType.GetImplementationType(to);
+
+								string fromValueType = from.GetTargetName(listType.ValueType.Original);
+								string fromSepType = from.GetTargetName(listType.SeparatorType.Original);
+
+								string targetValueType = to.GetTargetName(listType.ValueType.Original);
+								string targetSepType = to.GetTargetName(listType.SeparatorType.Original);
+
+								writer.WriteLine($"protected virtual {toType} Convert({fromType} list)");
+								using (writer.Braced())
+								{
+									writer.WriteLine($"ISyntaxNode[] nodes = new ISyntaxNode[list.Nodes.Count];");
+									writer.WriteLine($"{targetValueType}[] values = new {targetValueType}[list.Values.Count];");
+									writer.WriteLine($"{targetSepType}[] separators = new {targetSepType}[list.Separators.Count];");
+									writer.WriteLine();
+									writer.WriteLine($"for (int i = 0; i < list.Nodes.Count; i++)");
+									using (writer.Braced())
+									{
+										writer.WriteLine("// This implementation preserves the original order of the nodes");
+										writer.WriteLine("int valueIndex = list.Values.IndexOf(list.Nodes[i]);");
+										writer.WriteLine("if (valueIndex >= 0)");
+										using (writer.Braced())
+										{
+											writer.WriteLine($"{targetValueType} value = Convert(list.Values[i]);");
+											writer.WriteLine("values[valueIndex] = value;");
+											writer.WriteLine("nodes[i] = value;");
+										}
+										writer.WriteLine("else");
+										using (writer.Braced())
+										{
+											writer.WriteLine("int sepIndex = list.Separators.IndexOf(list.Nodes[i]);");
+											writer.WriteLine("if (sepIndex < 0)");
+											using (writer.Indented())
+												writer.WriteLine("throw new InvalidOperationException(\"Couldn't find a value or a separator index for the current node, is this an implementation problem somewhere?\");");
+											writer.WriteLine();
+											writer.WriteLine($"{targetSepType} separator = Convert(list.Separators[i]);");
+											writer.WriteLine("separators[sepIndex] = separator;");
+											writer.WriteLine("nodes[i] = separator;");
+										}
+									}
+									writer.WriteLine();
+									writer.WriteLine("return new(nodes, values, separators);");
 								}
 							}
 						}

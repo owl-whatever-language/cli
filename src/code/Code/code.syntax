@@ -37,6 +37,7 @@ value_return statement : token keyword, expression value, token terminator
 
 ### Declarations
 variable_declaration statement        : type type, token name, token assignment, expression value, token terminator
+variable_declaration @ semantic       : ILocalVariable variable
 
 #### Functions
 function_declaration statement        : token name, token start, list<function_parameter, token> parameters, token end, function_return return, function_body body

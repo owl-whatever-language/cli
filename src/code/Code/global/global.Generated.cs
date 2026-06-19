@@ -1,5 +1,6 @@
 global using System.CodeDom.Compiler;
 
+global using OwlDomain.ParsingTools;
 global using OwlDomain.ParsingTools.Syntax;
 global using OwlDomain.ParsingTools.Sources;
 global using OwlDomain.ParsingTools.Trivia;

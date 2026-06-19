@@ -1,6 +1,11 @@
 namespace OwlDomain.ParsingTools.Generator.Syntax;
 
-internal sealed record class MemberDescription(ITypeDescription Type, Name Name);
+internal sealed record class MemberDescription(ITypeDescription Type, Name Name)
+{
+	#region Properties
+	public bool IsNullable => Type.TargetType.EndsWith("?");
+	#endregion
+}
 
 internal interface ITypeDescription
 {
@@ -11,6 +16,7 @@ internal interface ITypeDescription
 
 	#region Methods
 	string GetTargetType(SyntaxNodeInfo node);
+	string GetTargetType(SyntaxTreeInfo tree);
 	#endregion
 }
 internal sealed record class TypeDescription(Name Type) : ITypeDescription
@@ -29,38 +35,73 @@ internal sealed record class TypeDescription(Name Type) : ITypeDescription
 			return Type.Original == Type.Original.ToLower();
 		}
 	}
-	public string GetTargetType(SyntaxNodeInfo node)
+	public string GetTargetType(SyntaxNodeInfo node) => GetTargetType(node.Tree);
+	public string GetTargetType(SyntaxTreeInfo tree)
 	{
 		if (IsSyntaxType is false)
 			return TargetType;
 
-		string name = node.Tree.GetTargetName(Type.Original);
+		string name = tree.GetTargetName(Type.Original);
 		return name;
 	}
 }
 
 internal sealed record class ListTypeDescription(Name ValueType) : ITypeDescription
 {
+	#region Nested types
+	public sealed class EqualityComparer : EqualityComparer<ListTypeDescription>
+	{
+		#region Methods
+		public override bool Equals(ListTypeDescription x, ListTypeDescription y) => x.TargetType == y.TargetType;
+		public override int GetHashCode(ListTypeDescription obj) => obj.TargetType.GetHashCode();
+		#endregion
+	}
+	#endregion
+
 	public string TargetType => $"SyntaxList<{ValueType.PascalCase}>";
 	public bool IsSyntaxType => true;
 
-	public string GetTargetType(SyntaxNodeInfo node)
+	public string GetTargetType(SyntaxNodeInfo node) => GetTargetType(node.Tree);
+	public string GetTargetType(SyntaxTreeInfo tree)
 	{
-		string valueType = node.Tree.GetTargetName(ValueType.Original);
+		string valueType = tree.GetTargetName(ValueType.Original);
 		return $"ISyntaxList<{valueType}>";
+	}
+	public string GetImplementationType(SyntaxTreeInfo tree)
+	{
+		string valueType = tree.GetTargetName(ValueType.Original);
+		return $"SyntaxList<{valueType}>";
 	}
 }
 internal sealed record class SeparatedListTypeDescription(Name ValueType, Name SeparatorType) : ITypeDescription
 {
+	#region Nested types
+	public sealed class EqualityComparer : EqualityComparer<SeparatedListTypeDescription>
+	{
+		#region Methods
+		public override bool Equals(SeparatedListTypeDescription x, SeparatedListTypeDescription y) => x.TargetType == y.TargetType;
+		public override int GetHashCode(SeparatedListTypeDescription obj) => obj.TargetType.GetHashCode();
+		#endregion
+	}
+	#endregion
+
 	public string TargetType => $"SyntaxList<{ValueType.PascalCase}, {SeparatorType.PascalCase}>";
 	public bool IsSyntaxType => true;
 
-	public string GetTargetType(SyntaxNodeInfo node)
+	public string GetTargetType(SyntaxNodeInfo node) => GetTargetType(node.Tree);
+	public string GetTargetType(SyntaxTreeInfo tree)
 	{
-		string valueType = node.Tree.GetTargetName(ValueType.Original);
-		string sepType = node.Tree.GetTargetName(SeparatorType.Original);
+		string valueType = tree.GetTargetName(ValueType.Original);
+		string sepType = tree.GetTargetName(SeparatorType.Original);
 
 		return $"ISyntaxList<{valueType}, {sepType}>";
+	}
+	public string GetImplementationType(SyntaxTreeInfo tree)
+	{
+		string valueType = tree.GetTargetName(ValueType.Original);
+		string sepType = tree.GetTargetName(SeparatorType.Original);
+
+		return $"SyntaxList<{valueType}, {sepType}>";
 	}
 }
 
