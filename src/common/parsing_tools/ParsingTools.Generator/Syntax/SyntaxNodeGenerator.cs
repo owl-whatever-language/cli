@@ -47,6 +47,8 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 			if (info.Shadowed is not null)
 				GenerateTreeConverter(context, info.Shadowed, info);
+
+			GenerateTreeVisitor(context, info);
 		}
 		GenerateSyntaxBundle(context, order);
 		GenerateShadowValidation(context, order);
@@ -571,6 +573,72 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 		string source = result.ToString();
 		context.AddSource($"{to.Directory}/{to.ConverterName}.g.cs", source);
+	}
+	static void GenerateTreeVisitor(SourceProductionContext context, SyntaxTreeInfo tree)
+	{
+		IndentedTextWriter writer = GetWriter(out StringWriter result);
+
+		using (writer.Preamble(tree.Namespace))
+		{
+			using (writer.TypePreamble())
+			{
+				writer.WriteLine($"public abstract partial class {tree.VisitorName}");
+				using (writer.Braced())
+				{
+					using (writer.Region("Methods"))
+					{
+						writer.WriteLine($"protected virtual void Visit({tree.ITreeName} tree) => Visit(tree.{tree.Document.PascalName});");
+						writer.WriteLine($"protected virtual void Visit(ISyntaxNode node)");
+						using (writer.Braced())
+						{
+							writer.WriteLine("bool visitChildren = node switch");
+							using (writer.Braced(terminate: true))
+							{
+								foreach (SyntaxNodeInfo node in tree.Nodes)
+									writer.WriteLine($"{node.InterfaceName} n => Visit(n),");
+
+								if (tree.Nodes.Any())
+									writer.WriteLine();
+
+								writer.WriteLine("ISyntaxTrivia trivia => Visit(trivia),");
+								writer.WriteLine("TriviaList list => Visit(list),");
+								writer.WriteLine($"{tree.ITokenName} token => Visit(token),");
+
+								writer.WriteLine();
+								writer.WriteLine("_ => VisitUnknown(node) // Used for syntax lists");
+							}
+
+							writer.WriteLine();
+							writer.WriteLine($"if (visitChildren)");
+							using (writer.Braced())
+							{
+								writer.WriteLine($"foreach (ISyntaxNode child in node.GetChildren())");
+								using (writer.Indented())
+									writer.WriteLine($"Visit(child);");
+							}
+						}
+					}
+					writer.WriteLine();
+					using (writer.Region("Node methods"))
+					{
+						writer.WriteLine($"protected virtual bool Visit(ISyntaxTrivia trivia) => true;");
+						writer.WriteLine($"protected virtual bool Visit(TriviaList list) => true;");
+						writer.WriteLine($"protected virtual bool Visit({tree.ITokenName} token) => false; // Don't waste time visiting trivia nodes by default");
+						if (tree.Nodes.Any())
+							writer.WriteLine();
+
+						foreach (SyntaxNodeInfo node in tree.Nodes)
+							writer.WriteLine($"protected virtual bool Visit({node.InterfaceName} node) => true;");
+
+						writer.WriteLine();
+						writer.WriteLine($"protected virtual bool VisitUnknown(ISyntaxNode node) => true;");
+					}
+				}
+			}
+		}
+
+		string text = result.ToString();
+		context.AddSource($"{tree.Directory}/{tree.VisitorName}.g.cs", text);
 	}
 
 	static void GenerateGlobal(SourceProductionContext context, SyntaxTreeInfo lastTree)

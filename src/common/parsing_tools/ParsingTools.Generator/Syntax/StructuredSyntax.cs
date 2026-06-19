@@ -24,6 +24,7 @@ internal sealed record class SyntaxTreeInfo(
 	public string INodeName => "I" + NodeName;
 	public string ITokenName => "I" + TokenName;
 	public string? ConverterName => Shadowed is null ? null : $"Base{Shadowed.PascalKind}To{PascalKind}TreeConverter";
+	public string VisitorName => $"Base{PascalKind}Visitor";
 
 	public string Directory => PascalKind;
 	public string TreePath => $"{Directory}/{TreeName}.g.cs";
