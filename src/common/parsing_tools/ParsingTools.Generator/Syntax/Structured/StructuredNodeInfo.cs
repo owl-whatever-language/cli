@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace OwlDomain.ParsingTools.Generator.Syntax.Structured;
 
 internal class StructuredNodeInfo : BaseStructuredGroupPart, IStructuredShadowedInfo<StructuredNodeInfo>
@@ -68,6 +70,19 @@ internal class StructuredNodeInfo : BaseStructuredGroupPart, IStructuredShadowed
 		return members.Distinct(StructuredMemberInfo.Comparer.JustName);
 	}
 	public bool HasInterfaceMember(Name name) => InterfaceMembers.Any(m => m.Name == name);
+	public bool MatchesName(params IEnumerable<Name?> names)
+	{
+		foreach (Name? current in names.Reverse())
+		{
+			if (current is null)
+				continue;
+
+			if (MatchesName(current.Value))
+				return true;
+		}
+
+		return false;
+	}
 	public bool MatchesName(Name name)
 	{
 		foreach (Name current in Names)

@@ -230,10 +230,20 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 	}
 	private static void PopulateNodes(NodeDescription description, OnKindDescription? modifier, StructuredTreeInfo tree)
 	{
+		//public Name NameWithGroup => _nameWithGroup ??= new(Name, Group?.Name ?? default);
+		//public Name NameWithTree => _nameWithTree ??= new(Tree.Kind, NameWithGroup);
+
 		Name name = description.Name;
 
 		StructuredGroupInfo? group = tree.Groups.FirstOrDefault(g => g.MatchesName(description.Kind));
-		StructuredNodeInfo? shadows = tree.Shadows?.Nodes.FirstOrDefault(n => n.MatchesName(name));
+
+		Name nameWithGroup = new(name, group?.Name);
+		Name nameWithTree = new(tree.Kind, nameWithGroup);
+
+		StructuredNodeInfo? shadows =
+		group?.Shadows?.Nodes.FirstOrDefault(n => n.MatchesName(name, nameWithGroup, nameWithTree)) ??
+			tree.Shadows?.Nodes.FirstOrDefault(n => n.MatchesName(name, nameWithGroup, nameWithTree));
+
 		if (shadows is null && tree.Shadows is not null)
 			throw new InvalidOperationException("Tried to populate a node without a shadow, when the tree had one.");
 

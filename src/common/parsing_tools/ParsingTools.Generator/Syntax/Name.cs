@@ -35,9 +35,9 @@ internal readonly struct Name : IEquatable<Name>
 		_parts = parts.ToArray();
 		_original = string.Join("_", Parts);
 	}
-	public Name(params ReadOnlySpan<Name> names)
+	public Name(params ReadOnlySpan<Name?> names)
 	{
-		_parts = names.ToArray().SelectMany(n => n.Parts).ToArray();
+		_parts = names.ToArray().Where(n => n is not null).SelectMany(n => n!.Value.Parts).ToArray();
 		_original = string.Join("_", Parts);
 	}
 	#endregion

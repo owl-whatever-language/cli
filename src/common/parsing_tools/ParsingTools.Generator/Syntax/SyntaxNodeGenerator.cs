@@ -26,17 +26,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		if (description is null)
 			return;
 
-		try
-		{
-			Generate(context, description);
-		}
-		catch (Exception exception)
-		{
-#pragma warning disable RS1035 // Do not use APIs banned for analyzers
-			File.WriteAllText("/mnt/data/projects/owldomain/projects/owl/cli/error.txt", exception.StackTrace.ToString());
-#pragma warning restore RS1035 // Do not use APIs banned for analyzers
-			throw;
-		}
+		Generate(context, description);
 	}
 	private static void Generate(SourceProductionContext context, SyntaxDescriptionFile description)
 	{
@@ -56,7 +46,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				GenerateNode(context, node);
 		}
 		GenerateSyntaxBundle(context, order);
-		//GenerateShadowValidation(context, order);
+		GenerateShadowValidation(context, order);
 	}
 
 	static void GenerateGlobal(SourceProductionContext context, StructuredTreeInfo lastTree)
