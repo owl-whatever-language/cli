@@ -32,9 +32,24 @@ internal static class IndentedTextWriterExtensions
 			writer.WriteLine();
 		}
 	}
-	public readonly struct RegionScope(IndentedTextWriter writer) : IDisposable
+	public readonly struct TypeImplementationScope(IndentedTextWriter writer) : IDisposable
 	{
-		public void Dispose() => writer.WriteLine("#endregion");
+		public void Dispose()
+		{
+			writer.Indent--;
+
+			writer.WriteLine("}");
+			writer.WriteLine();
+		}
+	}
+	public readonly struct RegionScope(IndentedTextWriter writer, bool lineAfter) : IDisposable
+	{
+		public void Dispose()
+		{
+			writer.WriteLine("#endregion");
+			if (lineAfter)
+				writer.WriteLine();
+		}
 	}
 	#endregion
 
@@ -70,11 +85,91 @@ internal static class IndentedTextWriterExtensions
 
 			return new(writer);
 		}
-		public RegionScope Region(string name)
+		public RegionScope Region(string name, bool lineAfter = false)
 		{
 			writer.WriteLine($"#region {name}");
 
-			return new(writer);
+			return new(writer, lineAfter);
+		}
+		#endregion
+
+		#region Structured methods
+		public TypeImplementationScope InterfacePreamble(StructuredInterfaceInfo info)
+		{
+			WriteGeneratedAttribute(writer);
+			writer.Write($"public partial interface {info.Name}");
+			writer.WriteInherit(info.InheritFrom);
+
+			writer.WriteLine("{");
+			writer.Indent++;
+
+			return new TypeImplementationScope(writer);
+		}
+		public TypeImplementationScope ClassPreamble(StructuredClassInfo info)
+		{
+			WriteGeneratedAttribute(writer);
+			writer.Write("public");
+			writer.WriteClassType(info.Type);
+			writer.Write($" partial class {info.Name}");
+			writer.WriteInherit(info.InheritFrom);
+
+			writer.WriteLine("{");
+			writer.Indent++;
+
+			return new TypeImplementationScope(writer);
+		}
+		public void WriteInterfaceProperties(IEnumerable<StructuredMemberInfo> members) => WriteInterfaceProperties(writer, members.ToArray());
+		public bool WriteInterfaceProperties(IReadOnlyList<StructuredMemberInfo> members)
+		{
+			if (members.Count is 0)
+				return false;
+
+			using (writer.Region("Properties"))
+			{
+				IReadOnlyList<StructuredMemberInfo> withShadows = members.Where(m => m.Shadows.Any()).ToArray();
+				IReadOnlyList<StructuredMemberInfo> withoutShadows = members.Where(m => m.Shadows.Count is 0).ToArray();
+
+				foreach (StructuredMemberInfo member in withShadows)
+					writer.WriteLine($"new {member.Type.TypeName} {member.Name.Pascal} {{ get; }}");
+
+				if (withShadows.Any())
+					writer.WriteLine();
+
+				foreach (StructuredMemberInfo member in withShadows)
+				{
+					foreach (StructuredMemberInfo shadow in member.Shadows)
+						writer.WriteLine($"{shadow.Type.TypeName} {shadow.Owner}.{shadow.Name.Pascal} => {member.Name.Pascal};");
+				}
+
+				if (withShadows.Any() && withoutShadows.Any())
+					writer.WriteLine();
+
+				foreach (StructuredMemberInfo member in withoutShadows)
+					writer.WriteLine($"{member.Type.TypeName} {member.Name.Pascal} {{ get; }}");
+			}
+
+			return true;
+		}
+		public bool WriteClassProperties(IEnumerable<StructuredMemberInfo> members) => WriteClassProperties(writer, members.ToArray());
+		public bool WriteClassProperties(IReadOnlyList<StructuredMemberInfo> members)
+		{
+			if (members.Count is 0)
+				return false;
+
+			using (writer.Region("Properties"))
+			{
+				foreach (StructuredMemberInfo member in members)
+				{
+					writer.WriteLine($"public {member.Type.TypeName} {member.Name.Pascal} {{ get; }}");
+				}
+			}
+
+			return true;
+		}
+		public void WriteConstructorAssignments(IEnumerable<StructuredMemberInfo> members)
+		{
+			foreach (StructuredMemberInfo member in members)
+				writer.WriteLine($"{member.Name.Pascal} = {member.Name.Camel};");
 		}
 		#endregion
 
@@ -94,6 +189,61 @@ internal static class IndentedTextWriterExtensions
 		public void WriteUsingNamespace(string @namespace)
 		{
 			writer.WriteLine($"using {@namespace};");
+		}
+
+		public void WriteClassType(ClassType type)
+		{
+			if (type is ClassType.Abstract)
+				writer.Write(" abstract");
+			else if (type is ClassType.Sealed)
+				writer.Write(" sealed");
+		}
+		public void WriteInherit(params IEnumerable<string?> types)
+		{
+			string[] actual = types.Where(t => t is not null).ToArray()!;
+			WriteInherit(writer, actual);
+		}
+		public void WriteInherit(IReadOnlyList<string> types)
+		{
+			if (types.Count is 0)
+			{
+				writer.WriteLine();
+				return;
+			}
+
+			writer.Write($" : {types[0]}");
+
+			foreach (string type in types.Skip(1))
+				writer.Write($", {type}");
+
+			writer.WriteLine();
+		}
+		public void WriteSeparated(IEnumerable<string> parts) => WriteSeparated(writer, parts.ToArray());
+		public void WriteSeparated(IReadOnlyList<string> parts) => WriteSeparated(writer, ", ", parts);
+		public void WriteSeparated(string separator, IEnumerable<string> parts) => WriteSeparated(writer, separator, parts.ToArray());
+		public void WriteSeparated(string separator, IReadOnlyList<string> parts)
+		{
+			if (parts.Count is 0)
+				return;
+
+			if (parts.Count is 1)
+			{
+				writer.Write(parts[0]);
+				return;
+			}
+
+			writer.WriteLine();
+
+			using (writer.Indented())
+			{
+				for (int i = 0; i < parts.Count; i++)
+				{
+					if (i > 0)
+						writer.WriteLine(separator);
+
+					writer.Write(parts[i]);
+				}
+			}
 		}
 		#endregion
 	}

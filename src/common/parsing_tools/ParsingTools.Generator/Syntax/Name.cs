@@ -1,7 +1,12 @@
 namespace OwlDomain.ParsingTools.Generator.Syntax;
 
-public sealed class Name(string original) : IEquatable<Name>
+internal readonly struct Name : IEquatable<Name>
 {
+	#region Fields
+	private readonly string? _original;
+	private readonly IReadOnlyList<string> _parts;
+	#endregion
+
 	#region Properties
 	public static IReadOnlyCollection<string> Keywords { get; } =
 	[
@@ -11,22 +16,30 @@ public sealed class Name(string original) : IEquatable<Name>
 		"bool", "true", "false",
 		"base", "operator", "this", "if", "else", "while", "for", "return"
 	];
-	public string Original { get; } = original;
-	public IReadOnlyList<string> Parts => Original.Split(['_'], StringSplitOptions.RemoveEmptyEntries);
-	public string PascalCase => ToPascalCase(Parts);
-	public string PascalNatural => ToPascalNatural(Parts);
-	public string CamelCase
-	{
-		get
-		{
-			string camel = ToCamelCase(Parts);
-			if (Keywords.Contains(camel))
-				return "@" + camel;
+	public string Original => _original ?? "";
+	public IReadOnlyList<string> Parts => _parts ?? [];
+	public string Camel => ToCamel(Parts);
+	public string Pascal => ToPascal(Parts);
+	public string Natural => ToNatural(Parts);
+	public Name Plural => ToPlural(Parts);
+	#endregion
 
-			return camel;
-		}
+	#region Constructors
+	public Name(string original)
+	{
+		_original = original;
+		_parts = original.Split(['_'], StringSplitOptions.RemoveEmptyEntries);
 	}
-	public Name Plural => new(ToPlural(Original));
+	public Name(ReadOnlySpan<string> parts)
+	{
+		_parts = parts.ToArray();
+		_original = string.Join("_", Parts);
+	}
+	public Name(params ReadOnlySpan<Name> names)
+	{
+		_parts = names.ToArray().SelectMany(n => n.Parts).ToArray();
+		_original = string.Join("_", Parts);
+	}
 	#endregion
 
 	#region Methods
@@ -44,66 +57,88 @@ public sealed class Name(string original) : IEquatable<Name>
 	#endregion
 
 	#region Functions
-	private static string ToPascalCase(IEnumerable<string> parts) => string.Concat(parts.Select(ToPascal));
-	private static string ToCamelCase(IReadOnlyList<string> parts)
+	public static Name ToPlural(IReadOnlyList<string> fragments)
 	{
-		if (parts.Count is 0)
-			return "";
+		if (fragments.Count is 0)
+			return string.Empty;
 
-		if (parts.Count is 1)
-			return ToCamel(parts[0]);
+		string plural = ToPluralFragment(fragments.Last());
 
-		string first = ToCamel(parts[0]);
-		string pascal = ToPascalCase(parts.Skip(1));
+		if (fragments.Count is 1)
+			return plural;
 
-		return first + pascal;
+		string[] parts = new string[fragments.Count];
+		for (int i = 0; i < fragments.Count - 1; i++)
+			parts[i] = fragments[i];
+
+		parts[parts.Length - 1] = plural;
+
+		return string.Join("_", parts);
 	}
-	private static string ToPascalNatural(IReadOnlyList<string> parts)
+	public static string ToPluralFragment(string name)
 	{
-		if (parts.Count is 0)
-			return "";
+		return ToSpecificPlural(name) ?? name;
+	}
+	private static string? ToSpecificPlural(string word)
+	{
+		return word switch
+		{
+			"body" => "bodies",
 
-		if (parts.Count is 1)
-			return ToPascal(parts[0]);
-
-		List<string> newParts = [ToPascal(parts[0])];
-		newParts.AddRange(parts.Skip(1).Select(ToCamel));
-
-		return string.Join(" ", newParts);
+			_ => word + "s",
+		};
 	}
 
-	private static string ToPascal(string part)
+	public static string ToNatural(IReadOnlyList<string> fragments)
 	{
-		if (part.Length is 0)
-			return part;
+		if (fragments.Count is 0)
+			return string.Empty;
 
-		if (part.Length is 1)
-			return part.ToUpper();
+		string pascal = ToPascalFragment(fragments[0]);
 
-		char ch = char.ToUpper(part[0]);
-		string remainder = part.Substring(1);
+		if (fragments.Count is 1)
+			return pascal;
 
-		return ch + remainder;
+		IEnumerable<string> camel = fragments.Skip(1).Select(ToCamelFragment);
+		return string.Join(" ", [pascal, .. camel]);
 	}
-	private static string ToCamel(string part)
+
+	public static string ToCamel(IReadOnlyList<string> fragments)
 	{
-		if (part.Length is 0)
-			return part;
+		if (fragments.Count is 0)
+			return string.Empty;
 
-		if (part.Length is 1)
-			return part.ToLower();
+		string camel = ToCamelFragment(fragments[0]);
+		if (fragments.Count is 1)
+			return camel;
 
-		char ch = char.ToLower(part[0]);
-		string remainder = part.Substring(1);
-
-		return ch + remainder;
+		IEnumerable<string> pascal = fragments.Skip(1).Select(ToPascalFragment);
+		return string.Concat([camel, .. pascal]);
 	}
-	private static string ToPlural(string name)
+	public static string ToCamelFragment(string? fragment)
 	{
-		if (name.EndsWith("body"))
-			return name.Substring(0, name.Length - 4) + "bodies";
+		if (fragment is null || fragment.Length is 0)
+			return string.Empty;
 
-		return name + "s";
+		return fragment.ToLower();
+	}
+
+	public static string ToPascal(IReadOnlyList<string> fragments)
+	{
+		if (fragments.Count is 0)
+			return string.Empty;
+
+		IEnumerable<string> pascal = fragments.Select(ToPascalFragment);
+		return string.Concat(pascal);
+	}
+	public static string ToPascalFragment(string? fragment)
+	{
+		if (fragment is null || fragment.Length is 0)
+			return string.Empty;
+
+		fragment = fragment.ToLower();
+
+		return char.ToUpper(fragment[0]) + fragment.Substring(1);
 	}
 	#endregion
 
