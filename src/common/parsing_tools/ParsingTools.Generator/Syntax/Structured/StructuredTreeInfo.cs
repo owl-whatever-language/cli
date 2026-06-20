@@ -25,6 +25,10 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 	public string Directory => Kind.Pascal;
 	public string TreePath => $"{Directory}/{Class.Name}.g.cs";
 	public SyntaxDescriptionFile Descriptions { get; }
+	public string VisitorType => $"Base{Kind.Pascal}Visitor";
+	public string ConverterType => $"Base{Shadows?.Kind.Pascal}To{Kind.Pascal}TreeConverter";
+	public string VisitorPath => $"{Directory}/{VisitorType}.g.cs";
+	public string ConverterPath => $"{Directory}/{ConverterType}.g.cs";
 	#endregion
 
 	#region Constructors
@@ -79,6 +83,23 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 				yield return used;
 		}
 	}
+	public IReadOnlyList<StructuredMemberInfo> GetListMembers()
+	{
+		return Nodes
+			.SelectMany(m => m.ClassMembers)
+			.Where(m => m.Type is StructuredListSyntaxTypeInfo)
+			.Distinct(StructuredMemberInfo.Comparer.JustType)
+			.ToArray();
+	}
+	public IReadOnlyList<StructuredMemberInfo> GetSeparatedListMembers()
+	{
+		return Nodes
+			.SelectMany(m => m.ClassMembers)
+			.Where(m => m.Type is StructuredSeparatedListSyntaxTypeInfo)
+			.Distinct(StructuredMemberInfo.Comparer.JustType)
+			.ToArray();
+	}
+
 	public IStructuredTypeInfo GetTargetName(Name key) => GetTargetName(key.Original);
 	public IStructuredTypeInfo GetTargetName(string key)
 	{
@@ -263,7 +284,7 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 
 		StructuredClassInfo @class = new(
 			coreName,
-			ClassType.Abstract,
+			ClassType.Sealed,
 			[tree.BaseNode.Class.Name, @interface.Name],
 			shadows?.Class);
 

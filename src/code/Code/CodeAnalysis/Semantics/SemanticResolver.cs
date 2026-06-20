@@ -167,7 +167,7 @@ public sealed class SemanticResolver : BaseConcreteToSemanticTreeConverter, IDia
 	}
 	protected override SemanticRegularFunctionArgumentSyntax Convert(IConcreteRegularFunctionArgumentSyntax concrete)
 	{
-
+		throw new NotImplementedException();
 	}
 	protected override SemanticNamedFunctionArgumentSyntax Convert(IConcreteNamedFunctionArgumentSyntax concrete)
 	{

@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace OwlDomain.ParsingTools.Generator.Syntax.Structured;
 
 internal class StructuredNodeInfo : BaseStructuredGroupPart, IStructuredShadowedInfo<StructuredNodeInfo>
@@ -55,7 +53,7 @@ internal class StructuredNodeInfo : BaseStructuredGroupPart, IStructuredShadowed
 	{
 		IEnumerable<StructuredMemberInfo> members = Members;
 
-		return members.Distinct(StructuredMemberInfo.Comparer.WithType);
+		return members.Distinct(StructuredMemberInfo.Comparer.Both);
 	}
 	private IEnumerable<StructuredMemberInfo> GetClassMembers()
 	{

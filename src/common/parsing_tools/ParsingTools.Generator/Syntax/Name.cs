@@ -18,7 +18,7 @@ internal readonly struct Name : IEquatable<Name>
 	];
 	public string Original => _original ?? "";
 	public IReadOnlyList<string> Parts => _parts ?? [];
-	public string Camel => ToCamel(Parts);
+	public string Camel => Keywords.Contains(Original) ? $"@{Original}" : ToCamel(Parts);
 	public string Pascal => ToPascal(Parts);
 	public string Natural => ToNatural(Parts);
 	public Name Plural => ToPlural(Parts);
