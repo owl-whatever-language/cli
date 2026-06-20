@@ -1,10 +1,10 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callables;
 
-public interface ICallableParameter
+public interface ICallableParameter : INamedSymbolTarget
 {
 	#region Properties
-	ITypeInfo Type { get; }
-	string? Name { get; }
+	ITypeInfo? Type { get; set; }
+	IFunctionParameter? Parameter { get; set; }
 	#endregion
 
 	#region Methods
@@ -12,24 +12,36 @@ public interface ICallableParameter
 	#endregion
 }
 
-public sealed class CallableParameter : ICallableParameter
+public sealed class CallableParameter : BaseNamedSymbolTarget, ICallableParameter
 {
 	#region Properties
-	public ITypeInfo Type { get; }
-	public string? Name { get; }
+	public override string Kind => "parameter";
+	public ITypeInfo? Type
+	{
+		get;
+		set => Set(ref field, value);
+	}
+	public IFunctionParameter? Parameter
+	{
+		get;
+		set => Set(ref field, value);
+	}
 	#endregion
 
 	#region Constructors
-	public CallableParameter(ITypeInfo type, string? name = null)
+	public CallableParameter(string? name = null) : base(name) { }
+	public CallableParameter(ITypeInfo type, string? name = null) : this(name)
 	{
 		Type = type;
-		Name = name;
 	}
 	#endregion
 
 	#region Methods
 	public bool CanAssignTo(ICallableParameter target)
 	{
+		if (Type is null || target.Type is null)
+			return false;
+
 		return Type.CanAssignTo(target.Type);
 	}
 	#endregion

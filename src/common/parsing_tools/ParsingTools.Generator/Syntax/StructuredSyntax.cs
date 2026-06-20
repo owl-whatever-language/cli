@@ -111,7 +111,7 @@ internal sealed record class SyntaxGroupInfo(
 	public string Directory => $"{Tree.Directory}/Nodes/{Name.Plural.PascalCase}";
 	public string InterfacePath => $"{Directory}/{InterfaceName}.g.cs";
 	public MemberDescriptionList InterfaceMembers => Members;
-	public MemberDescriptionList ClassMembers => Shadowed is not null ? [.. Shadowed.ClassMembers, .. Members] : Members;
+	public MemberDescriptionList ClassMembers => Members;
 	#endregion
 }
 
@@ -134,8 +134,20 @@ internal sealed record class SyntaxNodeInfo(
 	public string Directory => Group is not null ? Group.Directory : $"{PascalKind}/Nodes";
 	public string Path => $"{Directory}/{ClassName}.g.cs";
 	public string BaseInterfaceName => Group is not null ? Group.InterfaceName : Tree.INodeName;
-	public MemberDescriptionList InterfaceMembers => Members;
+	public MemberDescriptionList InterfaceMembers => GetInterfaceMembers();
 	public MemberDescriptionList ClassMembers => [.. Tree.BaseNodeClassMembers, .. Members, .. Group?.ClassMembers ?? [], .. Shadowed?.AttachedMembers ?? []];
 	public MemberDescriptionList SyntaxMembers => ClassMembers.Where(m => m.Type.IsSyntaxType).ToArray();
+	#endregion
+
+	#region Methods
+	private MemberDescriptionList GetInterfaceMembers()
+	{
+		List<MemberDescription> members = [.. Members];
+
+		if (Group is not null)
+			members.AddRange(Group.ClassMembers.Where(m => m.Type.IsSyntaxType));
+
+		return members;
+	}
 	#endregion
 }

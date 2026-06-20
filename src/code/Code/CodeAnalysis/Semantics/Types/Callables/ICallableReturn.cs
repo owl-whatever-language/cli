@@ -3,7 +3,7 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callables;
 public interface ICallableReturn
 {
 	#region Properties
-	ITypeInfo Type { get; }
+	ITypeInfo? Type { get; set; }
 	#endregion
 
 	#region Methods
@@ -11,10 +11,14 @@ public interface ICallableReturn
 	#endregion
 }
 
-public sealed class CallableReturn : ICallableReturn
+public sealed class CallableReturn : BaseMutableTarget, ICallableReturn
 {
 	#region Properties
-	public ITypeInfo Type { get; }
+	public ITypeInfo? Type
+	{
+		get;
+		set => Set(ref field, value);
+	}
 	#endregion
 
 	#region Constructors
@@ -26,6 +30,9 @@ public sealed class CallableReturn : ICallableReturn
 	{
 		if (target == SpecialTypes.Void)
 			return true;
+
+		if (Type is null || target.Type is null)
+			return false;
 
 		return Type.CanAssignTo(target.Type);
 	}

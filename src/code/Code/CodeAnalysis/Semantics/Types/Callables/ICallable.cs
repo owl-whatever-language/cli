@@ -3,6 +3,7 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callables;
 public interface ICallable : ITypeInfo
 {
 	#region Properties
+	IFunction? Function { get; }
 	IReadOnlyList<ICallableParameter> Parameters { get; }
 	ICallableReturn Return { get; }
 	#endregion
@@ -11,15 +12,15 @@ public interface ICallable : ITypeInfo
 public sealed class Callable : ICallable
 {
 	#region Properties
-	public string? Name { get; }
+	public IFunction? Function { get; }
 	public IReadOnlyList<ICallableParameter> Parameters { get; }
 	public ICallableReturn Return { get; }
 	#endregion
 
 	#region Constructors
-	public Callable(string? name, IReadOnlyList<ICallableParameter> parameters, ICallableReturn @return)
+	public Callable(IFunction? function, IReadOnlyList<ICallableParameter> parameters, ICallableReturn @return)
 	{
-		Name = name;
+		Function = function;
 		Parameters = parameters;
 		Return = @return;
 	}

@@ -1,14 +1,11 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols;
 
-public interface ISymbolTarget
+public interface ISymbolTarget : IMutableTarget
 {
 	#region Properties
 	/// <summary>The kind of the symbol target.</summary>
 	/// <remarks>This value will likely be used for creating diagnostic messages.</remarks>
 	string Kind { get; }
-
-	/// <summary>Whether the target might still be mutated.</summary>
-	bool IsMutable { get; }
 
 	/// <summary>The symbol that should be used to reference this target.</summary>
 	ISymbol Symbol { get; }
@@ -24,33 +21,15 @@ public interface INamedSymbolTarget : ISymbolTarget
 }
 
 [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
-public abstract class BaseSymbolTarget : ISymbolTarget
+public abstract class BaseSymbolTarget : BaseMutableTarget, ISymbolTarget
 {
 	#region Fields
 	private ISymbol? _symbol;
-	private bool _isMutable = true;
 	#endregion
 
 	#region Properties
 	/// <inheritdoc/>
 	public abstract string Kind { get; }
-
-	/// <inheritdoc/>
-	public bool IsMutable
-	{
-		get => _isMutable;
-		set
-		{
-			if (value is true)
-				ThrowHelper.ThrowArgumentException(nameof(value), "Making a symbol target mutable is not allowed.");
-
-			if (value == _isMutable)
-				return;
-
-			ValidateImmutableState();
-			_isMutable = false;
-		}
-	}
 
 	/// <inheritdoc/>
 	public ISymbol Symbol
@@ -68,35 +47,12 @@ public abstract class BaseSymbolTarget : ISymbolTarget
 	#endregion
 
 	#region Methods
-	/// <summary>Throws the <see cref="InvalidOperationException"/> if the target is no longer mutable.</summary>
-	protected void ThrowIfImmutable()
+	protected override void ValidateImmutableState()
 	{
-		if (IsMutable is false)
-			ThrowHelper.ThrowInvalidOperationException();
-	}
+		base.ValidateImmutableState();
 
-	/// <summary>Valid the state of the target to ensure it can be marked as immutable.</summary>
-	/// <remarks>By default this will check that the symbol has been assigned.</remarks>
-	protected virtual void ValidateImmutableState()
-	{
 		if (_symbol is null)
 			ThrowHelper.ThrowInvalidOperationException("A symbol target can only be locked once a symbol has been set.");
-	}
-
-	/// <summary>Tries to set the given <paramref name="value"/> to the given <paramref name="field"/>.</summary>
-	/// <typeparam name="T">The type of the value.</typeparam>
-	/// <param name="field">The field to store the <paramref name="value"/> in.</param>
-	/// <param name="value">The value to set the <paramref name="field"/> to.</param>
-	/// <param name="property">The name of the property that is being set.</param>
-	/// <exception cref="InvalidOperationException">Thrown if the <paramref name="field"/> has already been set.</exception>
-	protected void Set<T>(ref T? field, T? value, [CallerMemberName] string property = "<property>")
-	{
-		ThrowIfImmutable();
-
-		if (field is not null)
-			ThrowHelper.ThrowInvalidOperationException($"The {property} has already been set.");
-
-		field = value;
 	}
 	#endregion
 
@@ -137,14 +93,6 @@ public static class SymbolTargetExtensions
 		{
 			target.Symbol = new DeclaredSymbol(name, target, declaration);
 
-			return target;
-		}
-
-		/// <summary>Makes the symbol target immutable and returns it.</summary>
-		/// <returns>The locked target.</returns>
-		public TTarget Locked()
-		{
-			target.IsMutable = false;
 			return target;
 		}
 		#endregion

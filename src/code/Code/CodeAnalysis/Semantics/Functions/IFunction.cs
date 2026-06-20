@@ -21,4 +21,12 @@ public sealed class Function : BaseNamedSymbolTarget, IFunction
 	#region Constructors
 	public Function(string? name) : base(name) { }
 	#endregion
+
+	#region Methods
+	public Function WithCallable(ICallable callable)
+	{
+		Callable = callable;
+		return this;
+	}
+	#endregion
 }

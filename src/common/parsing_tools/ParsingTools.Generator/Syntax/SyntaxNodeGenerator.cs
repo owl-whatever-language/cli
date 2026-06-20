@@ -355,8 +355,33 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 					{
 						using (writer.Region("Properties"))
 						{
-							foreach (MemberDescription member in info.InterfaceMembers)
-								writer.WriteLine($"{member.Type.TargetType} {member.Name.PascalCase} {{ get; }}");
+							if (info.Shadowed is null)
+							{
+								foreach (MemberDescription member in info.InterfaceMembers)
+									writer.WriteLine($"{member.Type.GetTargetType(info.Tree)} {member.Name.PascalCase} {{ get; }}");
+							}
+							else
+							{
+								for (int i = 0; i < info.InterfaceMembers.Count; i++)
+								{
+									MemberDescription member = info.InterfaceMembers[i];
+									MemberDescription? shadowed = info.Shadowed.InterfaceMembers.FirstOrDefault(m => m.Name == member.Name);
+
+									if (shadowed is not null && shadowed.Type.IsSyntaxType is false)
+										continue;
+
+									if (i > 0)
+										writer.WriteLine();
+
+									if (shadowed is null)
+										writer.WriteLine($"{member.Type.GetTargetType(info.Tree)} {member.Name.PascalCase} {{ get; }}");
+									else
+									{
+										writer.WriteLine($"new {member.Type.GetTargetType(info.Tree)} {member.Name.PascalCase} {{ get; }}");
+										writer.WriteLine($"{shadowed.Type.GetTargetType(info.Shadowed.Tree)} {info.Shadowed.InterfaceName}.{shadowed.Name.PascalCase} => {member.Name.PascalCase};");
+									}
+								}
+							}
 						}
 					}
 				}
@@ -386,7 +411,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 					{
 						using (writer.Region("Properties"))
 						{
-							if (info.Shadowed is null)
+							if (info.Shadowed is null && info.Group is null)
 							{
 								foreach (MemberDescription member in info.InterfaceMembers)
 									writer.WriteLine($"{member.Type.GetTargetType(info)} {member.Name.PascalCase} {{ get; }}");
@@ -396,7 +421,17 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 								for (int i = 0; i < info.InterfaceMembers.Count; i++)
 								{
 									MemberDescription member = info.InterfaceMembers[i];
-									MemberDescription? shadowed = info.Shadowed.InterfaceMembers.FirstOrDefault(m => m.Name == member.Name);
+									MemberDescription? shadowed = info.Group?.InterfaceMembers.FirstOrDefault(m => m.Name == member.Name);
+									Isyntaxtre
+									Name? shadowedTypeName = null;
+
+									if (shadowed is not null)
+										shadowedTypeName = info.Group?.Name;
+									else
+									{
+										shadowed = info.Shadowed?.InterfaceMembers.FirstOrDefault(m => m.Name == member.Name);
+										shadowedTypeName = info.Shadowed?.Name;
+									}
 
 									if (shadowed is not null && shadowed.Type.IsSyntaxType is false)
 										continue;

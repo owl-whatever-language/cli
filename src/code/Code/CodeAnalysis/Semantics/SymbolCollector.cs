@@ -1,5 +1,3 @@
-using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions;
-
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics;
 
 public sealed class SymbolCollectionResult : IStageResultDiagnostics, IStageResultPerformance
@@ -9,14 +7,16 @@ public sealed class SymbolCollectionResult : IStageResultDiagnostics, IStageResu
 	public IDiagnosticBag Diagnostics { get; }
 	public IPerformanceResult Performance { get; }
 	public ISymbolScope Symbols { get; }
+	public IReadOnlyCollection<ISymbolTarget> Targets { get; }
 	#endregion
 
 	#region Constructors
-	public SymbolCollectionResult(IDiagnosticBag diagnostics, IPerformanceResult performance, ISymbolScope symbols)
+	public SymbolCollectionResult(IDiagnosticBag diagnostics, IPerformanceResult performance, ISymbolScope symbols, IReadOnlyCollection<ISymbolTarget> targets)
 	{
 		Diagnostics = diagnostics;
 		Performance = performance;
 		Symbols = symbols;
+		Targets = targets;
 	}
 	#endregion
 }
@@ -34,10 +34,13 @@ public sealed class SymbolCollector : BaseConcreteVisitor
 	private DiagnosticBag Diagnostics { get; } = [];
 	private SymbolScope ResultScope { get; }
 	private SymbolScope CurrentScope { get; set; }
+	private List<ISymbolTarget> Targets { get; } = [];
+	private IFunction? TargetFunction { get; set; }
+	private int ParameterIndex { get; set; }
 	#endregion
 
 	#region Constructors
-	public SymbolCollector(ISymbolScope baseScope)
+	private SymbolCollector(ISymbolScope baseScope)
 	{
 		ResultScope = new("user_defined", baseScope);
 		CurrentScope = ResultScope;
@@ -47,24 +50,25 @@ public sealed class SymbolCollector : BaseConcreteVisitor
 	#region Functions
 	public static SymbolCollectionResult Collect(ISymbolScope baseScope, IEnumerable<IConcreteSyntaxTree> trees)
 	{
-		using PerformanceScope _ = PerformanceResult.Scope(out IPerformanceResult performance);
+		using (PerformanceResult.Scope(out IPerformanceResult performance))
+		{
+			SymbolCollector collector = new(baseScope);
 
-		SymbolCollector collector = new(baseScope);
+			foreach (IConcreteSyntaxTree tree in trees)
+				collector.Visit(tree);
 
-		foreach (IConcreteSyntaxTree tree in trees)
-			collector.Visit(tree);
-
-		return new(collector.Diagnostics, performance, collector.ResultScope);
+			return new(collector.Diagnostics, performance, collector.ResultScope, collector.Targets);
+		}
 	}
 	#endregion
 
 	#region Methods
-	private Scope NewScope(string name)
+	private Scope NewScope(string name, IConcreteSyntaxNode? node)
 	{
-		EnterScope(name);
+		EnterScope(name, node);
 		return new(this);
 	}
-	private void EnterScope(string name) => CurrentScope = CurrentScope.NestScope(name);
+	private void EnterScope(string name, IConcreteSyntaxNode? node) => CurrentScope = CurrentScope.NestScope(name, node);
 	private void ExitScope()
 	{
 		if (CurrentScope == ResultScope)
@@ -77,24 +81,48 @@ public sealed class SymbolCollector : BaseConcreteVisitor
 	#region Node methods
 	protected override bool Visit(IConcreteFunctionDeclarationStatementSyntax node)
 	{
-		string? name = node.Name.Value as string;
+		IFunction? lastFunction = TargetFunction;
+		int parameterIndex = ParameterIndex;
 
+		string? name = node.Name.Value as string;
 		Function function = new Function(name).WithSymbol(node);
+		ICallable callable = CreateCallable(function, node);
+		function.WithCallable(callable).Lock();
+		Targets.Add(function);
+
+		TargetFunction = function;
+		ParameterIndex = -1;
+
 		CurrentScope.AddSymbol(function);
 
-		using (NewScope(name is null ? "function" : $"function({name})"))
+		using (NewScope(name is null ? "function" : $"function({name})", node))
 		{
 			VisitChildren(node);
 		}
 
+		TargetFunction = lastFunction;
+		ParameterIndex = parameterIndex;
+
 		return false;
+	}
+	private ICallable CreateCallable(IFunction function, IConcreteFunctionDeclarationStatementSyntax node)
+	{
+		List<CallableParameter> parameters = [];
+
+		throw new NotImplementedException();
 	}
 	protected override bool Visit(IConcreteRegularFunctionParameterSyntax node)
 	{
+		ParameterIndex++;
+
 		string? name = node.Name.Value as string;
 		FunctionParameter parameter = new FunctionParameter(name).WithSymbol(node);
+		Targets.Add(parameter);
 
 		CurrentScope.AddSymbol(parameter);
+
+		if (TargetFunction?.Callable is not null)
+			TargetFunction.Callable.Parameters[ParameterIndex].Parameter = parameter;
 
 		return true;
 	}
@@ -102,6 +130,7 @@ public sealed class SymbolCollector : BaseConcreteVisitor
 	{
 		string? name = node.Name.Value as string;
 		LocalVariable variable = new LocalVariable(name).WithSymbol(node);
+		Targets.Add(variable);
 
 		CurrentScope.AddSymbol(variable);
 

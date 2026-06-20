@@ -80,10 +80,13 @@ public class CompilationContext
 	private static ISymbolScope CreateBaseScope()
 	{
 		SymbolScope root = new("root");
-		SymbolScope builtin = root.NestScope("builtin");
+		SymbolScope builtin = root.NestScope("builtin", null);
 
 		foreach (INamedTypeInfo type in SpecialTypes.GetAll())
 			builtin.AddSymbol(type);
+
+		foreach (IFunction function in SpecialFunctions.GetAll())
+			builtin.AddSymbol(function);
 
 		return builtin;
 	}

@@ -9,8 +9,11 @@ public interface ISymbolScope : IReadOnlyCollection<ISymbol>
 	#endregion
 
 	#region Methods
-	bool GetSymbol(string name, [NotNullWhen(true)] out ISymbolGroup? symbols);
-	bool GetSymbol(IConcreteSyntaxNode node, [NotNullWhen(true)] out ISymbol? symbol);
+	bool TryGetSymbol(string name, [NotNullWhen(true)] out ISymbolGroup? symbols);
+	bool TryGetSymbol(IConcreteSyntaxNode node, [NotNullWhen(true)] out ISymbol? symbol);
+	T GetTarget<T>(IConcreteSyntaxNode node) where T : notnull, ISymbolTarget;
+	bool TryGetChild(IConcreteSyntaxNode node, [NotNullWhen(true)] out ISymbolScope? scope);
+	ISymbolScope GetChild(IConcreteSyntaxNode node);
 	#endregion
 }
 
@@ -20,6 +23,9 @@ public sealed class SymbolScope : ISymbolScope
 	#region Fields
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	private readonly List<SymbolScope> _children = [];
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	private readonly Dictionary<IConcreteSyntaxNode, ISymbolScope> _childrenByNode = [];
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	private readonly List<ISymbol> _symbols = [];
@@ -50,12 +56,27 @@ public sealed class SymbolScope : ISymbolScope
 	#endregion
 
 	#region Methods
-	public SymbolScope NestScope(string name)
+	public SymbolScope NestScope(string name, IConcreteSyntaxNode? declaration)
 	{
 		SymbolScope child = new(name, this);
 		_children.Add(child);
 
+		if (declaration is not null)
+			_childrenByNode.Add(declaration, child);
+
 		return child;
+	}
+	public bool TryGetChild(IConcreteSyntaxNode node, [NotNullWhen(true)] out ISymbolScope? scope)
+	{
+		return _childrenByNode.TryGetValue(node, out scope);
+	}
+	public ISymbolScope GetChild(IConcreteSyntaxNode node)
+	{
+		if (TryGetChild(node, out ISymbolScope? scope))
+			return scope;
+
+		ThrowHelper.ThrowInvalidOperationException("Couldn't find a child scope for the given declaration node but one was expected.");
+		return default;
 	}
 
 	public void AddSymbol(ISymbolTarget target) => AddSymbol(target.Symbol);
@@ -79,7 +100,7 @@ public sealed class SymbolScope : ISymbolScope
 
 		_symbols.Add(symbol);
 	}
-	public bool GetSymbol(string name, [NotNullWhen(true)] out ISymbolGroup? symbols)
+	public bool TryGetSymbol(string name, [NotNullWhen(true)] out ISymbolGroup? symbols)
 	{
 		if (_byName.TryGetValue(name, out SymbolGroup? group))
 		{
@@ -88,22 +109,34 @@ public sealed class SymbolScope : ISymbolScope
 		}
 
 		if (Parent is not null)
-			return Parent.GetSymbol(name, out symbols);
+			return Parent.TryGetSymbol(name, out symbols);
 
 		symbols = default;
 		return false;
 	}
 
-	public bool GetSymbol(IConcreteSyntaxNode node, [NotNullWhen(true)] out ISymbol? symbol)
+	public bool TryGetSymbol(IConcreteSyntaxNode node, [NotNullWhen(true)] out ISymbol? symbol)
 	{
 		if (_byNode.TryGetValue(node, out symbol))
 			return true;
 
 		if (Parent is not null)
-			return Parent.GetSymbol(node, out symbol);
+			return Parent.TryGetSymbol(node, out symbol);
 
 		symbol = default;
 		return false;
+	}
+
+	public T GetTarget<T>(IConcreteSyntaxNode node) where T : notnull, ISymbolTarget
+	{
+		if (TryGetSymbol(node, out ISymbol? symbol) is false)
+			ThrowHelper.ThrowInvalidOperationException($"Couldn't find a symbol for the given node, but one should've existed.");
+
+		if (symbol.Target is T typed)
+			return typed;
+
+		ThrowHelper.ThrowInvalidOperationException($"The found symbol ({symbol}) did not point to the expected target type ({typeof(T).Name}).");
+		return default;
 	}
 
 	public IEnumerator<ISymbol> GetEnumerator() => _symbols.GetEnumerator();
