@@ -270,7 +270,7 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 
 		List<StructuredMemberInfo> members = [];
 
-		string @namespace = group?.Namespace ?? tree.Namespace;
+		string @namespace = group?.Namespace ?? tree.Namespace + ".Nodes";
 
 		string coreName = $"{tree.Kind.Pascal}{name.Pascal}{group?.Name.Pascal}Syntax";
 

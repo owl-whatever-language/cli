@@ -60,9 +60,23 @@ public class CompilationContext
 			bundle.Concrete = result.Parsing.Tree;
 		}
 
-		SymbolCollectionResult symbolCollection = SymbolCollector.Collect(_baseScope, GetConcreteTrees());
+		IReadOnlyCollection<IConcreteSyntaxTree> concrete = GetConcreteTrees().ToArray();
+		SymbolCollectionResult symbolCollection = SymbolCollector.Collect(_baseScope, concrete);
+		ParallelSemanticResolutionResult semanticResolutionResult = SemanticResolver.Resolve(concrete, symbolCollection.Symbols);
 
-		return new(performance, [parsingResult, symbolCollection]);
+		foreach (ISymbolTarget target in symbolCollection.Targets)
+		{
+			if (target.IsMutable)
+				ThrowHelper.ThrowInvalidOperationException($"The target '{target}' was still mutable.");
+		}
+
+		foreach (SemanticResolutionResult result in semanticResolutionResult.Children)
+		{
+			SyntaxTreeBundle bundle = _trees[result.Source];
+			bundle.Semantic = result.Tree;
+		}
+
+		return new(performance, [parsingResult, symbolCollection, semanticResolutionResult]);
 	}
 	#endregion
 

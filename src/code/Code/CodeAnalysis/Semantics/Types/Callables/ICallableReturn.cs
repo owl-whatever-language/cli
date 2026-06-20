@@ -23,6 +23,7 @@ public sealed class CallableReturn : BaseMutableTarget, ICallableReturn
 
 	#region Constructors
 	public CallableReturn(ITypeInfo type) => Type = type;
+	public CallableReturn() { }
 	#endregion
 
 	#region Methods

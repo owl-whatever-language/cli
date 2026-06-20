@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics;
 
 public sealed class SemanticResolutionResult : ISourceStageResult, IStageResultDiagnostics, IStageResultPerformance
@@ -16,6 +18,23 @@ public sealed class SemanticResolutionResult : ISourceStageResult, IStageResultD
 		Diagnostics = diagnostics;
 		Performance = performance;
 		Tree = tree;
+	}
+	#endregion
+}
+
+public sealed class ParallelSemanticResolutionResult : IParallelStageResult<SemanticResolutionResult>
+{
+	#region Properties
+	public string Stage => "parallel_semantic_resolution";
+	public IPerformanceResult Performance { get; }
+	public IReadOnlyCollection<SemanticResolutionResult> Children { get; }
+	#endregion
+
+	#region Constructors
+	public ParallelSemanticResolutionResult(IPerformanceResult performance, IReadOnlyCollection<SemanticResolutionResult> children)
+	{
+		Performance = performance;
+		Children = children;
 	}
 	#endregion
 }
@@ -61,6 +80,28 @@ public sealed class SemanticResolver : BaseConcreteToSemanticTreeConverter, IDia
 			return new(resolver.Diagnostics, performance, converted);
 		}
 	}
+	public static ParallelSemanticResolutionResult Resolve(IReadOnlyCollection<IConcreteSyntaxTree> trees, ISymbolScope baseScope)
+	{
+		using (PerformanceResult.Scope(out IPerformanceResult performance))
+		{
+			if (trees.Count is 1)
+			{
+				SemanticResolutionResult result = Resolve(trees.Single(), baseScope);
+				return new(performance, [result]);
+			}
+
+			SemanticResolutionResult[] results = new SemanticResolutionResult[trees.Count];
+			ParallelOptions options = new() { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+			Parallel.ForEach(trees, options, (tree, _, index) =>
+			{
+				SemanticResolutionResult result = Resolve(tree, baseScope);
+				results[index] = result;
+			});
+
+			return new(performance, results);
+		}
+	}
 	#endregion
 
 	#region Methods
@@ -74,8 +115,8 @@ public sealed class SemanticResolver : BaseConcreteToSemanticTreeConverter, IDia
 		if (Symbols == BaseScope)
 			ThrowHelper.ThrowInvalidOperationException("Cannot exit the base scope.");
 
-		Debug.Assert(BaseScope.Parent is not null);
-		Symbols = BaseScope.Parent;
+		Debug.Assert(Symbols.Parent is not null);
+		Symbols = Symbols.Parent;
 	}
 	#endregion
 
@@ -167,7 +208,10 @@ public sealed class SemanticResolver : BaseConcreteToSemanticTreeConverter, IDia
 	}
 	protected override SemanticRegularFunctionArgumentSyntax Convert(IConcreteRegularFunctionArgumentSyntax concrete)
 	{
-		throw new NotImplementedException();
+		ICallableParameter? parameter = TargetFunction?.Callable?.Parameters[ArgumentIndex];
+		ISemanticExpressionSyntax value = Convert(concrete.Value);
+
+		return new(value, parameter);
 	}
 	protected override SemanticNamedFunctionArgumentSyntax Convert(IConcreteNamedFunctionArgumentSyntax concrete)
 	{
@@ -203,8 +247,40 @@ public sealed class SemanticResolver : BaseConcreteToSemanticTreeConverter, IDia
 	protected override SemanticBaseIntegerLiteralExpressionSyntax Convert(IConcreteBaseIntegerLiteralExpressionSyntax concrete) => throw new NotImplementedException();
 	protected override SemanticBinaryExpressionSyntax Convert(IConcreteBinaryExpressionSyntax concrete) => throw new NotImplementedException();
 	protected override SemanticGroupedExpressionSyntax Convert(IConcreteGroupedExpressionSyntax concrete) => throw new NotImplementedException();
-	protected override SemanticInterpolatedStringExpressionSyntax Convert(IConcreteInterpolatedStringExpressionSyntax concrete) => throw new NotImplementedException();
-	protected override SemanticStringLiteralExpressionSyntax Convert(IConcreteStringLiteralExpressionSyntax concrete) => throw new NotImplementedException();
+	protected override SemanticInterpolatedStringExpressionSyntax Convert(IConcreteInterpolatedStringExpressionSyntax concrete)
+	{
+		SemanticToken start = Convert(concrete.Start);
+		ISyntaxList<ISemanticStringFragmentSyntax> fragments = Convert(concrete.Fragments);
+		SemanticToken end = Convert(concrete.End);
+
+		return new(start, fragments, end, SpecialTypes.Text);
+	}
+	protected override SemanticStringLiteralExpressionSyntax Convert(IConcreteStringLiteralExpressionSyntax concrete)
+	{
+		SemanticToken start = Convert(concrete.Start);
+		ISyntaxList<ISemanticStringFragmentSyntax> fragments = Convert(concrete.Fragments);
+		SemanticToken end = Convert(concrete.End);
+
+		StringBuilder valueBuilder = new();
+
+		foreach (ISemanticStringFragmentSyntax fragment in fragments)
+		{
+			string? text = fragment switch
+			{
+				SemanticRegularStringFragmentSyntax r => r.Text.Value as string,
+				SemanticEscapedStringFragmentSyntax r => r.Sequence.Value as string,
+				SemanticEscapedHexStringFragmentSyntax r => r.Sequence.Value as string,
+
+				_ => "",
+			};
+
+			valueBuilder.Append(text);
+		}
+
+		string value = valueBuilder.ToString();
+
+		return new(start, fragments, end, value, SpecialTypes.Text);
+	}
 	protected override SemanticDecimalLiteralExpressionSyntax Convert(IConcreteDecimalLiteralExpressionSyntax concrete) => throw new NotImplementedException();
 	protected override SemanticTernaryExpressionSyntax Convert(IConcreteTernaryExpressionSyntax concrete) => throw new NotImplementedException();
 	#endregion
@@ -260,7 +336,7 @@ public sealed class SemanticResolver : BaseConcreteToSemanticTreeConverter, IDia
 	}
 	private ITypeInfo? GetType(ISymbol? symbol)
 	{
-		return symbol switch
+		return symbol?.Target switch
 		{
 			IFunction function => function.Callable,
 			IFunctionParameter parameter => parameter.Type,

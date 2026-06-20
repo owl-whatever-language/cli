@@ -109,7 +109,17 @@ public sealed class SymbolCollector : BaseConcreteVisitor
 	{
 		List<CallableParameter> parameters = [];
 
-		throw new NotImplementedException();
+		foreach (IConcreteFunctionParameterSyntax decl in node.Parameters.Values)
+		{
+			string? name = decl.Name.Value as string;
+			CallableParameter param = new(name);
+
+			parameters.Add(param);
+		}
+
+		CallableReturn @return = new();
+
+		return new Callable(function, parameters, @return);
 	}
 	protected override bool Visit(IConcreteRegularFunctionParameterSyntax node)
 	{
