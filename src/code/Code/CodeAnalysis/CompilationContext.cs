@@ -76,7 +76,16 @@ public class CompilationContext
 			bundle.Semantic = result.Tree;
 		}
 
-		return new(performance, [parsingResult, symbolCollection, semanticResolutionResult]);
+		IReadOnlyCollection<ISemanticSyntaxTree> semantic = GetSemanticTrees().ToArray();
+		ParallelFinalisationResult finalisationResult = SyntaxFinaliser.Finalise(semantic);
+
+		foreach (SyntaxFinalisationResult result in finalisationResult.Children)
+		{
+			SyntaxTreeBundle bundle = _trees[result.Source];
+			bundle.Final = result.Tree;
+		}
+
+		return new(performance, [parsingResult, symbolCollection, semanticResolutionResult, finalisationResult]);
 	}
 	#endregion
 
@@ -86,9 +95,19 @@ public class CompilationContext
 		foreach (ISyntaxTreeBundle bundle in _trees.Values)
 		{
 			if (bundle.Concrete is null)
-				ThrowHelper.ThrowInvalidOperationException("Expect the concrete tree to be set.");
+				ThrowHelper.ThrowInvalidOperationException("Expected the concrete tree to be set.");
 
 			yield return bundle.Concrete;
+		}
+	}
+	private IEnumerable<ISemanticSyntaxTree> GetSemanticTrees()
+	{
+		foreach (ISyntaxTreeBundle bundle in _trees.Values)
+		{
+			if (bundle.Semantic is null)
+				ThrowHelper.ThrowInvalidOperationException("Expected the semantic tree to be set.");
+
+			yield return bundle.Semantic;
 		}
 	}
 	private static ISymbolScope CreateBaseScope()

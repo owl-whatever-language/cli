@@ -12,3 +12,4 @@ global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callables;
 global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Targets;
 global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions;
 global using OwlDomain.Owl.Code.CodeAnalysis.Parsing;
+global using OwlDomain.Owl.Code.CodeAnalysis.Finalisation;
