@@ -363,7 +363,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 				using (writer.Region("Methods"))
 				{
-					IEnumerable<string> syntaxMembers = info.InterfaceMembers.Where(m => m.Type is IStructuredSyntaxTypeInfo).Select(m => m.Name.Pascal);
+					IEnumerable<string> syntaxMembers = info.ClassMembers.Where(m => m.Type is IStructuredSyntaxTypeInfo).Select(m => m.Name.Pascal);
 					writer.WriteLine($"public override IEnumerable<ISyntaxNode> GetChildren() => [{string.Join(", ", syntaxMembers)}];");
 				}
 			}
