@@ -5,13 +5,15 @@ public readonly struct TextFragment
 	#region Properties
 	public string Text { get; }
 	public ClassificationKind? Classification { get; }
+	public ISyntaxPart? Syntax { get; }
 	#endregion
 
 	#region Constructors
-	public TextFragment(string text, ClassificationKind? classification = null)
+	public TextFragment(string text, ClassificationKind? classification = null, ISyntaxPart? syntax = null)
 	{
 		Text = text;
 		Classification = classification;
+		Syntax = syntax;
 	}
 	#endregion
 }

@@ -218,7 +218,7 @@ public static class ISyntaxNodeExtensions
 				if (part.Lexeme is null)
 					continue;
 
-				TextFragment fragment = new(part.Lexeme, part.Classification);
+				TextFragment fragment = new(part.Lexeme, part.Classification, part);
 				fragments.Add(fragment);
 			}
 
