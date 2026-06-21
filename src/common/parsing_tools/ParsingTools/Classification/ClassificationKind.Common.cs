@@ -59,5 +59,8 @@ partial struct ClassificationKind
 
 	/// <summary>Represents a classification for variables.</summary>
 	public static ClassificationKind Variable { get; } = Identifier + "variable";
+
+	/// <summary>Represents a classification for parameters.</summary>
+	public static ClassificationKind Parameter { get; } = Variable + "parameter";
 	#endregion
 }

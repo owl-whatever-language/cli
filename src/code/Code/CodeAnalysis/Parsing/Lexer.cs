@@ -76,6 +76,7 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 			TryLexSimpleToken("*", SyntaxKind.Star) ||
 			TryLexSimpleToken("/", SyntaxKind.Divide) ||
 			TryLexSimpleToken(".", SyntaxKind.Period) ||
+			TryLexSimpleToken(",", SyntaxKind.Comma) ||
 			TryLexSimpleToken("?", SyntaxKind.QuestionMark) ||
 			TryLexSimpleToken(":", SyntaxKind.Colon) ||
 			TryLexSimpleToken(";", SyntaxKind.Semicolon) ||

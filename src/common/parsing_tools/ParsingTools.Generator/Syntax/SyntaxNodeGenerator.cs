@@ -612,7 +612,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 										writer.WriteLine("if (valueIndex >= 0)");
 										using (writer.Braced())
 										{
-											writer.WriteLine($"{targetValueType} value = Convert(list.Values[i]);");
+											writer.WriteLine($"{targetValueType} value = Convert(list.Values[valueIndex]);");
 											writer.WriteLine("values[valueIndex] = value;");
 											writer.WriteLine("nodes[i] = value;");
 										}
@@ -624,7 +624,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 											using (writer.Indented())
 												writer.WriteLine("throw new InvalidOperationException(\"Couldn't find a value or a separator index for the current node, is this an implementation problem somewhere?\");");
 											writer.WriteLine();
-											writer.WriteLine($"{targetSepType} separator = Convert(list.Separators[i]);");
+											writer.WriteLine($"{targetSepType} separator = Convert(list.Separators[sepIndex]);");
 											writer.WriteLine("separators[sepIndex] = separator;");
 											writer.WriteLine("nodes[i] = separator;");
 										}

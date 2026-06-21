@@ -92,7 +92,21 @@ public static class ISyntaxNodeExtensions
 
 	extension(ISyntaxNode node)
 	{
-		#region Methods
+		#region Parent methods
+		public T? GetParent<T>(bool includeSelf = true) where T : notnull, ISyntaxNode
+		{
+			ISyntaxNode? current = includeSelf ? node : node.Parent;
+
+			while (current is not null)
+			{
+				if (current is T typed)
+					return typed;
+
+				current = current.Parent;
+			}
+
+			return default;
+		}
 		public ISyntaxNode GetRoot()
 		{
 			while (node.Parent is not null)
@@ -100,7 +114,34 @@ public static class ISyntaxNodeExtensions
 
 			return node;
 		}
+		#endregion
 
+		#region Search methods
+		public ISyntaxNode? Search(Predicate<ISyntaxNode> predicate) => Search<ISyntaxNode>(node, predicate);
+		public T? Search<T>(Predicate<T> predicate) where T : notnull, ISyntaxNode
+		{
+			return Search(predicate, node);
+		}
+		private static T? Search<T>(Predicate<T> predicate, ISyntaxNode current) where T : notnull, ISyntaxNode
+		{
+			if (current is T typed)
+			{
+				if (predicate.Invoke(typed))
+					return typed;
+			}
+
+			foreach (ISyntaxNode child in current.GetChildren())
+			{
+				T? result = Search(predicate, child);
+				if (result is not null)
+					return result;
+			}
+
+			return default;
+		}
+		#endregion
+
+		#region Flatten methods
 		public IReadOnlyList<ISyntaxToken> Flatten() => Flatten<ISyntaxToken>(node);
 		public IReadOnlyList<T> Flatten<T>() where T : notnull, ISyntaxNode
 		{
@@ -122,9 +163,12 @@ public static class ISyntaxNodeExtensions
 			foreach (ISyntaxNode child in current.GetChildren())
 				Flatten(target, child);
 		}
-		public string Print(bool includeStartAndEndTrivia = true)
+		#endregion
+
+		#region Print methods
+		public IReadOnlyList<ISyntaxPart> ToParts(bool includeStartAndEndTrivia = true)
 		{
-			StringBuilder builder = new();
+			List<ISyntaxPart> parts = [];
 
 			ISyntaxToken? last = null;
 
@@ -133,48 +177,49 @@ public static class ISyntaxNodeExtensions
 				if (last is not null)
 				{
 					foreach (ISyntaxTrivia trivia in last.TrailingTrivia)
-						builder.Append(trivia.Lexeme);
+						parts.Add(trivia);
 				}
 
 				if (includeStartAndEndTrivia || last != null)
 				{
 					foreach (ISyntaxTrivia trivia in token.LeadingTrivia)
-						builder.Append(trivia.Lexeme);
+						parts.Add(trivia);
 				}
 
-				builder.Append(token.Lexeme);
+				parts.Add(token);
 				last = token;
 			}
 
 			if (includeStartAndEndTrivia && last is not null)
 			{
 				foreach (ISyntaxTrivia trivia in last.TrailingTrivia)
-					builder.Append(trivia.Lexeme);
+					parts.Add(trivia);
 			}
+
+			return parts;
+		}
+
+		public string Print(bool includeStartAndEndTrivia = true)
+		{
+			StringBuilder builder = new();
+
+			foreach (ISyntaxPart part in ToParts(node, includeStartAndEndTrivia))
+				builder.Append(part.Lexeme);
 
 			string text = builder.ToString();
 			return text;
 		}
-		public TextFragmentCollection ToTextFragments()
+		public TextFragmentCollection ToTextFragments(bool includeStartAndEndTrivia = true)
 		{
 			List<TextFragment> fragments = [];
 
-			foreach (ISyntaxToken token in Flatten(node))
+			foreach (ISyntaxPart part in ToParts(node, includeStartAndEndTrivia))
 			{
-				foreach (ISyntaxTrivia trivia in token.LeadingTrivia)
-				{
-					if (trivia.Lexeme is not null)
-						fragments.Add(new(trivia.Lexeme, trivia.Classification));
-				}
+				if (part.Lexeme is null)
+					continue;
 
-				if (token.Lexeme is not null)
-					fragments.Add(new(token.Lexeme, token.Classification));
-
-				foreach (ISyntaxTrivia trivia in token.TrailingTrivia)
-				{
-					if (trivia.Lexeme is not null)
-						fragments.Add(new(trivia.Lexeme, trivia.Classification));
-				}
+				TextFragment fragment = new(part.Lexeme, part.Classification);
+				fragments.Add(fragment);
 			}
 
 			return new(fragments);

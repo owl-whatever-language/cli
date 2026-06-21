@@ -92,6 +92,8 @@ public readonly struct PositionRange :
 
 	/// <inheritdoc/>
 	public override string ToString() => $"{Start} -> {End}";
+
+	public bool Contains(LinePosition position) => position >= Start && position <= End;
 	#endregion
 
 	#region Operators

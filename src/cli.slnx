@@ -5,6 +5,7 @@
 	<Folder Name="/common/" />
 	<Folder Name="/common/parsing_tools/">
 		<Project Path="common/parsing_tools/ParsingTools.Generator/ParsingTools.Generator.csproj" />
+		<Project Path="common/parsing_tools/ParsingTools.Spectre/ParsingTools.Spectre.csproj" />
 		<Project Path="common/parsing_tools/ParsingTools.Tests/ParsingTools.Tests.csproj" />
 		<Project Path="common/parsing_tools/ParsingTools/ParsingTools.csproj" />
 	</Folder>

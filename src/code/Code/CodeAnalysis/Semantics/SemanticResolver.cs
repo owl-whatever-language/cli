@@ -154,9 +154,9 @@ public sealed class SemanticResolver : BaseConcreteToSemanticTreeConverter, IDia
 		using (EnterScope(concrete))
 		{
 			SemanticToken name = Convert(concrete.Name, function.Symbol);
-			SemanticToken start = Convert(concrete.Name);
+			SemanticToken start = Convert(concrete.Start);
 			SyntaxList<ISemanticFunctionParameterSyntax, ISemanticToken> parameters = Convert(concrete.Parameters);
-			SemanticToken end = Convert(concrete.Name);
+			SemanticToken end = Convert(concrete.End);
 			ISemanticFunctionReturnSyntax @return = Convert(concrete.Return);
 			ISemanticFunctionBodySyntax body = Convert(concrete.Body);
 
@@ -238,8 +238,9 @@ public sealed class SemanticResolver : BaseConcreteToSemanticTreeConverter, IDia
 			symbol = GetTarget<ISymbolTarget>(concrete.Name, "symbol")?.Symbol;
 
 		ITypeInfo? type = GetType(symbol);
+		ClassificationKind? classification = GetSymbolClassification(symbol);
 
-		SemanticToken name = Convert(concrete.Name, symbol);
+		SemanticToken name = Convert(concrete.Name, classification ?? concrete.Name.Classification, symbol);
 		return new(name, symbol, type);
 	}
 	protected override SemanticBooleanLiteralExpressionSyntax Convert(IConcreteBooleanLiteralExpressionSyntax concrete) => throw new NotImplementedException();
@@ -343,6 +344,19 @@ public sealed class SemanticResolver : BaseConcreteToSemanticTreeConverter, IDia
 			ILocalVariable variable => variable.Type,
 
 			_ => null
+		};
+	}
+	private ClassificationKind? GetSymbolClassification(ISymbol? symbol) => GetTargetClassification(symbol?.Target);
+	private ClassificationKind? GetTargetClassification(ISymbolTarget? target)
+	{
+		return target switch
+		{
+			IFunction => ClassificationKind.Function,
+			ITypeInfo => ClassificationKind.Type,
+			ILocalVariable => ClassificationKind.Variable,
+			IFunctionParameter => ClassificationKind.Variable,
+
+			_ => null,
 		};
 	}
 	#endregion

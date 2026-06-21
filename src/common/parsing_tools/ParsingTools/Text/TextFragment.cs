@@ -46,20 +46,24 @@ public static class TextFragmentExtensions
 	extension(IEnumerable<TextFragment> fragments)
 	{
 		#region Methods
-		public IReadOnlyList<TextFragmentCollection> ToLines(bool trimLastLines = true, bool ensureOneLine = true)
+		public IReadOnlyList<TextFragmentCollection> ToLines(bool trimLastLines = true, bool ensureOneLine = true, bool includeLineBreak = false)
 		{
 			List<TextFragmentCollection> lines = [];
 			List<TextFragment> current = [];
 
 			foreach (TextFragment fragment in fragments)
 			{
-				current.Add(fragment);
 				if (fragment.Classification == ClassificationKind.LineBreak)
 				{
+					if (includeLineBreak)
+						current.Add(fragment);
+
 					TextFragmentCollection line = new(current);
 					lines.Add(line);
 					current = [];
 				}
+				else
+					current.Add(fragment);
 			}
 
 			if (current.Any())
@@ -87,7 +91,6 @@ public static class TextFragmentExtensions
 			}
 
 			return lines;
-
 		}
 		#endregion
 	}

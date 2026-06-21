@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- Project -->
+	<PropertyGroup Label="project">
+		<TargetFrameworks>net10.0</TargetFrameworks>
+		<LangVersion>14</LangVersion>
+		<Nullable>enable</Nullable>
+
+		<AssemblyName>OwlDomain.ParsingTools.Spectre</AssemblyName>
+		<RootNamespace>OwlDomain.ParsingTools</RootNamespace>
+		<Version>1.0.0</Version>
+
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<NoWarn>CS1591</NoWarn>
+		<Deterministic>true</Deterministic>
+
+		<EnableNETAnalyzers>true</EnableNETAnalyzers>
+		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+	</PropertyGroup>
+
+	<!-- Project references -->
+	<ItemGroup Label="projects">
+		<ProjectReference Include="../ParsingTools/ParsingTools.csproj" />
+	</ItemGroup>
+
+	<!-- Package references -->
+	<ItemGroup Label="packages">
+		<PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Syntax/" />
+	  <Folder Include="Text/" />
+	</ItemGroup>
+
+</Project>

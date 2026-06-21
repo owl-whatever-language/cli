@@ -324,6 +324,11 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		}
 
 		LoopGuard(() => RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket, Body);
+
+		if (separators.Count > 0 && separators.Count >= parameters.Count)
+			ReportExpectedFunctionParameter(separators[^1].Position);
+
+
 		IConcreteToken end = Expect(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, "Expecting a closing bracket ')' to end the function parameters.");
 		IConcreteFunctionReturnSyntax @return = ParseFunctionReturn();
 		IConcreteFunctionBodySyntax body = ParseFunctionBody();
@@ -345,7 +350,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		if (TryParseType(out IConcreteTypeSyntax? type) is false)
 			return null;
 
-		IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Variable, "Expected the function parameter name.");
+		IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Parameter, "Expected the function parameter name.");
 		return new ConcreteRegularFunctionParameterSyntax(type, name);
 	}
 	private IConcreteFunctionReturnSyntax ParseFunctionReturn()
@@ -619,7 +624,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	{
 		if (Current?.Kind == SyntaxKind.Identifier && Next?.Kind == SyntaxKind.Colon)
 		{
-			IConcreteToken name = Convert(Current, ClassificationKind.Identifier);
+			IConcreteToken name = Convert(Current, ClassificationKind.Parameter);
 			IConcreteToken colon = Convert(Next, ClassificationKind.Punctuation);
 			Advance(2);
 

@@ -27,7 +27,7 @@ public class CompilationContext
 	#endregion
 
 	#region Properties
-	public IReadOnlyCollection<ISyntaxTreeBundle> Trees => _trees.Values;
+	public IReadOnlyDictionary<ISourceFile, ISyntaxTreeBundle> Trees => _trees.ToDictionary(pair => pair.Key, pair => (ISyntaxTreeBundle)pair.Value);
 	#endregion
 
 	#region Methods
