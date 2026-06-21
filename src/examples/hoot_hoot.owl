@@ -11,11 +11,11 @@ print(output);
 HootTheUser("<user>");
 
 // 'fun' is only required for local / top-level function declarations
-fun HootTheUser(text user,)
+fun HootTheUser(text user)
 {
 	// Using named parameter
 	text output = GetHootText(target: user);
-	print(output); print(invalid); print(output);
+	print(output);
 }
 
 // Showing off function body shorthand syntax.
