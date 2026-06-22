@@ -21,4 +21,8 @@ public class LocalVariable : BaseNamedSymbolTarget, ILocalVariable
 	#region Constructors
 	public LocalVariable(string? name) : base(name) { }
 	#endregion
+
+	#region Methods
+	public override string ToString() => $"{Type?.ToString() ?? "???"} {Name ?? "???"}";
+	#endregion
 }

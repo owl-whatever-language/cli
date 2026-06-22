@@ -35,6 +35,7 @@ public sealed class Symbol : ISymbol
 	#endregion
 
 	#region Helpers
+	public override string ToString() => Target.ToString() ?? Name;
 	private string DebuggerDisplay() => $"Symbol({Name}) -> {Target.Kind}";
 	#endregion
 }
@@ -63,6 +64,7 @@ public sealed class DeclaredSymbol : IDeclaredSymbol
 	#endregion
 
 	#region Helpers
+	public override string ToString() => Target.ToString() ?? Name ?? "???";
 	private string DebuggerDisplay() => $"Symbol({Name}) -> {Target.Kind}";
 	#endregion
 }

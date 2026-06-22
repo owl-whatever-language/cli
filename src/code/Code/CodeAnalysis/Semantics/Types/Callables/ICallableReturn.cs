@@ -1,6 +1,6 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callables;
 
-public interface ICallableReturn
+public interface ICallableReturn : IMutableTarget
 {
 	#region Properties
 	ITypeInfo? Type { get; set; }

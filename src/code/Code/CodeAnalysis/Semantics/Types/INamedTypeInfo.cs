@@ -15,6 +15,7 @@ public sealed class NamedTypeInfo : BaseNamedSymbolTarget, INamedTypeInfo
 	#endregion
 
 	#region Methods
+	public override string ToString() => Name ?? "???";
 	public bool CanAssignTo(ITypeInfo target) => target == this;
 	#endregion
 }

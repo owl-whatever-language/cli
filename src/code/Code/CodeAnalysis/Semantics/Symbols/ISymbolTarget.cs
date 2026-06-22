@@ -8,7 +8,11 @@ public interface ISymbolTarget : IMutableTarget
 	string Kind { get; }
 
 	/// <summary>The symbol that should be used to reference this target.</summary>
-	ISymbol Symbol { get; }
+	ISymbol Symbol { get; set; }
+	#endregion
+
+	#region Methods
+	string ToString();
 	#endregion
 }
 
@@ -58,6 +62,7 @@ public abstract class BaseSymbolTarget : BaseMutableTarget, ISymbolTarget
 
 	#region Helpers
 	private string DebuggerDisplay() => $"Symbol({Kind})";
+	public override string ToString() => base.ToString() ?? Kind;
 	#endregion
 }
 
@@ -79,7 +84,7 @@ public abstract class BaseNamedSymbolTarget : BaseSymbolTarget, INamedSymbolTarg
 
 public static class SymbolTargetExtensions
 {
-	extension<TTarget>(TTarget target) where TTarget : notnull, BaseSymbolTarget
+	extension<TTarget>(TTarget target) where TTarget : notnull, ISymbolTarget
 	{
 		#region Methods
 		public TTarget WithSymbol(string name)
@@ -97,7 +102,7 @@ public static class SymbolTargetExtensions
 		}
 		#endregion
 	}
-	extension<TTarget>(TTarget target) where TTarget : notnull, BaseNamedSymbolTarget
+	extension<TTarget>(TTarget target) where TTarget : notnull, INamedSymbolTarget
 	{
 		#region Methods
 		public TTarget WithSymbol(IConcreteSyntaxNode declaration)

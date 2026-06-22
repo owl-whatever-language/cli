@@ -146,5 +146,22 @@ public sealed class DebugTree : DebugTreeObject, IDebugTree
 
 	#region Functions
 	public static IDebugTree Create(ISyntaxTree tree) => new DebugTreeFactory().Create(tree);
+	public static IDebugTreeObject Create(ISyntaxNode node) => new DebugTreeFactory().Create(node);
 	#endregion
+}
+
+public static class DebugTreeExtensions
+{
+	extension(ISyntaxTree tree)
+	{
+		#region Methods
+		public IDebugTree ToDebug() => DebugTree.Create(tree);
+		#endregion
+	}
+	extension(ISyntaxNode node)
+	{
+		#region Methods
+		public IDebugTreeObject ToDebug() => DebugTree.Create(node);
+		#endregion
+	}
 }

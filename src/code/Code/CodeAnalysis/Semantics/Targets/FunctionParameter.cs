@@ -20,5 +20,6 @@ public class FunctionParameter : BaseNamedSymbolTarget, IFunctionParameter
 
 	#region Constructors
 	public FunctionParameter(string? name) : base(name) { }
+	public override string ToString() => $"{Type?.ToString() ?? "???"} {Name ?? "???"}";
 	#endregion
 }

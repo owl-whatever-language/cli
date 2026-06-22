@@ -21,6 +21,7 @@
 
 	<!-- Project references -->
 	<ItemGroup Label="projects">
+		<ProjectReference Include="../code/Code/Code.csproj" />
 		<ProjectReference Include="../common/parsing_tools/ParsingTools/ParsingTools.csproj" />
 		<ProjectReference Include="../common/parsing_tools/ParsingTools.Spectre/ParsingTools.Spectre.csproj" />
 	</ItemGroup>

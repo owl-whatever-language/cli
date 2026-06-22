@@ -47,6 +47,14 @@ public class DebugTreeFactory
 
 		return tree;
 	}
+	public virtual IDebugTreeObject Create(ISyntaxNode syntax)
+	{
+		DebugTreeObject obj = new();
+
+		Populate(obj, syntax);
+
+		return obj;
+	}
 
 	protected virtual void Populate(DebugTreeObject target, object value)
 	{
@@ -68,16 +76,27 @@ public class DebugTreeFactory
 		PopulateExtra(target, value);
 		Prune(target);
 		Reorder(target);
-	}
-	protected virtual void PopulateExtra(DebugTreeObject target, object value)
-	{
-		if (value is ISyntaxNode or ISyntaxTree and not ISyntaxPart)
-			target.Add("Kind", value.GetType().Name);
+		Deduplicate(target);
 	}
 	protected virtual string GetLabel(PropertyInfo property) => property.Name;
 	protected virtual bool Include(PropertyInfo property, object container)
 	{
-		if (container is ISyntaxNode && property.Name is nameof(ISyntaxNode.Parent) or nameof(ISyntaxNode.Position))
+		if (container is ISyntaxNode node)
+		{
+			if (property.Name is nameof(ISyntaxNode.Parent) or nameof(ISyntaxNode.Position))
+				return false;
+
+			if (property.Name is nameof(ISyntaxNode.IsFabricated))
+				return node.IsFabricated;
+		}
+
+		if (container is ISyntaxPart && property.Name is nameof(ISyntaxPart.Lexeme))
+			return false;
+
+		if (property.PropertyType == typeof(TriviaList) || property.IsSyntaxPart())
+			return false;
+
+		if (container.GetType().IsSeparatedSyntaxListNode() && property.Name is nameof(ISyntaxList<,>.Separators) or nameof(ISyntaxList<,>.Values))
 			return false;
 
 		return true;
@@ -100,6 +119,50 @@ public class DebugTreeFactory
 		foreach (IDebugTreeProperty property in target.Properties.Order(comparer))
 			target.Move(property, index++);
 	}
+	protected virtual void Deduplicate(DebugTreeObject target)
+	{
+		HashSet<string> seen = [];
+		Dictionary<string, int> indices = [];
+
+		List<int> toRemove = [];
+
+		for (int i = 0; i < target.Properties.Count; i++)
+		{
+			IDebugTreeProperty property = target.Properties[i];
+
+			if (property.Value is IDebugTreeObject or IDebugTreeList or null)
+				continue;
+
+			// Note(Nightowl): We want to iterate like this because we want to ensure the original order matter;
+
+			string trueValue = property.Value switch
+			{
+				ISyntaxNode node => node.Print(false), // Note(Nightowl): printer minimised the output;
+
+				_ => property.Value.ToString() ?? "",
+			};
+
+			if (seen.Add(trueValue))
+				indices[trueValue] = i;
+			else
+			{
+				int originalIndex = indices[trueValue];
+				IDebugTreeProperty original = target.Properties[originalIndex];
+
+				// Note(Nightowl): Always replace source with more specific value, at least for now;
+				if (original.Label is "Source")
+				{
+					toRemove.Add(originalIndex);
+					indices[trueValue] = i;
+				}
+				else
+					toRemove.Add(i);
+			}
+		}
+
+		foreach (int index in toRemove)
+			target.RemoveAt(index);
+	}
 
 	protected virtual int? Compare(bool left, bool right)
 	{
@@ -113,17 +176,14 @@ public class DebugTreeFactory
 		return null;
 	}
 	protected bool IsComplex(object? value) => value is IDebugTreeObject or IDebugTreeList;
+	protected bool IsSimple(object? value) => IsComplex(value) is false;
 	protected virtual int Compare(IDebugTreeObject target, IDebugTreeProperty left, IDebugTreeProperty right)
 	{
-		bool leftKind = left.Label is "Kind";
-		bool rightKind = right.Label is "Kind";
-
-		bool leftComplex = IsComplex(left.Value);
-		bool rightComplex = IsComplex(right.Value);
-
 		return
-			Compare(leftKind, rightKind) ??
-			Compare(leftComplex is false, rightComplex is false) ??
+			Compare(left.Label is "Kind", right.Label is "Kind") ??
+			Compare(left.Label is "FullPosition", right.Label is "FullPosition") ??
+			Compare(left.Label is "Source", right.Label is "Source") ??
+			Compare(IsSimple(left.Value), IsSimple(right.Value)) ??
 			target.Properties.IndexOf(left).CompareTo(target.Properties.IndexOf(right));
 	}
 
@@ -152,11 +212,34 @@ public class DebugTreeFactory
 		return value switch
 		{
 			null => true,
-			IDebugTreeObject obj => obj.Properties.Count is 0,
-			IDebugTreeList list => list.Elements.Count is 0,
+			IDebugTreeObject obj => ShouldPrune(obj),
+			IDebugTreeList list => ShouldPrune(list),
 
 			_ => false,
 		};
+	}
+
+	protected virtual bool ShouldPrune(IDebugTreeObject obj)
+	{
+		if (obj.Properties.Count is 0)
+			return true;
+
+		HashSet<string> labels = obj.Properties.Select(p => p.Label).ToHashSet();
+		labels.Remove("Kind");
+		labels.Remove("Source");
+		labels.Remove("FullPosition");
+
+		if (labels.Count is 0)
+			return true;
+
+		return false;
+	}
+	protected virtual bool ShouldPrune(IDebugTreeList list)
+	{
+		if (list.Elements.Count is 0)
+			return true;
+
+		return false;
 	}
 
 	protected virtual object? CreateValue(object? value)
@@ -166,6 +249,9 @@ public class DebugTreeFactory
 			DebugTreeList list = new();
 			Populate(list, enumerable);
 
+			if (list.Elements.Count is 1)
+				return list.Elements[0].Value;
+
 			return list;
 		}
 
@@ -174,6 +260,14 @@ public class DebugTreeFactory
 			DebugTreeObject obj = new();
 			Populate(obj, value);
 
+			HashSet<string> labels = obj.Properties.Select(p => p.Label).ToHashSet();
+			labels.Remove("Kind");
+			labels.Remove("FullPosition");
+			labels.Remove("Source");
+
+			if (labels.Count is 1)
+				return obj.Properties.Single(p => p.Label == labels.Single()).Value;
+
 			return obj;
 		}
 
@@ -181,6 +275,12 @@ public class DebugTreeFactory
 	}
 	protected virtual bool IsList([NotNullWhen(true)] object? value, [NotNullWhen(true)] out IEnumerable? enumerable)
 	{
+		if (value is string)
+		{
+			enumerable = default;
+			return false;
+		}
+
 		enumerable = value as IEnumerable;
 		return enumerable is not null;
 	}
@@ -195,6 +295,28 @@ public class DebugTreeFactory
 		return false;
 	}
 	#endregion
+
+	#region Extra property methods
+	protected virtual void PopulateExtra(DebugTreeObject target, object value)
+	{
+		AddKind(target, value);
+		AddSource(target, value);
+	}
+	protected virtual void AddKind(DebugTreeObject target, object value)
+	{
+		Type type = value.GetType();
+		if (type.IsSyntaxListNode() || type.IsSeparatedSyntaxListNode())
+			return;
+
+		if (value is (ISyntaxNode or ISyntaxTree) and not ISyntaxPart)
+			target.Add("Kind", value.GetType().Name);
+	}
+	protected virtual void AddSource(DebugTreeObject target, object value)
+	{
+		if (value is ISyntaxNode node && node.Position.IsMultiline is false)
+			target.Add("Source", node);
+	}
+	#endregion
 }
 
 public static class SyntaxTypeExtensions
@@ -205,19 +327,21 @@ public static class SyntaxTypeExtensions
 		public bool IsSyntaxNode() => type.IsAssignableTo(typeof(ISyntaxNode));
 		public bool IsTriviaNode() => type.IsAssignableTo(typeof(ISyntaxTrivia));
 		public bool IsTokenNode() => type.IsAssignableTo(typeof(ISyntaxToken));
+		public bool IsSyntaxPart() => type.IsAssignableTo(typeof(ISyntaxPart));
 		public bool IsSyntaxListNode() => type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ISyntaxList<>));
 		public bool IsSeparatedSyntaxListNode() => type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ISyntaxList<,>));
 		#endregion
 	}
 
-	extension(ParameterInfo parameter)
+	extension(PropertyInfo property)
 	{
 		#region Methods
-		public bool IsSyntaxNode() => parameter.ParameterType.IsSyntaxNode();
-		public bool IsTriviaNode() => parameter.ParameterType.IsTriviaNode();
-		public bool IsTokenNode() => parameter.ParameterType.IsTokenNode();
-		public bool IsSyntaxListNode() => parameter.ParameterType.IsSyntaxListNode();
-		public bool IsSeparatedSyntaxListNode() => parameter.ParameterType.IsSeparatedSyntaxListNode();
+		public bool IsSyntaxNode() => property.PropertyType.IsSyntaxNode();
+		public bool IsTriviaNode() => property.PropertyType.IsTriviaNode();
+		public bool IsTokenNode() => property.PropertyType.IsTokenNode();
+		public bool IsSyntaxPart() => property.PropertyType.IsSyntaxPart();
+		public bool IsSyntaxListNode() => property.PropertyType.IsSyntaxListNode();
+		public bool IsSeparatedSyntaxListNode() => property.PropertyType.IsSeparatedSyntaxListNode();
 		#endregion
 	}
 }

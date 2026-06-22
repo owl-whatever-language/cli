@@ -4,7 +4,7 @@ public interface IMutableTarget
 {
 	#region Properties
 	/// <summary>Whether the target might still be mutated.</summary>
-	bool IsMutable { get; }
+	bool IsMutable { get; set; }
 	#endregion
 }
 
@@ -65,7 +65,7 @@ public abstract class BaseMutableTarget : IMutableTarget
 
 public static class IMutableTargetExtensions
 {
-	extension<T>(T target) where T : notnull, BaseMutableTarget
+	extension<T>(T target) where T : notnull, IMutableTarget
 	{
 		#region Methods
 		/// <summary>Makes the symbol target immutable and returns it.</summary>

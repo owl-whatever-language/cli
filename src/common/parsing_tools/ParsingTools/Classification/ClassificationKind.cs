@@ -56,7 +56,6 @@ public readonly partial struct ClassificationKind :
 
 		return Name
 			.Split('.')
-			.Reverse() // Most specific one should always be checked first, so might as well reverse it here.
 			.Select(s => new ClassificationKind(s))
 			.ToArray();
 	}

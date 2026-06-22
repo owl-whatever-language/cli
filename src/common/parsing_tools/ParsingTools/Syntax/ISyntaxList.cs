@@ -76,6 +76,8 @@ public class SyntaxList<TValue> : ISyntaxList<TValue>
 	/// <inheritdoc/>
 	public IEnumerable<ISyntaxNode> GetChildren() => _values;
 
+	public override string ToString() => this.Print();
+
 	/// <inheritdoc/>
 	public IEnumerator<TValue> GetEnumerator() => _values.GetEnumerator();
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -151,6 +153,8 @@ public class SyntaxList<TValue, TSeparator> : ISyntaxList<TValue, TSeparator>
 
 	/// <inheritdoc/>
 	public IEnumerable<ISyntaxNode> GetChildren() => Nodes;
+
+	public override string ToString() => this.Print();
 	#endregion
 
 	#region Helpers

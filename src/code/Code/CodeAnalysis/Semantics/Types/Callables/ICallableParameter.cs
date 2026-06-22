@@ -44,5 +44,7 @@ public sealed class CallableParameter : BaseNamedSymbolTarget, ICallableParamete
 
 		return Type.CanAssignTo(target.Type);
 	}
+
+	public override string ToString() => Type?.ToString() ?? "???";
 	#endregion
 }

@@ -87,7 +87,7 @@ public sealed class SymbolCollector : BaseConcreteVisitor
 		string? name = node.Name.Value as string;
 		Function function = new Function(name).WithSymbol(node);
 		ICallable callable = CreateCallable(function, node);
-		function.WithCallable(callable).Lock();
+		function.WithCallable(callable);
 		Targets.Add(function);
 
 		TargetFunction = function;
