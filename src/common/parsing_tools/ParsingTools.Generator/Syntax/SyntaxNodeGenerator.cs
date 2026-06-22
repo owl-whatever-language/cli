@@ -114,11 +114,29 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 								{
 									writer.WriteLine($"_{tree.Kind.Camel} = value;");
 
-									if (tree.Shadows is not null)
-										writer.WriteLine($"_{tree.Shadows.Kind.Camel} = value; // re-use current as lower tree;");
+									StructuredTreeInfo? shadows = tree.Shadows;
+									if (shadows is not null)
+									{
+										writer.WriteLine();
+										writer.WriteLine("// re-use current as lower tree(s);");
+										while (shadows is not null)
+										{
+											writer.WriteLine($"_{shadows.Kind.Camel} = value;");
+											shadows = shadows.Shadows;
+										}
+									}
 
-									if (tree.ShadowedBy is not null)
-										writer.WriteLine($"_{tree.ShadowedBy.Kind.Camel} = null; // invalidate richer tree;");
+									StructuredTreeInfo? shadowedBy = tree.ShadowedBy;
+									if (shadowedBy is not null)
+									{
+										writer.WriteLine();
+										writer.WriteLine("// invalidate richer tree;");
+										while (shadowedBy is not null)
+										{
+											writer.WriteLine($"_{shadowedBy.Kind.Camel} = null;");
+											shadowedBy = shadowedBy.ShadowedBy;
+										}
+									}
 								}
 							}
 						}
