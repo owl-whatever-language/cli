@@ -164,26 +164,32 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		return new(statements, endOfInput);
 	}
 	private SyntaxList<IConcreteStatementSyntax> ParseDocumentStatements() => ParseStatements();
-	private SyntaxList<IConcreteStatementSyntax> ParseStatements() => ParseStatements(() => RealisticHasRemaining, TryParseStatement);
-	private SyntaxList<IConcreteStatementSyntax> ParseStatements(Func<IConcreteStatementSyntax?> parselet)
-	{
-		return ParseStatements(() => RealisticHasRemaining, parselet);
-	}
-	private SyntaxList<IConcreteStatementSyntax> ParseStatements(Func<bool> condition)
-	{
-		return ParseStatements(condition, TryParseStatement);
-	}
-	private SyntaxList<IConcreteStatementSyntax> ParseStatements(Func<bool> condition, Func<IConcreteStatementSyntax?> parselet)
+	private SyntaxList<IConcreteStatementSyntax> ParseStatements(params ReadOnlySpan<SyntaxKind> stopAt)
 	{
 		List<IConcreteStatementSyntax> statements = [];
 
-		void Body()
+		while (RealisticHasRemaining && (IsCurrentAny(stopAt) is false))
 		{
-			IConcreteStatementSyntax? statement = parselet.Invoke();
+			using LoopGuardScope _ = LoopGuard();
+
+			IConcreteStatementSyntax? statement = TryParseStatement();
 			if (statement is not null)
 			{
 				if (statement.IsFabricated is false)
 					statements.Add(statement);
+			}
+			else if (Current.Kind == SyntaxKind.CloseBrace && (stopAt.Contains(SyntaxKind.CloseBrace) is false))
+			{
+				// Note(Nightowl):
+				// When possible, use the previous, correctly parsed brace
+				// so that the "smart" diagnostic shows a better location;
+				ISyntaxNode target = Current;
+				ISyntaxToken? last = statements.LastOrDefault()?.Flatten().LastOrDefault();
+				if (last?.Kind == SyntaxKind.CloseBrace)
+					target = last;
+
+				AddError("duplicate_closing_brace", target.Position, "A duplicate closing brace was encountered.");
+				SkipCurrent();
 			}
 			else
 			{
@@ -192,8 +198,6 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 				SkipCurrent();
 			}
 		}
-
-		LoopGuard(condition, Body);
 
 		return new(statements);
 	}
@@ -260,8 +264,8 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		if (Match(SyntaxKind.OpenBrace, ClassificationKind.Punctuation, out IConcreteToken? start) is false)
 			return null;
 
-		SyntaxList<IConcreteStatementSyntax> statements = ParseStatements(() => HasRemaining && Current.Kind != SyntaxKind.CloseBrace);
-		IConcreteToken end = Expect(SyntaxKind.CloseBrace, ClassificationKind.Punctuation, "Expected a closing brace '}' to end the statement block.");
+		SyntaxList<IConcreteStatementSyntax> statements = ParseStatements(SyntaxKind.CloseBrace);
+		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBrace, ClassificationKind.Punctuation, start, "Expected a closing brace '}' to match this one.");
 
 		return new ConcreteBlockStatementSyntax(start, statements, end);
 	}
@@ -298,9 +302,12 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		List<IConcreteFunctionParameterSyntax> parameters = [];
 		List<IConcreteToken> separators = [];
 
-		void Body()
+		while (RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket)
 		{
-			Debug.Assert(Current is not null);
+			if (IsCurrentAny(SyntaxKind.Semicolon, SyntaxKind.OpenBrace, SyntaxKind.EqualArrow)) // missing ')' but body started
+				break;
+
+			using LoopGuardScope _ = LoopGuard();
 
 			IConcreteFunctionParameterSyntax? parameter = TryParseFunctionParameter();
 			if (parameter is not null)
@@ -318,18 +325,33 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 					nodes.Add(comma);
 					separators.Add(comma);
 				}
+				else if (IsCurrentAny(SyntaxKind.Semicolon, SyntaxKind.OpenBrace, SyntaxKind.EqualArrow)) // missing ')' but body started
+					break;
 				else
 					ReportExpectedFunctionParameterSeparator(Current.Position);
 			}
 		}
 
-		LoopGuard(() => RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket, Body);
-
 		if (separators.Count > 0 && separators.Count >= parameters.Count)
 			ReportExpectedFunctionParameter(separators[^1].Position);
 
+		IConcreteToken end;
+		if (IsCurrentAny(SyntaxKind.Semicolon, SyntaxKind.OpenBrace, SyntaxKind.EqualArrow))
+		{
+			// Note(Nightowl): I don't know if this is really needed, but I'm doing it this way for now;
+			ISyntaxNode target = nodes.LastOrDefault()?.Flatten().LastOrDefault() ?? start;
+			ReportExpectedToken(target.Position, SyntaxKind.CloseBracket, "Expected a closing bracket ')' to end the function parameters.");
+			end = Fabricate(SyntaxKind.Semicolon, ClassificationKind.Punctuation);
+		}
+		else
+		{
+			end = ExpectMatching(
+				SyntaxKind.CloseBracket,
+				ClassificationKind.Punctuation,
+				start,
+				"Expecting a closing bracket ')' to match this one.");
+		}
 
-		IConcreteToken end = Expect(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, "Expecting a closing bracket ')' to end the function parameters.");
 		IConcreteFunctionReturnSyntax @return = ParseFunctionReturn();
 		IConcreteFunctionBodySyntax body = ParseFunctionBody();
 
@@ -754,10 +776,31 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		ISyntaxToken token = ExpectCore(kind, message);
 		return Convert(token, classification);
 	}
+	private IConcreteToken ExpectMatching(SyntaxKind kind, ClassificationKind classification, ISyntaxToken start, string message)
+	{
+		if (Match(kind, classification, out IConcreteToken? end) is false)
+		{
+			end = Fabricate(kind, classification);
+			ReportExpectedToken(start.Position, kind, message);
+		}
+
+		return end;
+	}
 	private IConcreteToken Expect(SyntaxKind kind, string message)
 	{
 		ISyntaxToken token = ExpectCore(kind, message);
 		return Convert(token);
+	}
+
+	private IConcreteToken Fabricate(SyntaxKind kind)
+	{
+		ISyntaxToken token = FabricateCore(kind);
+		return Convert(token);
+	}
+	private IConcreteToken Fabricate(SyntaxKind kind, ClassificationKind classification)
+	{
+		ISyntaxToken token = FabricateCore(kind);
+		return Convert(token, classification);
 	}
 
 	[return: NotNullIfNotNull(nameof(token))]

@@ -78,6 +78,22 @@ public abstract class BaseParser
 	#endregion
 
 	#region Parsing helpers
+	[MemberNotNullWhen(true, nameof(Current))]
+	protected bool IsCurrentAny(params ReadOnlySpan<SyntaxKind> kinds)
+	{
+		if (Current is null)
+			return false;
+
+		SyntaxKind current = Current.Kind;
+		foreach (SyntaxKind kind in kinds)
+		{
+			if (current == kind)
+				return true;
+		}
+
+		return false;
+	}
+
 	/// <summary>Gets the token at the given <paramref name="offset"/> from the current position.</summary>
 	/// <param name="offset">The offset in terms of tokens.</param>
 	/// <returns>The token at the given offset, or <see langword="null"/> if the end of the input was reached.</returns>
@@ -146,24 +162,25 @@ public abstract class BaseParser
 		if (Match(kind, out ISyntaxToken? token))
 			return token;
 
-		Debug.Assert(Tokens.Count > 0, "Must have at least one token representing the end of the input.");
-		ISyntaxNode expected = Current ?? Tokens.Last();
+		token = FabricateCore(kind);
+		ReportExpectedToken(token.Position, kind, errorMessage);
 
-		IndexedPositionRange position = new(expected.FullPosition.Start, expected.FullPosition.Start);
-
-		ReportExpectedToken(position, kind, errorMessage);
-		return new SyntaxToken(kind, position);
+		return token;
 	}
 	protected ISyntaxToken ExpectSilentCore(SyntaxKind kind)
 	{
 		if (Match(kind, out ISyntaxToken? token))
 			return token;
 
+		return FabricateCore(kind);
+	}
+	protected SyntaxToken FabricateCore(SyntaxKind kind)
+	{
 		Debug.Assert(Tokens.Count > 0, "Must have at least one token representing the end of the input.");
 		ISyntaxNode expected = Current ?? Tokens.Last();
 
 		IndexedPositionRange position = new(expected.FullPosition.Start, expected.FullPosition.Start);
-		return new SyntaxToken(kind, position);
+		return new(kind, position);
 	}
 
 	protected void SkipToEndOfInput()
@@ -212,30 +229,6 @@ public abstract class BaseParser
 			ThrowHelper.ThrowInvalidDataException("Expected the current token to be available.");
 
 		return new(this, Current);
-	}
-
-	/// <summary>Wraps a <paramref name="body"/> where each iteration is inside a loop guard scope.</summary>
-	/// <param name="condition">The condition for each iteration.</param>
-	/// <param name="body">The body of the iteration.</param>
-	protected void LoopGuard(Func<bool> condition, Action body)
-	{
-		while (condition.Invoke())
-		{
-			using (LoopGuard())
-				body.Invoke();
-		}
-	}
-
-	/// <summary>Wraps a <paramref name="body"/> where each iteration is inside a loop guard scope.</summary>
-	/// <param name="body">The body of the iteration.</param>
-	/// <remarks>The default condition will be to check <see cref="RealisticHasRemaining"/>.</remarks>
-	protected void LoopGuard(Action body)
-	{
-		while (RealisticHasRemaining)
-		{
-			using (LoopGuard())
-				body.Invoke();
-		}
 	}
 	#endregion
 

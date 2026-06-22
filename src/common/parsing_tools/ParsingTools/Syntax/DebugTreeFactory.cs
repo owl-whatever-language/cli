@@ -90,6 +90,9 @@ public class DebugTreeFactory
 				return node.IsFabricated;
 		}
 
+		if (property.Name is "Annotations")
+			return false;
+
 		if (container is ISyntaxPart && property.Name is nameof(ISyntaxPart.Lexeme))
 			return false;
 
@@ -266,7 +269,11 @@ public class DebugTreeFactory
 			labels.Remove("Source");
 
 			if (labels.Count is 1)
-				return obj.Properties.Single(p => p.Label == labels.Single()).Value;
+			{
+				IDebugTreeProperty property = obj.Properties.Single(p => p.Label == labels.Single());
+				if (property.Value is IDebugTreeObject or IDebugTreeList)
+					return property.Value;
+			}
 
 			return obj;
 		}
