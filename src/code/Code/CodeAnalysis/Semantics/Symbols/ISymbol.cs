@@ -11,7 +11,7 @@ public interface ISymbol
 public interface IDeclaredSymbol : ISymbol
 {
 	#region Properties
-	IConcreteSyntaxNode Declaration { get; }
+	IConcreteSyntaxNode Declaration { get; set; }
 	#endregion
 }
 
@@ -51,7 +51,7 @@ public sealed class DeclaredSymbol : IDeclaredSymbol
 	public ISymbolTarget Target { get; }
 
 	/// <inheritdoc/>
-	public IConcreteSyntaxNode Declaration { get; }
+	public IConcreteSyntaxNode Declaration { get; set; }
 	#endregion
 
 	#region Constructors

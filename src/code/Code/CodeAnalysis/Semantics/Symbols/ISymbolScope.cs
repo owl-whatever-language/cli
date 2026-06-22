@@ -10,8 +10,8 @@ public interface ISymbolScope : IReadOnlyCollection<ISymbol>
 
 	#region Methods
 	bool TryGetSymbol(string name, [NotNullWhen(true)] out ISymbolGroup? symbols);
-	bool TryGetSymbol(IConcreteSyntaxNode node, [NotNullWhen(true)] out ISymbol? symbol);
-	T GetTarget<T>(IConcreteSyntaxNode node) where T : notnull, ISymbolTarget;
+	bool TryGetSymbol(IConcreteSyntaxNode node, [NotNullWhen(true)] out IDeclaredSymbol? symbol);
+	T GetTarget<T>(IConcreteSyntaxNode node, out IDeclaredSymbol declaredSymbol) where T : notnull, ISymbolTarget;
 	bool TryGetChild(IConcreteSyntaxNode node, [NotNullWhen(true)] out ISymbolScope? scope);
 	ISymbolScope GetChild(IConcreteSyntaxNode node);
 	#endregion
@@ -34,7 +34,7 @@ public sealed class SymbolScope : ISymbolScope
 	private readonly Dictionary<string, SymbolGroup> _byName = [];
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	private readonly Dictionary<IConcreteSyntaxNode, ISymbol> _byNode = [];
+	private readonly Dictionary<IConcreteSyntaxNode, IDeclaredSymbol> _byNode = [];
 	#endregion
 
 	#region Properties
@@ -83,7 +83,7 @@ public sealed class SymbolScope : ISymbolScope
 	public void AddSymbol(ISymbol symbol)
 	{
 		if (symbol is IDeclaredSymbol declared)
-			_byNode.Add(declared.Declaration, symbol);
+			_byNode.Add(declared.Declaration, declared);
 		else if (symbol.Name is null)
 			ThrowHelper.ThrowArgumentException(nameof(symbol), "Symbols that aren't declared cannot have a null name.");
 
@@ -115,7 +115,7 @@ public sealed class SymbolScope : ISymbolScope
 		return false;
 	}
 
-	public bool TryGetSymbol(IConcreteSyntaxNode node, [NotNullWhen(true)] out ISymbol? symbol)
+	public bool TryGetSymbol(IConcreteSyntaxNode node, [NotNullWhen(true)] out IDeclaredSymbol? symbol)
 	{
 		if (_byNode.TryGetValue(node, out symbol))
 			return true;
@@ -127,15 +127,19 @@ public sealed class SymbolScope : ISymbolScope
 		return false;
 	}
 
-	public T GetTarget<T>(IConcreteSyntaxNode node) where T : notnull, ISymbolTarget
+	public T GetTarget<T>(IConcreteSyntaxNode node, out IDeclaredSymbol declaredSymbol) where T : notnull, ISymbolTarget
 	{
-		if (TryGetSymbol(node, out ISymbol? symbol) is false)
+		if (TryGetSymbol(node, out IDeclaredSymbol? symbol) is false)
 			ThrowHelper.ThrowInvalidOperationException($"Couldn't find a symbol for the given node, but one should've existed.");
 
 		if (symbol.Target is T typed)
+		{
+			declaredSymbol = symbol;
 			return typed;
+		}
 
 		ThrowHelper.ThrowInvalidOperationException($"The found symbol ({symbol}) did not point to the expected target type ({typeof(T).Name}).");
+		declaredSymbol = default;
 		return default;
 	}
 

@@ -3,6 +3,7 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callables;
 public interface ICallableParameter : INamedSymbolTarget
 {
 	#region Properties
+	int Index { get; }
 	ITypeInfo? Type { get; set; }
 	IFunctionParameter? Parameter { get; set; }
 	#endregion
@@ -16,6 +17,7 @@ public sealed class CallableParameter : BaseNamedSymbolTarget, ICallableParamete
 {
 	#region Properties
 	public override string Kind => "parameter";
+	public int Index { get; }
 	public ITypeInfo? Type
 	{
 		get;
@@ -29,8 +31,11 @@ public sealed class CallableParameter : BaseNamedSymbolTarget, ICallableParamete
 	#endregion
 
 	#region Constructors
-	public CallableParameter(string? name = null) : base(name) { }
-	public CallableParameter(ITypeInfo type, string? name = null) : this(name)
+	public CallableParameter(int index, string? name = null) : base(name)
+	{
+		Index = index;
+	}
+	public CallableParameter(int index, ITypeInfo type, string? name = null) : this(index, name)
 	{
 		Type = type;
 	}

@@ -150,7 +150,7 @@ public sealed class SemanticResolver : BaseConcreteToSemanticTreeConverter, IDia
 	protected override SemanticVariableDeclarationStatementSyntax Convert(IConcreteVariableDeclarationStatementSyntax concrete)
 	{
 		ISemanticTypeSyntax type = Convert(concrete.Type);
-		ILocalVariable variable = Symbols.GetTarget<ILocalVariable>(concrete);
+		ILocalVariable variable = Symbols.GetTarget<ILocalVariable>(concrete, out IDeclaredSymbol declared);
 		variable.Type = type.TypeInfo;
 		variable.Lock();
 
@@ -159,11 +159,14 @@ public sealed class SemanticResolver : BaseConcreteToSemanticTreeConverter, IDia
 		ISemanticExpressionSyntax value = Convert(concrete.Value);
 		SemanticToken terminator = Convert(concrete.Terminator);
 
-		return new(type, name, assignment, value, terminator, variable);
+		SemanticVariableDeclarationStatementSyntax semantic = new(type, name, assignment, value, terminator, variable);
+		declared.Declaration = semantic;
+
+		return semantic;
 	}
 	protected override SemanticFunctionDeclarationStatementSyntax Convert(IConcreteFunctionDeclarationStatementSyntax concrete)
 	{
-		IFunction function = Symbols.GetTarget<IFunction>(concrete);
+		IFunction function = Symbols.GetTarget<IFunction>(concrete, out IDeclaredSymbol declared);
 		using (WithValue(ref _targetFunction, function))
 		using (WithValue(ref _parameterIndex, -1))
 		using (EnterScope(concrete))
@@ -177,7 +180,10 @@ public sealed class SemanticResolver : BaseConcreteToSemanticTreeConverter, IDia
 
 			function.Lock();
 
-			return new(name, start, parameters, end, @return, body, function);
+			SemanticFunctionDeclarationStatementSyntax semantic = new(name, start, parameters, end, @return, body, function);
+			declared.Declaration = semantic;
+
+			return semantic;
 		}
 	}
 	#endregion
@@ -186,14 +192,20 @@ public sealed class SemanticResolver : BaseConcreteToSemanticTreeConverter, IDia
 	protected override ISemanticFunctionParameterSyntax Convert(IConcreteFunctionParameterSyntax concrete)
 	{
 		_parameterIndex++;
-		return base.Convert(concrete);
+		ISemanticFunctionParameterSyntax semantic = base.Convert(concrete);
+
+		_ = Symbols.GetTarget<IFunctionParameter>(concrete, out IDeclaredSymbol declared);
+		declared.Declaration = semantic;
+
+		return semantic;
 	}
 	protected override SemanticRegularFunctionParameterSyntax Convert(IConcreteRegularFunctionParameterSyntax concrete)
 	{
 		ICallableParameter? callable = _targetFunction?.Callable?.Parameters[_parameterIndex];
 
 		ISemanticTypeSyntax type = Convert(concrete.Type);
-		IFunctionParameter parameter = Symbols.GetTarget<IFunctionParameter>(concrete);
+		IFunctionParameter parameter = Symbols.GetTarget<IFunctionParameter>(concrete, out _);
+
 		parameter.Type = type.TypeInfo;
 		parameter.Lock();
 

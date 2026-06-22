@@ -109,10 +109,11 @@ public sealed class SymbolCollector : BaseConcreteVisitor
 	{
 		List<CallableParameter> parameters = [];
 
-		foreach (IConcreteFunctionParameterSyntax decl in node.Parameters.Values)
+		for (int i = 0; i < node.Parameters.Values.Count; i++)
 		{
+			IConcreteFunctionParameterSyntax decl = node.Parameters.Values[i];
 			string? name = decl.Name.Value as string;
-			CallableParameter param = new(name);
+			CallableParameter param = new(i, name);
 
 			parameters.Add(param);
 		}
