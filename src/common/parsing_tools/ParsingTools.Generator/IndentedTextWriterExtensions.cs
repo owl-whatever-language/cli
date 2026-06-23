@@ -150,13 +150,16 @@ internal static class IndentedTextWriterExtensions
 
 			return true;
 		}
-		public bool WriteClassProperties(IEnumerable<StructuredMemberInfo> members) => WriteClassProperties(writer, members.ToArray());
-		public bool WriteClassProperties(IReadOnlyList<StructuredMemberInfo> members)
+		public bool WriteClassProperties(IEnumerable<StructuredMemberInfo> members, bool skipRegion = false)
+		{
+			return WriteClassProperties(writer, members.ToArray(), skipRegion: skipRegion);
+		}
+		public bool WriteClassProperties(IReadOnlyList<StructuredMemberInfo> members, bool skipRegion = false)
 		{
 			if (members.Count is 0)
 				return false;
 
-			using (writer.Region("Properties"))
+			using (skipRegion ? null : (RegionScope?)writer.Region("Properties"))
 			{
 				foreach (StructuredMemberInfo member in members)
 				{

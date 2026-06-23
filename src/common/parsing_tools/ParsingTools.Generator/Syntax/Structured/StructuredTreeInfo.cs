@@ -8,6 +8,7 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 
 	#region Properties
 	public Name Kind { get; }
+	public int Level => Shadows?.Level + 1 ?? 1;
 	public string RootNamespace { get; }
 	public string Namespace { get; }
 	public StructuredTokenInfo Token { get; }

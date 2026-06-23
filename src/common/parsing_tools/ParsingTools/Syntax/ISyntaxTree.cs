@@ -3,6 +3,8 @@ namespace OwlDomain.ParsingTools.Syntax;
 public interface ISyntaxTree
 {
 	#region Properties
+	string Kind { get; }
+	int Level { get; }
 	ISourceFile Source { get; }
 	#endregion
 }
@@ -11,6 +13,8 @@ public interface ISyntaxTree
 public abstract class BaseSyntaxTree : ISyntaxTree
 {
 	#region Properties
+	public abstract string Kind { get; }
+	public abstract int Level { get; }
 	public ISourceFile Source { get; }
 	#endregion
 

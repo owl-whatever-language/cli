@@ -26,6 +26,9 @@ public class SyntaxList<TValue> : ISyntaxList<TValue>
 	#endregion
 
 	#region Properties
+	public SyntaxNodeKind NodeKind => new(null, "syntax_list", null);
+	public int Level => 0;
+
 	/// <inheritdoc/>
 	[DisallowNull]
 	public virtual ISyntaxNode? Parent
@@ -94,6 +97,9 @@ public class SyntaxList<TValue, TSeparator> : ISyntaxList<TValue, TSeparator>
 	where TSeparator : class, ISyntaxNode
 {
 	#region Properties
+	public SyntaxNodeKind NodeKind => new(null, "syntax_list", null);
+	public int Level => 0;
+
 	/// <inheritdoc/>
 	[DisallowNull]
 	public ISyntaxNode? Parent

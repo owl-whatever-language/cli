@@ -3,6 +3,9 @@ namespace OwlDomain.ParsingTools.Syntax;
 public interface ISyntaxNode
 {
 	#region Properties
+	SyntaxNodeKind NodeKind { get; }
+	int Level { get; }
+
 	[DisallowNull]
 	ISyntaxNode? Parent { get; set; }
 	IndexedPositionRange Position { get; }
@@ -19,6 +22,9 @@ public interface ISyntaxNode
 public abstract class BaseSyntaxNode : ISyntaxNode
 {
 	#region Properties
+	public abstract SyntaxNodeKind NodeKind { get; }
+	public abstract int Level { get; }
+
 	/// <inheritdoc/>
 	[DisallowNull]
 	public ISyntaxNode? Parent

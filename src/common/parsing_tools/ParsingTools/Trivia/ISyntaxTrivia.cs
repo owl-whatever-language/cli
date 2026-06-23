@@ -8,6 +8,9 @@ public interface ISyntaxTrivia : ISyntaxPart
 public sealed class SyntaxTrivia : ISyntaxTrivia
 {
 	#region Properties
+	public SyntaxNodeKind NodeKind => new(null, Kind.Name, Kind.Category.Name);
+	public int Level => 0;
+
 	/// <inheritdoc/>
 	public SyntaxKind Kind { get; }
 

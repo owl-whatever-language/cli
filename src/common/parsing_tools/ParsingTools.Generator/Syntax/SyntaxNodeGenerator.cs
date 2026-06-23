@@ -213,8 +213,17 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 			using (writer.ClassPreamble(token.Class))
 			{
-				if (writer.WriteClassProperties(token.ClassMembers))
-					writer.WriteLine();
+				using (writer.Region("Properties", lineAfter: true))
+				{
+					writer.WriteLine($"protected override string? TreeKind => {$"\"{token.Kind.Original}\""};");
+					writer.WriteLine($"public override int Level => {token.Tree.Level};");
+
+					if (token.ClassMembers.Any())
+						writer.WriteLine();
+
+					writer.WriteClassProperties(token.ClassMembers, skipRegion: true);
+				}
+
 
 				using (writer.Region("Constructors"))
 				{
@@ -276,6 +285,10 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			}
 			using (writer.ClassPreamble(node.Class))
 			{
+				using (writer.Region("Properties"))
+				{
+					writer.WriteLine($"public sealed override int Level => {node.Tree.Level};");
+				}
 			}
 			using (writer.TypePreamble())
 			{
@@ -310,8 +323,16 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 			using (writer.ClassPreamble(info.Class))
 			{
-				if (writer.WriteClassProperties(info.Members))
-					writer.WriteLine();
+				using (writer.Region("Properties", true))
+				{
+					writer.WriteLine($"public override string Kind => \"{info.Kind.Original}\";");
+					writer.WriteLine($"public override int Level => {info.Level};");
+
+					if (info.Members.Any())
+						writer.WriteLine();
+
+					writer.WriteClassProperties(info.Members, skipRegion: true);
+				}
 
 				using (writer.Region("Constructors", lineAfter: true))
 				{
@@ -361,8 +382,19 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 			using (writer.ClassPreamble(info.Class))
 			{
-				if (writer.WriteClassProperties(info.ClassMembers))
-					writer.WriteLine();
+				using (writer.Region("Properties", lineAfter: true))
+				{
+					string treeKind = $"\"{info.Kind.Original}\"";
+					string nodeKind = $"\"{info.Name.Original}\"";
+					string? groupKind = info.Group is null ? "null" : $"\"{info.Group.Name.Original}\"";
+
+					writer.WriteLine($"public override SyntaxNodeKind NodeKind => new({treeKind}, {nodeKind}, {groupKind});");
+
+					if (info.ClassMembers.Any())
+						writer.WriteLine();
+
+					writer.WriteClassProperties(info.ClassMembers, skipRegion: true);
+				}
 
 				using (writer.Region("Constructors", lineAfter: true))
 				{
