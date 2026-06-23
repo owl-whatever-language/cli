@@ -213,7 +213,7 @@ public abstract class BaseParser
 			return;
 		}
 
-		SyntaxTrivia newTrivia = new(badSyntax);
+		BadSyntaxTrivia newTrivia = new(badSyntax);
 		TriviaList newList = new([newTrivia, .. Current.LeadingTrivia]);
 
 		SyntaxToken typed = (SyntaxToken)Current;

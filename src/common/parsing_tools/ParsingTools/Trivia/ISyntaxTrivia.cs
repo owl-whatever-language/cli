@@ -4,6 +4,13 @@ public interface ISyntaxTrivia : ISyntaxPart
 {
 }
 
+public interface IBadSyntaxTrivia : ISyntaxTrivia
+{
+	#region Properties
+	ISyntaxNode BadSyntax { get; set; }
+	#endregion
+}
+
 [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public sealed class SyntaxTrivia : ISyntaxTrivia
 {
@@ -61,31 +68,83 @@ public sealed class SyntaxTrivia : ISyntaxTrivia
 
 		IsFabricated = true;
 	}
-	public SyntaxTrivia(ISyntaxNode badSyntax)
+	#endregion
+
+	#region Methods
+	public IEnumerable<ISyntaxNode> GetChildren() => [];
+	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"Trivia({Kind}): {Lexeme}";
+	#endregion
+}
+
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
+public sealed class BadSyntaxTrivia : IBadSyntaxTrivia
+{
+	#region Properties
+	public SyntaxNodeKind NodeKind => new(null, Kind.Name, Kind.Category.Name);
+	public int Level => 0;
+
+	/// <inheritdoc/>
+	public SyntaxKind Kind { get; }
+
+	/// <inheritdoc/>
+	[DisallowNull]
+	public ISyntaxNode? Parent { get; set; }
+
+	/// <inheritdoc/>
+	public IndexedPositionRange Position => BadSyntax.Position;
+
+	/// <inheritdoc/>
+	public IndexedPositionRange FullPosition => BadSyntax.FullPosition;
+
+	/// <inheritdoc/>
+	public string? Lexeme => null;
+
+	/// <inheritdoc/>
+	public object? Value => null;
+
+	/// <inheritdoc/>
+	public bool IsFabricated => true;
+
+	/// <inheritdoc/>
+	public ClassificationKind? Classification => null;
+
+	/// <inheritdoc/>
+	public ISyntaxNode BadSyntax
 	{
-		Kind = SyntaxKind.BadSyntax;
+		get;
+		set
+		{
+			if (field is not null) // Note(Nightowl): First set from the constructor;
+			{
+				if (value.NodeKind.WithGroup != field.NodeKind.WithGroup)
+					ThrowHelper.ThrowArgumentException(nameof(value), "The bad syntax can only be shadowed by a node of the same kind.");
 
-		Position = badSyntax.Position;
-		FullPosition = badSyntax.FullPosition;
-		Value = badSyntax;
+				if (value.Level <= field.Level)
+					ThrowHelper.ThrowArgumentException(nameof(value), "The bad syntax can only be shadowed by a node with a higher level.");
+			}
 
-		IsFabricated = true;
+			field = value;
+		}
+	}
+	#endregion
+
+	#region Constructors
+	public BadSyntaxTrivia(ISyntaxNode badSyntax)
+	{
+		BadSyntax = badSyntax;
 
 		// Note(Nightowl): We purposefully don't assign the badSyntax's parent because we won't be able to replace it;
 	}
 	#endregion
 
 	#region Methods
-	public IEnumerable<ISyntaxNode> GetChildren()
-	{
-		if (Value is ISyntaxNode node)
-			return [node];
-
-		return [];
-	}
+	public IEnumerable<ISyntaxNode> GetChildren() => [BadSyntax];
 	#endregion
 
 	#region Helpers
-	private string DebuggerDisplay() => $"Trivia({Kind}): {Lexeme}";
+	private string DebuggerDisplay() => $"{nameof(BadSyntaxTrivia)}({BadSyntax.NodeKind})";
 	#endregion
 }

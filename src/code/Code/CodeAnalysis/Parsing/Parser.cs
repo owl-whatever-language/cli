@@ -144,6 +144,12 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	}
 	protected override ISyntaxNode? TryParseBadSyntax()
 	{
+		// Note(Nightowl): Bad syntax parsing should only be done on things that will start with a keyword;
+		ISyntaxNode? attempt = TryParseLocalFunctionDeclaration();
+
+		if (attempt is not null)
+			return attempt;
+
 		ISyntaxToken? current = Current;
 		if (current is not null)
 			Advance();
