@@ -22,6 +22,17 @@ public sealed class InterpretingResult : IStageResultPerformance, IStageResultDi
 public sealed class Interpreter : IDiagnosticProvider
 {
 	#region Nested types
+	private readonly struct TypedValue(ITypeInfo type, object? value)
+	{
+		#region Properties
+		public ITypeInfo Type { get; } = type;
+		public object? Value { get; } = value;
+		#endregion
+
+		#region Conversions
+		public static implicit operator TypedValue(string? value) => new(SpecialTypes.Text, value);
+		#endregion
+	}
 	private sealed class RuntimeException : Exception
 	{
 		#region Properties
@@ -38,18 +49,18 @@ public sealed class Interpreter : IDiagnosticProvider
 	private sealed class FunctionReturnException : Exception
 	{
 		#region Properties
-		public object? Value { get; }
+		public TypedValue Value { get; }
 		#endregion
 
 		#region Constructors
-		public FunctionReturnException(object? value) => Value = value;
+		public FunctionReturnException(TypedValue value) => Value = value;
 		#endregion
 	}
 	private sealed class VariableStore
 	{
 		#region Properties
 		public VariableStore? Parent { get; }
-		public Dictionary<INamedSymbolTarget, object?> Values { get; } = [];
+		public Dictionary<INamedSymbolTarget, TypedValue> Values { get; } = [];
 		#endregion
 
 		#region Constructors
@@ -60,7 +71,7 @@ public sealed class Interpreter : IDiagnosticProvider
 		#endregion
 
 		#region Methods
-		public bool TryGetValue(INamedSymbolTarget variable, out object? value)
+		public bool TryGetValue(INamedSymbolTarget variable, out TypedValue value)
 		{
 			if (Values.TryGetValue(variable, out value))
 				return true;
@@ -115,6 +126,9 @@ public sealed class Interpreter : IDiagnosticProvider
 		}
 		catch (RuntimeException exception)
 		{
+			if (Debugger.IsAttached)
+				throw;
+
 			if (exception.Node is not null)
 				Console.Error.WriteLine($"Runtime error occurred on {exception.Node.Position}, check the diagnostics for more details.");
 
@@ -157,9 +171,15 @@ public sealed class Interpreter : IDiagnosticProvider
 	}
 	private void Interpret(IFinalVariableDeclarationStatementSyntax declaration)
 	{
-		object? value = Evaluate(declaration.Value);
+		TypedValue value = Evaluate(declaration.Value);
+		ILocalVariable variable = declaration.Variable;
 
-		if (Variables.Values.TryAdd(declaration.Variable, value) is false)
+		if (variable.Type is not null && value.Type.CanAssignTo(variable.Type) is false)
+		{
+			AddError("incompatible_value_type", declaration.Value.Position, $"The type '{value.Type}' cannot be assigned to a variable with the type '{variable.Type}'.");
+			throw new RuntimeException(declaration.Value);
+		}
+		else if (Variables.Values.TryAdd(declaration.Variable, value) is false)
 		{
 			AddError("duplicate_variable", declaration.Name.Position, $"The '{declaration.Variable.Name}' variable has already been set.");
 			throw new RuntimeException(declaration);
@@ -168,7 +188,7 @@ public sealed class Interpreter : IDiagnosticProvider
 	#endregion
 
 	#region Evaluate methods
-	private object? Evaluate(IFinalExpressionSyntax expression)
+	private TypedValue Evaluate(IFinalExpressionSyntax expression)
 	{
 		return expression switch
 		{
@@ -177,39 +197,47 @@ public sealed class Interpreter : IDiagnosticProvider
 			IFinalGetExpressionSyntax get => Evaluate(get),
 			IFinalFunctionCallExpressionSyntax call => Evaluate(call),
 
-			_ => ThrowHelper.ThrowNotSupportedException<object>($"The expression '{expression.GetType().Name}' is not supported by the interpreter, this is likely a bug.")
+			_ => ThrowHelper.ThrowNotSupportedException<TypedValue>($"The expression '{expression.GetType().Name}' is not supported by the interpreter, this is likely a bug.")
 		};
 	}
-	private object? Evaluate(IFinalStringLiteralExpressionSyntax expression) => expression.Value;
-	private object? Evaluate(IFinalInterpolatedStringExpressionSyntax expression)
+	private TypedValue Evaluate(IFinalStringLiteralExpressionSyntax expression) => expression.Value;
+	private TypedValue Evaluate(IFinalInterpolatedStringExpressionSyntax expression)
 	{
 		StringBuilder builder = new();
 
 		foreach (IFinalStringFragmentSyntax fragment in expression.Fragments)
 		{
-			object? value = Evaluate(fragment);
-			string? str = value is string s ? s : value?.ToString();
+			TypedValue value = Evaluate(fragment);
+			string? str = value.Value is string s ? s : value.Value?.ToString();
 
 			builder.Append(str);
 		}
 
 		return builder.ToString();
 	}
-	private object? Evaluate(IFinalStringFragmentSyntax fragment)
+	private TypedValue Evaluate(IFinalStringFragmentSyntax fragment)
 	{
 		return fragment switch
 		{
-			IFinalRegularStringFragmentSyntax regular => regular.Text.Value,
-			IFinalEscapedStringFragmentSyntax escaped => escaped.Sequence.Value,
-			IFinalEscapedHexStringFragmentSyntax escaped => escaped.Sequence.Value,
+			IFinalRegularStringFragmentSyntax regular => (string?)regular.Text.Value,
+			IFinalEscapedStringFragmentSyntax escaped => (string?)escaped.Sequence.Value,
+			IFinalEscapedHexStringFragmentSyntax escaped => (string?)escaped.Sequence.Value,
 			IFinalInterpolatedStringFragmentSyntax interpolated => Evaluate(interpolated.Value),
 
-			_ => ThrowHelper.ThrowNotSupportedException<object>($"The string fragment '{fragment.GetType().Name}' is not supported by the interpreter, this is likely a bug.")
+			_ => ThrowHelper.ThrowNotSupportedException<TypedValue>($"The string fragment '{fragment.GetType().Name}' is not supported by the interpreter, this is likely a bug.")
 		};
 	}
-	private object? Evaluate(IFinalGetExpressionSyntax expression)
+	private TypedValue Evaluate(IFinalGetExpressionSyntax expression)
 	{
-		INamedSymbolTarget? lookup = expression.Symbol?.Target switch
+		ISymbolTarget? target = expression.Symbol?.Target;
+
+		if (target is IFunction function)
+		{
+			Debug.Assert(function.Callable is not null);
+			return new(function.Callable, function.Callable);
+		}
+
+		INamedSymbolTarget? lookup = target switch
 		{
 			ILocalVariable variable => variable,
 			IFunctionParameter parameter => parameter,
@@ -219,30 +247,25 @@ public sealed class Interpreter : IDiagnosticProvider
 
 		if (lookup is not null)
 		{
-			if (Variables.TryGetValue(lookup, out object? value))
+			if (Variables.TryGetValue(lookup, out TypedValue value))
 				return value;
-
-			AddError("variable_not_defined", expression.Position, $"The value '{lookup.Name}' has not been defined yet.");
-			throw new RuntimeException(expression);
 		}
 
-		return expression.Symbol?.Target;
+		AddError("variable_not_defined", expression.Position, $"The value '{target?.Symbol.Name}' has not been defined yet.");
+		throw new RuntimeException(expression);
 	}
-	private object? Evaluate(IFinalFunctionCallExpressionSyntax expression)
+	private TypedValue Evaluate(IFinalFunctionCallExpressionSyntax expression)
 	{
-		object? value = Evaluate(expression.Expression);
-		if (value is IFunction function)
-			value = function.Callable;
-
-		if (value is not ICallable callable)
+		TypedValue value = Evaluate(expression.Expression);
+		if (value.Value is not ICallable callable)
 		{
-			AddError("not_callable", expression.Expression.Position, $"The value ({value?.GetType().Name}) '{value}' cannot be called.");
+			AddError("not_callable", expression.Expression.Position, $"The value ({value.GetType().Name}) '{value}' cannot be called.");
 			throw new RuntimeException(expression.Start);
 		}
 
 		Debug.Assert(callable.Function is not null);
 
-		object?[] arguments = new object?[callable.Parameters.Count];
+		TypedValue[] arguments = new TypedValue[callable.Parameters.Count];
 		for (int i = 0; i < expression.Arguments.Values.Count; i++)
 		{
 			IFinalFunctionArgumentSyntax argument = expression.Arguments.Values[i];
@@ -267,15 +290,14 @@ public sealed class Interpreter : IDiagnosticProvider
 			ThrowHelper.ThrowNotSupportedException($"The function argument '{argument.GetType().Name}' is not supported by the interpreter, this is likely a bug.");
 		}
 
-		object? result = Evaluate(callable, arguments);
+		TypedValue result = Evaluate(callable, arguments);
 		return result;
 	}
-	private object? Evaluate(ICallable callable, IReadOnlyList<object?> arguments)
+	private TypedValue Evaluate(ICallable callable, IReadOnlyList<TypedValue> arguments)
 	{
 		if (callable.Function == SpecialFunctions.Print)
 		{
-			string? text = (string?)arguments[0];
-			Debug.Assert(text is not null);
+			string? text = arguments[0].Value?.ToString();
 			Console.WriteLine(text);
 
 			return null;
@@ -288,7 +310,7 @@ public sealed class Interpreter : IDiagnosticProvider
 		return default;
 	}
 
-	private object? Evaluate(IFinalFunctionDeclarationStatementSyntax declaration, IReadOnlyList<object?> arguments)
+	private TypedValue Evaluate(IFinalFunctionDeclarationStatementSyntax declaration, IReadOnlyList<TypedValue> arguments)
 	{
 		Debug.Assert(arguments.Count == declaration.Parameters.Values.Count);
 
@@ -326,7 +348,7 @@ public sealed class Interpreter : IDiagnosticProvider
 				return;
 
 			case IFinalShortFunctionBodySyntax @short:
-				object? value = Evaluate(@short.Expression);
+				TypedValue value = Evaluate(@short.Expression);
 				throw new FunctionReturnException(value);
 
 			case IFinalBlockFunctionBodySyntax block:
