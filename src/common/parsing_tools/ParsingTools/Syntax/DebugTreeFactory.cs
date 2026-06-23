@@ -93,6 +93,12 @@ public class DebugTreeFactory
 		if (property.Name is "Annotations")
 			return false;
 
+		if (container is ISyntaxNode && property.Name is nameof(ISyntaxNode.NodeKind) or nameof(ISyntaxNode.Level))
+			return false;
+
+		if (container is ISyntaxTree && property.Name is nameof(ISyntaxTree.Kind) or nameof(ISyntaxTree.Level))
+			return false;
+
 		if (container is ISyntaxPart && property.Name is nameof(ISyntaxPart.Lexeme))
 			return false;
 
@@ -315,8 +321,13 @@ public class DebugTreeFactory
 		if (type.IsSyntaxListNode() || type.IsSeparatedSyntaxListNode())
 			return;
 
-		if (value is (ISyntaxNode or ISyntaxTree) and not ISyntaxPart)
-			target.Add("Kind", value.GetType().Name);
+		if (value is not ISyntaxPart)
+		{
+			if (value is ISyntaxNode node)
+				target.Add("Kind", node.NodeKind.WithGroup);
+			else if (value is ISyntaxTree tree)
+				target.Add("Kind", tree.Kind);
+		}
 	}
 	protected virtual void AddSource(DebugTreeObject target, object value)
 	{
