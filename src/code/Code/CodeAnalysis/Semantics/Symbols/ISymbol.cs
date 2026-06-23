@@ -51,7 +51,23 @@ public sealed class DeclaredSymbol : IDeclaredSymbol
 	public ISymbolTarget Target { get; }
 
 	/// <inheritdoc/>
-	public IConcreteSyntaxNode Declaration { get; set; }
+	public IConcreteSyntaxNode Declaration
+	{
+		get;
+		set
+		{
+			if (field is not null) // Note(Nightowl): First set from the constructor;
+			{
+				if (value.NodeKind.WithGroup != field.NodeKind.WithGroup)
+					ThrowHelper.ThrowArgumentException(nameof(value), "The symbol declaration can only be shadowed by a node of the same kind.");
+
+				if (value.Level <= field.Level)
+					ThrowHelper.ThrowArgumentException(nameof(value), "The symbol declaration can only be shadowed by a node with a higher level.");
+			}
+
+			field = value;
+		}
+	}
 	#endregion
 
 	#region Constructors
