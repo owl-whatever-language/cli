@@ -178,6 +178,7 @@ public sealed class SemanticResolver : BaseConcreteToSemanticTreeConverter, IDia
 			ISemanticFunctionReturnSyntax @return = Convert(concrete.Return);
 			ISemanticFunctionBodySyntax body = Convert(concrete.Body);
 
+			function.Callable?.Lock();
 			function.Lock();
 
 			SemanticFunctionDeclarationStatementSyntax semantic = new(name, start, parameters, end, @return, body, function);

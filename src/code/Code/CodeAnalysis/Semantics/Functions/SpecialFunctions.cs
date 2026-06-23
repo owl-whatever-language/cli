@@ -13,7 +13,7 @@ public static class SpecialFunctions
 		Function function = new("print");
 		CallableReturn @return = new CallableReturn(SpecialTypes.Void).Lock();
 		CallableParameter parameter = new CallableParameter(0, SpecialTypes.Text, "text").WithSymbol("text").Lock();
-		Callable callable = new(function, [parameter], @return);
+		Callable callable = new Callable(function, [parameter], @return).Lock();
 
 		return function.WithCallable(callable).WithSymbol("print").Lock();
 	}

@@ -16,6 +16,11 @@ public sealed class NamedTypeInfo : BaseNamedSymbolTarget, INamedTypeInfo
 
 	#region Methods
 	public override string ToString() => Name ?? "???";
-	public bool CanAssignTo(ITypeInfo target) => target == this;
+	public bool CanAssignTo(ITypeInfo target)
+	{
+		ThrowIfMutable();
+
+		return target == this;
+	}
 	#endregion
 }

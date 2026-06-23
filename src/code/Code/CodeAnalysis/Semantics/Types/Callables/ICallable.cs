@@ -2,23 +2,21 @@ using System.Text;
 
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callables;
 
-public interface ICallable : ITypeInfo
+public interface ICallable : IMutableTarget, ITypeInfo
 {
 	#region Properties
 	IFunction? Function { get; }
 	IReadOnlyList<ICallableParameter> Parameters { get; }
 	ICallableReturn Return { get; }
-	bool IsMutable { get; }
 	#endregion
 }
 
-public sealed class Callable : ICallable
+public sealed class Callable : BaseMutableTarget, ICallable
 {
 	#region Properties
 	public IFunction? Function { get; }
 	public IReadOnlyList<ICallableParameter> Parameters { get; }
 	public ICallableReturn Return { get; }
-	public bool IsMutable => Return.IsMutable || Parameters.Any(p => p.IsMutable);
 	#endregion
 
 	#region Constructors
@@ -32,8 +30,23 @@ public sealed class Callable : ICallable
 	#endregion
 
 	#region Methods
+	protected override void ValidateImmutableState()
+	{
+		if (Return.IsMutable)
+			ThrowHelper.ThrowInvalidOperationException("The callable cannot be locked as the return is still mutable.");
+
+		foreach (ICallableParameter parameter in Parameters)
+		{
+			if (parameter.IsMutable)
+				ThrowHelper.ThrowInvalidOperationException($"The callable cannot be locked as the parameter ({parameter}) is still mutable.");
+		}
+
+		base.ValidateImmutableState();
+	}
 	public bool CanAssignTo(ITypeInfo target)
 	{
+		ThrowIfMutable();
+
 		if (target is not ICallable other)
 			return false;
 

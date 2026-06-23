@@ -39,7 +39,14 @@ public abstract class BaseMutableTarget : IMutableTarget
 	protected void ThrowIfImmutable()
 	{
 		if (IsMutable is false)
-			ThrowHelper.ThrowInvalidOperationException();
+			ThrowHelper.ThrowInvalidOperationException("The symbol target is no longer mutable.");
+	}
+
+	/// <summary>Throws the <see cref="InvalidOperationException"/> if the target is still mutable.</summary>
+	protected void ThrowIfMutable()
+	{
+		if (IsMutable)
+			ThrowHelper.ThrowInvalidOperationException("The symbol target is still mutable.");
 	}
 
 	/// <summary>Valid the state of the target to ensure it can be marked as immutable.</summary>
