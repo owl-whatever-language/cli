@@ -73,6 +73,9 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 	{
 		IndentedTextWriter writer = GetWriter(out StringWriter result);
 
+		StructuredTreeInfo leastDetailed = order.First();
+		StructuredTreeInfo mostDetailed = order.Last();
+
 		using (writer.Preamble(order.First().RootNamespace))
 		{
 			using (writer.TypePreamble()) // interface
@@ -83,8 +86,14 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 					using (writer.Region("Properties"))
 					{
 						writer.WriteLine("ISourceFile Source { get; }");
+
+
+						writer.WriteLine($"{leastDetailed.Interface.Name}? LeastDetailed {{ get; }}");
+
 						foreach (StructuredTreeInfo tree in order)
 							writer.WriteLine($"{tree.Interface.Name}? {tree.Kind.Pascal} {{ get; }}");
+
+						writer.WriteLine($"{mostDetailed.Interface.Name}? MostDetailed {{ get; }}");
 					}
 				}
 			}
@@ -103,6 +112,8 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 					using (writer.Region("Properties"))
 					{
 						writer.WriteLine("public ISourceFile Source { get; }");
+						writer.WriteLine($"public {leastDetailed.Interface.Name}? LeastDetailed => {leastDetailed.Kind.Pascal};");
+
 						foreach (StructuredTreeInfo tree in order)
 						{
 							writer.WriteLine($"public {tree.Interface.Name}? {tree.Kind.Pascal}");
@@ -140,6 +151,8 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 								}
 							}
 						}
+
+						writer.WriteLine($"public {mostDetailed.Interface.Name}? MostDetailed => {mostDetailed.Kind.Pascal};");
 					}
 					writer.WriteLine();
 					using (writer.Region("Constructors"))
@@ -175,7 +188,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 							if (tree.Shadows is null)
 								continue;
 
-							writer.WriteLine($"private static void Validate{tree.Kind.Pascal}To{tree.Kind.Pascal}()");
+							writer.WriteLine($"private static void Validate{tree.Kind.Pascal}To{tree.Shadows.Kind.Pascal}()");
 							using (writer.Braced())
 							{
 								writer.WriteLine($"{tree.Shadows.Token.Interface.Name}? n0 = ({tree.Token.Interface.Name}?)null;");
@@ -185,7 +198,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 									if (node.Shadows is null)
 										throw new InvalidOperationException("A node with a shadow was expected.");
 
-									writer.WriteLine($"{node.Shadows?.Interface.Name}? n{i + 1} = ({node.Interface.Name}?)null;");
+									writer.WriteLine($"{node.Shadows.Interface.Name}? n{i + 1} = ({node.Interface.Name}?)null;");
 								}
 							}
 						}
