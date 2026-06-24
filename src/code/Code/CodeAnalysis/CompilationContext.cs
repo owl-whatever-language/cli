@@ -11,7 +11,7 @@ public sealed class CompilationUpdateResult : IStageResultPerformance, IStageRes
 	#region Constructors
 	public CompilationUpdateResult(
 		IPerformanceResult performance,
-		IReadOnlyCollection<IStageResult> children)
+		params IReadOnlyCollection<IStageResult> children)
 	{
 		Performance = performance;
 		Children = children;
@@ -26,7 +26,18 @@ public class CompilationContext
 	#endregion
 
 	#region Properties
+	public ISymbolScope BaseScope { get; }
 	public IReadOnlyDictionary<ISourceFile, ISyntaxTreeBundle> Trees => _trees.ToDictionary(pair => pair.Key, pair => (ISyntaxTreeBundle)pair.Value);
+	public IReadOnlyCollection<IConcreteSyntaxTree> Concrete => GetConcreteTrees().ToArray();
+	public IReadOnlyCollection<ISemanticSyntaxTree> Semantic => GetSemanticTrees().ToArray();
+	public IReadOnlyCollection<IConcreteSyntaxTree> Final => GetFinalTrees().ToArray();
+	#endregion
+
+	#region Constructors
+	public CompilationContext(ISymbolScope baseScope)
+	{
+		BaseScope = baseScope;
+	}
 	#endregion
 
 	#region Methods
@@ -59,8 +70,10 @@ public class CompilationContext
 			bundle.Concrete = result.Parsing.Tree;
 		}
 
-		IReadOnlyCollection<IConcreteSyntaxTree> concrete = GetConcreteTrees().ToArray();
-		return new(performance, [parsingResult]);
+		SymbolCollectionResult collectionResult = SymbolCollector.Collect(BaseScope, Concrete);
+
+
+		return new(performance, parsingResult, collectionResult);
 	}
 	#endregion
 
@@ -83,6 +96,16 @@ public class CompilationContext
 				ThrowHelper.ThrowInvalidOperationException("Expected the semantic tree to be set.");
 
 			yield return bundle.Semantic;
+		}
+	}
+	private IEnumerable<IFinalSyntaxTree> GetFinalTrees()
+	{
+		foreach (ISyntaxTreeBundle bundle in _trees.Values)
+		{
+			if (bundle.Final is null)
+				ThrowHelper.ThrowInvalidOperationException("Expected the final tree to be set.");
+
+			yield return bundle.Final;
 		}
 	}
 	#endregion

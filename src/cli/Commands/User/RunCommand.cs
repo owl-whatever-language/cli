@@ -1,4 +1,5 @@
 using System.IO;
+using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Builtins;
 
 namespace OwlDomain.Owl.CLI.Commands.User;
 
@@ -24,13 +25,18 @@ public sealed class RunCommand : Command<RunCommand.Settings>
 
 		FileSystemSourceFile source = new(settings.File);
 
-		CompilationContext compilation = new();
+		BuiltinResolutionResult builtinResult = BuiltinResolver.Resolve();
+
+		CompilationContext compilation = new(builtinResult.ResultScope);
 		CompilationUpdateResult compilationResult = compilation.Update(added: [source]);
 
 		IFinalSyntaxTree? tree = compilation.Trees.Values.Single().Final;
-		if (tree is null || compilationResult.GetAllDiagnostics().Any())
+
+		IStageResult[] results = [builtinResult, compilationResult];
+
+		if (tree is null || results.GetAllDiagnostics().Any())
 		{
-			Display(compilationResult.GetAllDiagnostics());
+			Display(results.GetAllDiagnostics());
 			return -1;
 		}
 
