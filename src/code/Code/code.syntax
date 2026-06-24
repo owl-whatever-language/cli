@@ -1,19 +1,19 @@
 namespace : OwlDomain.Owl.Code.CodeAnalysis.Syntax
 
 # Define the shadowing
-shadow : concrete symbolic semantic final
+shadow : concrete symbolic semantic annotated
 
 # Define what's on the tokens
 token concrete
 token symbolic
 token semantic
-token final
+token annotated
 
 # Define the trees, and what each node in that tree can have
 tree concrete
 tree symbolic
 tree semantic
-tree final
+tree annotated
 
 # Defines the root node of the tree
 document : list<statement> statements, token end_of_input

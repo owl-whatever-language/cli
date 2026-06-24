@@ -1,20 +1,20 @@
-namespace OwlDomain.Owl.Code.CodeAnalysis.Syntax.Final;
+namespace OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated;
 
-partial interface IFinalSyntaxNode
+partial interface IAnnotatedSyntaxNode
 {
 	#region Properties
 	ICodeAnnotations Annotations { get; }
 	#endregion
 }
 
-partial class BaseFinalSyntaxNode
+partial class BaseAnnotatedSyntaxNode
 {
 	#region Properties
 	public ICodeAnnotations Annotations { get; } = new CodeAnnotations();
 	#endregion
 }
 
-partial class FinalToken
+partial class AnnotatedToken
 {
 	#region Properties
 	public ICodeAnnotations Annotations { get; } = new CodeAnnotations();

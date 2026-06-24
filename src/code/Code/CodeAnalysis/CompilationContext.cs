@@ -31,7 +31,7 @@ public class CompilationContext
 	public IReadOnlyCollection<IConcreteSyntaxTree> Concrete => GetConcreteTrees().ToArray();
 	public IReadOnlyCollection<ISymbolicSyntaxTree> Symbolic => GetSymbolicTrees().ToArray();
 	public IReadOnlyCollection<ISemanticSyntaxTree> Semantic => GetSemanticTrees().ToArray();
-	public IReadOnlyCollection<IConcreteSyntaxTree> Final => GetFinalTrees().ToArray();
+	public IReadOnlyCollection<IAnnotatedSyntaxTree> Annotated => GetAnnotatedTrees().ToArray();
 	#endregion
 
 	#region Constructors
@@ -109,14 +109,14 @@ public class CompilationContext
 			yield return bundle.Semantic;
 		}
 	}
-	private IEnumerable<IFinalSyntaxTree> GetFinalTrees()
+	private IEnumerable<IAnnotatedSyntaxTree> GetAnnotatedTrees()
 	{
 		foreach (ISyntaxTreeBundle bundle in _trees.Values)
 		{
-			if (bundle.Final is null)
-				ThrowHelper.ThrowInvalidOperationException("Expected the final tree to be set.");
+			if (bundle.Annotated is null)
+				ThrowHelper.ThrowInvalidOperationException("Expected the annotated tree to be set.");
 
-			yield return bundle.Final;
+			yield return bundle.Annotated;
 		}
 	}
 	#endregion

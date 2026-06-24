@@ -1,4 +1,4 @@
-namespace OwlDomain.Owl.Code.CodeAnalysis.Finalisation;
+namespace OwlDomain.Owl.Code.CodeAnalysis.Annotation;
 
 public interface ICodeAnnotations
 {

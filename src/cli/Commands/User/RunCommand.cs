@@ -30,7 +30,7 @@ public sealed class RunCommand : Command<RunCommand.Settings>
 		CompilationContext compilation = new(builtinResult.ResultScope);
 		CompilationUpdateResult compilationResult = compilation.Update(added: [source]);
 
-		IFinalSyntaxTree? tree = compilation.Trees.Values.Single().Final;
+		ISyntaxTree? tree = compilation.Trees.Values.Single().MostDetailed;
 
 		IStageResult[] results = [builtinResult, compilationResult];
 
