@@ -75,7 +75,7 @@ boolean_literal expression : token token
 
 #### Strings
 group string_fragment
-string_literal expression      : token start, list<string_fragment> fragments, token end, string? value
+string_literal expression      : token start, list<string_fragment> fragments, token end, string value
 interpolated_string expression : token start, list<string_fragment> fragments, token end
 
 regular string_fragment        : token text
