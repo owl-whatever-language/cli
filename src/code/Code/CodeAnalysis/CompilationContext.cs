@@ -29,6 +29,7 @@ public class CompilationContext
 	public ISymbolScope BaseScope { get; }
 	public IReadOnlyDictionary<ISourceFile, ISyntaxTreeBundle> Trees => _trees.ToDictionary(pair => pair.Key, pair => (ISyntaxTreeBundle)pair.Value);
 	public IReadOnlyCollection<IConcreteSyntaxTree> Concrete => GetConcreteTrees().ToArray();
+	public IReadOnlyCollection<ISymbolicSyntaxTree> Symbolic => GetSymbolicTrees().ToArray();
 	public IReadOnlyCollection<ISemanticSyntaxTree> Semantic => GetSemanticTrees().ToArray();
 	public IReadOnlyCollection<IConcreteSyntaxTree> Final => GetFinalTrees().ToArray();
 	#endregion
@@ -86,6 +87,16 @@ public class CompilationContext
 				ThrowHelper.ThrowInvalidOperationException("Expected the concrete tree to be set.");
 
 			yield return bundle.Concrete;
+		}
+	}
+	private IEnumerable<ISymbolicSyntaxTree> GetSymbolicTrees()
+	{
+		foreach (ISyntaxTreeBundle bundle in _trees.Values)
+		{
+			if (bundle.Symbolic is null)
+				ThrowHelper.ThrowInvalidOperationException("Expected the symbolic tree to be set.");
+
+			yield return bundle.Symbolic;
 		}
 	}
 	private IEnumerable<ISemanticSyntaxTree> GetSemanticTrees()
