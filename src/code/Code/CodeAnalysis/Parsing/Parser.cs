@@ -948,16 +948,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	}
 	private void AddDiagnostic(DiagnosticKind kind, string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
 	{
-		Diagnostics.Add(new Diagnostic()
-		{
-			Provider = this,
-			Kind = kind,
-			Id = id,
-			StackTrace = stackTrace,
-
-			Location = new DiagnosticSourceLocation(Source, position),
-			Message = message
-		});
+		Diagnostics.Add(this, kind, id, Source, position, message, stackTrace);
 	}
 	#endregion
 }

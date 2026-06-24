@@ -32,6 +32,27 @@ public sealed class DiagnosticBag : IDiagnosticBag, ICollection<IDiagnostic>
 	#endregion
 
 	#region Methods
+	public void Add(
+		IDiagnosticProvider provider,
+		DiagnosticKind kind,
+		string id,
+		ISourceFile source,
+		IndexedPositionRange position,
+		string message,
+		StackTrace? stackTrace = null)
+	{
+		Add(new Diagnostic()
+		{
+			Provider = provider,
+			Kind = kind,
+			Id = id,
+			StackTrace = stackTrace,
+
+			Location = new DiagnosticSourceLocation(source, position),
+			Message = message
+		});
+	}
+
 	/// <inheritdoc/>
 	public void Add(IDiagnostic item) => _diagnostics.Add(item);
 

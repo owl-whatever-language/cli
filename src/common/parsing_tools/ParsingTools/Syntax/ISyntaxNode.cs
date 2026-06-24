@@ -231,5 +231,16 @@ public static class ISyntaxNodeExtensions
 			return new(fragments);
 		}
 		#endregion
+
+		#region Kind and level validation methods
+		public void ThrowIfInvalidShadow(ISyntaxNode @new, [CallerArgumentExpression(nameof(@new))] string? parameter = null)
+		{
+			if (node.NodeKind.WithGroup != @new.NodeKind.WithGroup)
+				ThrowHelper.ThrowArgumentException(parameter, $"The current node ({node.NodeKind.WithGroup}) tried to be shadowed by a node with a different kind ({@new.NodeKind.WithGroup}).");
+
+			if (node.Level >= @new.Level)
+				ThrowHelper.ThrowArgumentException(parameter, $"The current node ({node.Level}: {node.NodeKind.Kind}) tried to be shadowed by a node with a different level ({@new.Level}: {@new.NodeKind.Kind}).");
+		}
+		#endregion
 	}
 }

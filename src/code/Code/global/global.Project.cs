@@ -6,4 +6,10 @@ global using OwlDomain.ParsingTools.Parsing;
 global using OwlDomain.ParsingTools.Text;
 
 global using OwlDomain.Owl.Code.CodeAnalysis.Parsing;
+global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols;
+global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols.Scopes;
+global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions.Callable;
+global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions.Declared;
+global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
+global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callable;
 global using OwlDomain.Owl.Code.CodeAnalysis.Finalisation;

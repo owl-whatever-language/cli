@@ -18,7 +18,7 @@ document : list<statement> statements, token end_of_input
 
 ## Type names
 group type
-#type @ semantic : ITypeInfo? type_info
+type @ semantic : IType type_info
 empty type
 regular type : token name
 nested type : type left, token dot, token name
@@ -38,18 +38,19 @@ value_return statement : token keyword, expression value, token terminator
 
 ### Declarations
 variable_declaration statement        : type type, token name, token assignment, expression value, token terminator
-#variable_declaration @ semantic       : ILocalVariable variable
+variable_declaration @ semantic       : IDeclaredLocalVariable variable
 
 #### Functions
 function_declaration statement        : token name, token start, list<function_parameter, token> parameters, token end, function_return return, function_body body
-#function_declaration @ semantic       : IFunction function
+function_declaration @ semantic       : IDeclaredFunction function, ISymbolScope scope
 local_function_declaration statement  : token keyword, function_declaration_statement declaration
 
 group function_parameter : token name
-#function_parameter @ semantic : IFunctionParameter parameter
+function_parameter @ semantic : IDeclaredFunctionParameter parameter
 regular function_parameter : type type
 
 group function_return
+function_return @ semantic : IDeclaredFunctionReturn return
 empty function_return
 regular function_return : token colon, type return_type
 
@@ -59,16 +60,15 @@ empty function_body
 short function_body : token arrow, expression expression, token terminator
 block function_body : block_statement block
 
-
 ## Expressions
 group expression
-#expression @ semantic : ITypeInfo? result_type
+expression @ semantic : IType result_type
 empty expression
 binary expression     : expression left, token operator, expression right
 ternary expression    : expression condition, token question, expression true_clause, token colon, expression false_clause
 grouped expression    : token start, expression value, token end
 get expression        : token name
-#get @ semantic        : ISymbol? symbol
+get @ semantic        : ISymbol symbol
 
 ### Literals
 boolean_literal expression : token token
@@ -93,6 +93,6 @@ function_call expression : expression expression, token start, list<function_arg
 #function_call @ semantic : ICallable? callable
 
 group function_argument
-#function_argument @ semantic : ICallableParameter? parameter
+function_argument @ semantic : ICallableTypeParameter? parameter
 regular function_argument : expression value
 named function_argument  : token name, token separator, expression value
