@@ -82,17 +82,11 @@ public sealed class SyntaxFinaliser : BaseSemanticToFinalTreeConverter
 	{
 		FinalFunctionDeclarationStatementSyntax final = base.Convert(semantic);
 
-		IDeclaredSymbol declared = (IDeclaredSymbol)final.Function.Symbol;
-		declared.Declaration = final;
-
 		return final;
 	}
 	protected override IFinalFunctionParameterSyntax Convert(ISemanticFunctionParameterSyntax semantic)
 	{
 		IFinalFunctionParameterSyntax final = base.Convert(semantic);
-
-		IDeclaredSymbol declared = (IDeclaredSymbol)final.Parameter.Symbol;
-		declared.Declaration = final;
 
 		return final;
 	}
@@ -100,9 +94,6 @@ public sealed class SyntaxFinaliser : BaseSemanticToFinalTreeConverter
 	protected override FinalVariableDeclarationStatementSyntax Convert(ISemanticVariableDeclarationStatementSyntax semantic)
 	{
 		FinalVariableDeclarationStatementSyntax final = base.Convert(semantic);
-
-		IDeclaredSymbol declared = (IDeclaredSymbol)final.Variable.Symbol;
-		declared.Declaration = final;
 
 		return final;
 	}

@@ -34,14 +34,7 @@ public sealed class RunCommand : Command<RunCommand.Settings>
 			return -1;
 		}
 
-		InterpretingResult interpretingResult = Interpreter.Interpret(tree);
-		if (compilationResult.GetAllDiagnostics().Any())
-		{
-			Display(compilationResult.GetAllDiagnostics());
-			return -1;
-		}
-
-		return 0;
+		throw new NotImplementedException("Interpreting has not been added back in yet.");
 	}
 
 	private void Display(IEnumerable<IDiagnostic> diagnostics)

@@ -23,7 +23,6 @@ public class CompilationContext
 {
 	#region Fields
 	private readonly Dictionary<ISourceFile, SyntaxTreeBundle> _trees = [];
-	private readonly ISymbolScope _baseScope = CreateBaseScope();
 	#endregion
 
 	#region Properties
@@ -61,31 +60,7 @@ public class CompilationContext
 		}
 
 		IReadOnlyCollection<IConcreteSyntaxTree> concrete = GetConcreteTrees().ToArray();
-		SymbolCollectionResult symbolCollection = SymbolCollector.Collect(_baseScope, concrete);
-		ParallelSemanticResolutionResult semanticResolutionResult = SemanticResolver.Resolve(concrete, symbolCollection.Symbols);
-
-		foreach (ISymbolTarget target in symbolCollection.Targets)
-		{
-			if (target.IsMutable)
-				ThrowHelper.ThrowInvalidOperationException($"The target '{target}' was still mutable.");
-		}
-
-		foreach (SemanticResolutionResult result in semanticResolutionResult.Children)
-		{
-			SyntaxTreeBundle bundle = _trees[result.Source];
-			bundle.Semantic = result.Tree;
-		}
-
-		IReadOnlyCollection<ISemanticSyntaxTree> semantic = GetSemanticTrees().ToArray();
-		ParallelFinalisationResult finalisationResult = SyntaxFinaliser.Finalise(semantic);
-
-		foreach (SyntaxFinalisationResult result in finalisationResult.Children)
-		{
-			SyntaxTreeBundle bundle = _trees[result.Source];
-			bundle.Final = result.Tree;
-		}
-
-		return new(performance, [parsingResult, symbolCollection, semanticResolutionResult, finalisationResult]);
+		return new(performance, [parsingResult]);
 	}
 	#endregion
 
@@ -109,19 +84,6 @@ public class CompilationContext
 
 			yield return bundle.Semantic;
 		}
-	}
-	private static ISymbolScope CreateBaseScope()
-	{
-		SymbolScope root = new("root");
-		SymbolScope builtin = root.NestScope("builtin", null);
-
-		foreach (INamedTypeInfo type in SpecialTypes.GetAll())
-			builtin.AddSymbol(type);
-
-		foreach (IFunction function in SpecialFunctions.GetAll())
-			builtin.AddSymbol(function);
-
-		return builtin;
 	}
 	#endregion
 }

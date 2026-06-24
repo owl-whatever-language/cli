@@ -539,7 +539,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 						#endregion
 
 						#region Auto implementation
-						if (canAutoImplementToken)
+						if (canAutoImplementToken && target.Token.ClassMembers.Any())
 						{
 							writer.WriteLine();
 							writer.WriteLine($"protected virtual {target.Token.Class.Name} Convert({from.Token.Interface.Name} token)");
