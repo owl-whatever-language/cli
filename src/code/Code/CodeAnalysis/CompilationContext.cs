@@ -19,6 +19,8 @@ public sealed class CompilationUpdateResult : IStageResultPerformance, IStageRes
 	#endregion
 }
 
+public delegate void StageCompleteDelegate(CompilationContext context, IStageResult result);
+
 public sealed class CompilationContext
 {
 	#region Fields
@@ -45,7 +47,8 @@ public sealed class CompilationContext
 	public CompilationUpdateResult Update(
 		IReadOnlyCollection<ISourceFile>? added = null,
 		IReadOnlyCollection<ISourceFile>? removed = null,
-		IReadOnlyCollection<ISourceFile>? changed = null)
+		IReadOnlyCollection<ISourceFile>? changed = null,
+		StageCompleteDelegate? stageCompleteCallback = null)
 	{
 		added ??= [];
 		removed ??= [];
@@ -70,6 +73,7 @@ public sealed class CompilationContext
 			SyntaxTreeBundle bundle = _trees[result.Source];
 			bundle.Concrete = result.Parsing.Tree;
 		}
+		stageCompleteCallback?.Invoke(this, parsing);
 
 		SemanticResultGroup semanticGroup;
 		ISymbolScope userScope;
@@ -77,6 +81,7 @@ public sealed class CompilationContext
 		{
 			DeclarationDiscoveryResult declarationDiscovery = DeclarationFinder.Discover(BaseScope, Concrete);
 			userScope = declarationDiscovery.ResultScope;
+			stageCompleteCallback?.Invoke(this, declarationDiscovery);
 
 			ParallelDeclarationResolutionResult symbolResolution = SymbolResolver.Resolve(userScope, Concrete);
 			foreach (IDeclaredSyntaxTree tree in symbolResolution.Trees)
@@ -84,6 +89,7 @@ public sealed class CompilationContext
 				SyntaxTreeBundle bundle = _trees[tree.Source];
 				bundle.Declared = tree;
 			}
+			stageCompleteCallback?.Invoke(this, symbolResolution);
 
 			ParallelSemanticResolutionResult semanticResolution = SemanticResolver.Resolve(userScope, Declared);
 			foreach (ISemanticSyntaxTree tree in semanticResolution.Trees)
@@ -91,9 +97,12 @@ public sealed class CompilationContext
 				SyntaxTreeBundle bundle = _trees[tree.Source];
 				bundle.Semantic = tree;
 			}
+			stageCompleteCallback?.Invoke(this, semanticResolution);
 
 			semanticGroup = new(semanticPerformance, declarationDiscovery, symbolResolution, semanticResolution);
 		}
+
+		stageCompleteCallback?.Invoke(this, semanticGroup);
 
 		ParallelAnnotationPreparingResult annotationPreparing = AnnotationPreparer.Prepare(userScope, Semantic);
 		foreach (IAnnotatedSyntaxTree tree in annotationPreparing.Trees)
@@ -101,6 +110,7 @@ public sealed class CompilationContext
 			SyntaxTreeBundle bundle = _trees[tree.Source];
 			bundle.Annotated = tree;
 		}
+		stageCompleteCallback?.Invoke(this, annotationPreparing);
 
 		return new(performance, parsing, semanticGroup, annotationPreparing);
 	}
