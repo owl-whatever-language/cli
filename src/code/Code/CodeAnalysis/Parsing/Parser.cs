@@ -54,7 +54,7 @@ public sealed class LexingAndParsingResult : ISourceStageResult, IStageResultPer
 public sealed class ParallelParsingResult : IParallelStageResult<LexingAndParsingResult>, IStagePerformanceBreakdownResult
 {
 	#region Properties
-	public string Stage => "parallel_parsing";
+	public string Stage => "parsing";
 	public IPerformanceResult Performance { get; }
 	public IReadOnlyCollection<LexingAndParsingResult> Children { get; }
 	#endregion

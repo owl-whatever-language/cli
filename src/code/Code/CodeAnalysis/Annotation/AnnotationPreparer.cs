@@ -21,7 +21,7 @@ public sealed class AnnotationPreparingResult : ISourceStageResult, IStageResult
 public sealed class ParallelAnnotationPreparingResult : IParallelStageResult<AnnotationPreparingResult>
 {
 	#region Properties
-	public string Stage => "parallel_annotation_preparing";
+	public string Stage => "annotation_preparing";
 	public IPerformanceResult Performance { get; }
 	public IReadOnlyCollection<AnnotationPreparingResult> Children { get; }
 	#endregion

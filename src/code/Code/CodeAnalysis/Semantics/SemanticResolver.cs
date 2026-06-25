@@ -25,7 +25,7 @@ public sealed class SemanticResolutionResult : ISourceStageResult, IStageResultD
 public sealed class ParallelSemanticResolutionResult : IParallelStageResult<SemanticResolutionResult>
 {
 	#region Properties
-	public string Stage => "parallel_semantic_resolution";
+	public string Stage => "semantic_resolution";
 	public IPerformanceResult Performance { get; }
 	public IReadOnlyCollection<SemanticResolutionResult> Children { get; }
 	public IEnumerable<ISemanticSyntaxTree> Trees => Children.Select(r => r.Tree);

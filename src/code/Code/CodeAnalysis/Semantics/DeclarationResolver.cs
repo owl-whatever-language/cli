@@ -26,7 +26,7 @@ public sealed class DeclarationResolutionResult : IStageResultDiagnostics, IStag
 public sealed class ParallelDeclarationResolutionResult : IParallelStageResult<DeclarationResolutionResult>
 {
 	#region Properties
-	public string Stage => "parallel_declaration_resolution";
+	public string Stage => "declaration_resolution";
 	public IPerformanceResult Performance { get; }
 	public IReadOnlyCollection<DeclarationResolutionResult> Children { get; }
 	public IEnumerable<IDeclaredSyntaxTree> Trees => Children.Select(r => r.Tree);
