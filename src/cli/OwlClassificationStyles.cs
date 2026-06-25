@@ -14,6 +14,7 @@ public class OwlClassificationStyles : ClassificationStyles
 		{ ClassificationKind.Parameter, new(Color.Cornsilk1) },
 		{ ClassificationKind.Variable, new(Color.White) },
 		{ ClassificationKind.Identifier, new(Color.Gray70) },
+		{ ClassificationKind.Error, new(Color.Red) }
 	};
 
 	public static OwlClassificationStyles Instance { get; } = new();

@@ -13,7 +13,7 @@ public sealed class FileSystemSourceFile : ISourceFile
 	public string SimpleName => FileInfo.Name;
 
 	/// <inheritdoc/>
-	public string? Path => FileInfo.FullName;
+	public string Path => FileInfo.FullName;
 
 	/// <summary>The system information about the source file.</summary>
 	public FileInfo FileInfo { get; }
@@ -36,6 +36,7 @@ public sealed class FileSystemSourceFile : ISourceFile
 		string text = FileInfo.OpenText().ReadToEnd();
 		return new StringTextParser(text);
 	}
+	public TextFragmentCollection GetFragments() => [new(SimpleName), new(": ", ClassificationKind.Punctuation), new(Path)];
 	#endregion
 
 	#region Helpers

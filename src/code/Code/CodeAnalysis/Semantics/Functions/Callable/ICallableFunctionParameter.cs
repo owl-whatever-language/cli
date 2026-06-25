@@ -19,4 +19,20 @@ public sealed class CallableFunctionParameter : ICallableFunctionParameter
 	#region Constructor
 	public CallableFunctionParameter(IFunctionParameter parameter) => FunctionParameter = parameter;
 	#endregion
+
+	#region Methods
+	public TextFragmentCollection GetFragments()
+	{
+		List<TextFragment> fragments = [];
+
+		fragments.Add(Type);
+		if (Name is not null)
+		{
+			fragments.Add(" ", ClassificationKind.Whitespace);
+			fragments.Add(Name, ClassificationKind.Parameter);
+		}
+
+		return new(fragments);
+	}
+	#endregion
 }

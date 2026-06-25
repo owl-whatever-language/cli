@@ -10,4 +10,8 @@ public sealed class NotFoundSymbol : ISymbol
 	#region Constructors
 	private NotFoundSymbol() { }
 	#endregion
+
+	#region Methods
+	public TextFragmentCollection GetFragments() => [new("not_found", ClassificationKind.Error)];
+	#endregion
 }

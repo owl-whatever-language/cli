@@ -43,4 +43,17 @@ public sealed class DeclaredFunctionParameter : IDeclaredFunctionParameter
 		AsCallable = new CallableFunctionParameter(this);
 	}
 	#endregion
+
+	#region Methods
+	public TextFragmentCollection GetFragments()
+	{
+		List<TextFragment> fragments = [];
+
+		fragments.Add(Type);
+		fragments.Add(" ", ClassificationKind.Whitespace);
+		fragments.Add(Name ?? "???", ClassificationKind.Parameter);
+
+		return new(fragments);
+	}
+	#endregion
 }

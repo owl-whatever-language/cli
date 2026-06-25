@@ -8,6 +8,9 @@ partial struct ClassificationKind
 
 	/// <summary>Represents a classification for keywords.</summary>
 	public static ClassificationKind Keyword { get; } = new("keyword");
+
+	/// <summary>Represents a classification for errors.</summary>
+	public static ClassificationKind Error { get; } = new("error");
 	#endregion
 
 	#region Trivia

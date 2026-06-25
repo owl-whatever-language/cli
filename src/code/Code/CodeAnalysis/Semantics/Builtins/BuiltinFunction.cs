@@ -19,6 +19,34 @@ public sealed class BuiltinFunction : IFunction
 		AsCallable = new CallableFunction(this);
 	}
 	#endregion
+
+	#region Methods
+	public TextFragmentCollection GetFragments()
+	{
+		List<TextFragment> fragments = [];
+
+		fragments.Add(Name, ClassificationKind.Function);
+		fragments.Add("(", ClassificationKind.Punctuation);
+
+		for (int i = 0; i < Parameters.Count; i++)
+		{
+			if (i > 0)
+				fragments.Add(", ", ClassificationKind.Punctuation);
+
+			fragments.Add(Parameters[i]);
+		}
+
+		fragments.Add(")", ClassificationKind.Punctuation);
+
+		if (Return.Type != SpecialTypes.Void)
+		{
+			fragments.Add(": ", ClassificationKind.Punctuation);
+			fragments.Add(Return.Type);
+		}
+
+		return new(fragments);
+	}
+	#endregion
 }
 
 public sealed class BuiltinFunctionParameter : IFunctionParameter
@@ -37,6 +65,19 @@ public sealed class BuiltinFunctionParameter : IFunctionParameter
 		Type = type;
 		Name = name;
 		AsCallable = new CallableFunctionParameter(this);
+	}
+	#endregion
+
+	#region Methods
+	public TextFragmentCollection GetFragments()
+	{
+		List<TextFragment> fragments = [];
+
+		fragments.Add(Type);
+		fragments.Add(" ", ClassificationKind.Whitespace);
+		fragments.Add(Name, ClassificationKind.Parameter);
+
+		return new(fragments);
 	}
 	#endregion
 }

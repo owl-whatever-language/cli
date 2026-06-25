@@ -1,5 +1,3 @@
-using System;
-
 namespace OwlDomain.ParsingTools.Syntax;
 
 public interface IDebugTreePrintable

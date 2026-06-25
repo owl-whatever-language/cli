@@ -89,12 +89,12 @@ public readonly partial struct ClassificationKind :
 		for (int i = 0; i < parts.Count; i++)
 		{
 			if (i > 0)
-				fragments.Add(new(".", Punctuation));
+				fragments.Add(".", Punctuation);
 
 			ClassificationKind part = parts[i];
 			current = current is null ? part : current.Value + part.Name;
 
-			fragments.Add(new(part.Name, current));
+			fragments.Add(part.Name, current);
 		}
 
 		return new(fragments);

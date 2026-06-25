@@ -34,6 +34,7 @@ public sealed class MemorySourceFile : ISourceFile
 	#region Methods
 	/// <inheritdoc/>
 	public ITextParser CreateParser() => new StringTextParser(Text);
+	public TextFragmentCollection GetFragments() => [new(SimpleName), new(": ", ClassificationKind.Punctuation), new("<memory>")];
 	#endregion
 
 	#region Helpers

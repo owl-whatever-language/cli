@@ -62,5 +62,31 @@ public sealed class CallableFunction : ICallableFunction
 
 		return code.ToHashCode();
 	}
+
+	public TextFragmentCollection GetFragments()
+	{
+		List<TextFragment> fragments = [];
+
+		fragments.Add("callable", ClassificationKind.Type);
+		fragments.Add("(", ClassificationKind.Punctuation);
+
+		for (int i = 0; i < Parameters.Count; i++)
+		{
+			if (i > 0)
+				fragments.Add(", ", ClassificationKind.Punctuation);
+
+			fragments.Add(Parameters[i].Type);
+		}
+
+		fragments.Add(")", ClassificationKind.Punctuation);
+
+		if (Return.Type != SpecialTypes.Void)
+		{
+			fragments.Add(": ", ClassificationKind.Punctuation);
+			fragments.Add(Return.Type);
+		}
+
+		return new(fragments);
+	}
 	#endregion
 }

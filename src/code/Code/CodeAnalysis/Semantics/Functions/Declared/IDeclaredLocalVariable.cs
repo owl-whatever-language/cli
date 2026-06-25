@@ -39,4 +39,17 @@ public sealed class DeclaredLocalVariable : IDeclaredLocalVariable
 		Type = SpecialTypes.Unknown;
 	}
 	#endregion
+
+	#region Methods
+	public TextFragmentCollection GetFragments()
+	{
+		List<TextFragment> fragments = [];
+
+		fragments.Add(Type);
+		fragments.Add(" ", ClassificationKind.Whitespace);
+		fragments.Add(Name ?? "???", ClassificationKind.Variable);
+
+		return new(fragments);
+	}
+	#endregion
 }

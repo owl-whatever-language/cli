@@ -18,6 +18,7 @@ public readonly struct TextFragment
 	#endregion
 }
 
+[CollectionBuilder(typeof(TextFragmentCollection), nameof(Create))]
 public sealed class TextFragmentCollection : IReadOnlyList<TextFragment>
 {
 	#region Fields
@@ -35,6 +36,10 @@ public sealed class TextFragmentCollection : IReadOnlyList<TextFragment>
 
 	#region Constructors
 	public TextFragmentCollection(params IReadOnlyList<TextFragment> fragments) => _fragments = fragments;
+	#endregion
+
+	#region Functions
+	public static TextFragmentCollection Create(params ReadOnlySpan<TextFragment> fragments) => new([.. fragments]);
 	#endregion
 
 	#region Methods
@@ -93,6 +98,33 @@ public static class TextFragmentExtensions
 			}
 
 			return lines;
+		}
+		#endregion
+	}
+
+	extension(IList<TextFragment> fragments)
+	{
+		#region Methods
+		public void Add(string text, ClassificationKind? classification = null, ISyntaxPart? part = null)
+		{
+			TextFragment fragment = new(text, classification, part);
+			fragments.Add(fragment);
+		}
+		public void Add(IDebugTreePrintable printable)
+		{
+			TextFragmentCollection printableFragments = printable.GetFragments();
+			foreach (TextFragment fragment in printableFragments)
+				fragments.Add(fragment);
+		}
+		#endregion
+	}
+	extension(List<TextFragment> fragments)
+	{
+		#region Methods
+		public void Add(IDebugTreePrintable printable)
+		{
+			TextFragmentCollection printableFragments = printable.GetFragments();
+			fragments.AddRange(printableFragments);
 		}
 		#endregion
 	}

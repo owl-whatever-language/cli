@@ -16,5 +16,6 @@ public sealed class ErrorType : IType
 	public override bool Equals(object? obj) => false;
 	public override int GetHashCode() => base.GetHashCode();
 	public override string ToString() => "error";
+	public TextFragmentCollection GetFragments() => [new("error", ClassificationKind.Error)];
 	#endregion
 }

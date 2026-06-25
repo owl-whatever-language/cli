@@ -148,8 +148,13 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 			var @return = Convert(concrete.Return);
 			var body = Convert(concrete.Body);
 
-			if (@return is IDeclaredRegularFunctionReturnSyntax regularReturn)
-				function.Return.Type = regularReturn.ReturnType.TypeInfo;
+			function.Return.Type = @return switch
+			{
+				IDeclaredRegularFunctionReturnSyntax regular => regular.ReturnType.TypeInfo,
+				IDeclaredEmptyFunctionReturnSyntax => SpecialTypes.Void,
+
+				_ => ThrowHelper.ThrowInvalidOperationException<IType>($"Unhandled function return type {@return.GetType().Name}"),
+			};
 
 			declared = new(name, start, parameters, end, @return, body, function, scope);
 			Update(function, declared);
