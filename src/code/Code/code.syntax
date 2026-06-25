@@ -23,7 +23,7 @@ group type
 type @ declared : IType type_info
 empty type
 regular type : token name
-regular_type @ declared : ISymbolGroup symbols
+regular_type @ declared : ISymbol symbol
 nested type : type left, token dot, token name
 generic type : type type, token start, list<type, token> generics, token end
 

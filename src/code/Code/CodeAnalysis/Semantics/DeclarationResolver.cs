@@ -178,15 +178,13 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	#region Type methods
 	protected override DeclaredRegularTypeSyntax Convert(IConcreteRegularTypeSyntax concrete)
 	{
-		ISymbolGroup symbols = GetAll(concrete.Name);
 		var name = Convert(concrete.Name);
+		INamedType? type = GetSingle<INamedType>(concrete.Name, "type", "types");
 
-		IType[] typed = symbols.OfType<IType>().ToArray();
-
-		if (typed.Length > 1)
-			AddError("type_ambiguity", concrete.Name.Position, $"There are several types named '{concrete.Name.Value}', and they cannot be disambiguated.");
-
-		return new(name, symbols, typed.SingleOrDefault() ?? SpecialTypes.Error);
+		return new(
+			name,
+			(ISymbol?)type ?? SpecialSymbols.NotFound,
+			(IType?)type ?? SpecialTypes.Error);
 	}
 	protected override DeclaredEmptyTypeSyntax Convert(IConcreteEmptyTypeSyntax concrete) => new(SpecialTypes.Error);
 	protected override DeclaredNestedTypeSyntax Convert(IConcreteNestedTypeSyntax concrete) => throw new NotImplementedException();
@@ -222,6 +220,37 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 			AddError("symbol_not_found", position, $"No accessible symbol named '{name}' could be found.");
 
 		return group;
+	}
+	private ISymbol? GetSingle(ISyntaxToken token) => GetSingle<ISymbol>(token, "symbol", "symbols");
+	private T? GetSingle<T>(ISyntaxToken token, string kind, string kindPlural)
+	{
+		return GetSingle<T>(token.Value as string, kind, kindPlural, token.Position);
+	}
+	private T? GetSingle<T>(string? name, string kind, string kindPlural, IndexedPositionRange position)
+	{
+		if (name is null) // Note(Nightowl): Invalid names will have already been reported during parsing;
+			return default;
+
+		if (CurrentScope.TryGet(name, out ISymbolGroup? symbols) is false)
+			symbols = GetAll(name, position);
+
+		if (symbols.Count is 0)
+			return default;
+
+		T[] typed = symbols.OfType<T>().ToArray();
+		if (typed.Length is 0)
+		{
+			AddError($"{kind}_not_found", position, $"No accessible {kind} named '{name}' could be found.");
+			return default;
+		}
+
+		if (typed.Length > 1)
+		{
+			AddError($"{kind}_ambiguity", position, $"Multiple {kindPlural} named '{name}' were found, but they couldn't be disambiguated.");
+			return default;
+		}
+
+		return typed[0];
 	}
 	private void Get<T>(IConcreteSyntaxNode declaration, out T symbol) where T : notnull, IDeclaredSymbol
 	{
