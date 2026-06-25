@@ -116,6 +116,9 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	{
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
+			if (files.Count is 0)
+				return new(performance, []);
+
 			if (files.Count is 1)
 			{
 				LexingAndParsingResult result = Parse(files.Single());
@@ -246,6 +249,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	{
 		if (TryParseExpression(out IConcreteExpressionSyntax? expression) is false)
 			return null;
+
 
 		IConcreteToken terminator = ExpectStatementTerminator();
 		return new ConcreteExpressionStatementSyntax(expression, terminator);
@@ -626,6 +630,15 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 				separators.Add(comma);
 			}
 		}
+
+		IConcreteFunctionArgumentSyntax? lastNonNamed = arguments.LastOrDefault(a => a is not IConcreteNamedFunctionArgumentSyntax);
+		IEnumerable<IConcreteNamedFunctionArgumentSyntax>? mispositionedNamed = lastNonNamed is null ? [] :
+			arguments
+			.OfType<IConcreteNamedFunctionArgumentSyntax>()
+			.Where(a => a.Position.Start < lastNonNamed.Position.Start);
+
+		foreach (IConcreteNamedFunctionArgumentSyntax argument in mispositionedNamed)
+			AddError("named_argument_not_at_end", argument.Name.Position, "Named arguments should come after positioned ones.");
 
 		IConcreteToken end = Expect(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, "Expecting a closing bracket ')' to end the function call.");
 

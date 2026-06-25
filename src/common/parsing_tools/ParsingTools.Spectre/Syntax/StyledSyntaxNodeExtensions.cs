@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace OwlDomain.ParsingTools.Syntax;
 
 public static class StyledSyntaxNodeExtensions
@@ -49,18 +47,11 @@ public static class StyledSyntaxNodeExtensions
 		public Rows StyledSource(IClassificationStyles styles, bool includeLineNumbers = true, Style? marginStyle = null)
 		{
 			marginStyle ??= new(Color.Gray);
-
 			List<Markup> rows = [];
-			IReadOnlyList<TextFragmentCollection> lines = node.ToTextFragments().ToLines();
-			int maxLineNumberLength = includeLineNumbers ? lines.Count.ToString("n0").Length : 0;
-
-			if (node.FullPosition.IsMultiline)
-			{
-				StringBuilder builder = new();
-				builder.Append(' ', node.FullPosition.Start.Column - 1);
-			}
 
 			int startLine = node.FullPosition.Start.Line;
+			IReadOnlyList<TextFragmentCollection> lines = node.ToTextFragments().ToLines();
+			int maxLineNumberLength = includeLineNumbers ? (startLine + lines.Count).ToString("n0").Length : 0;
 
 			for (int i = 0; i < lines.Count; i++)
 			{
