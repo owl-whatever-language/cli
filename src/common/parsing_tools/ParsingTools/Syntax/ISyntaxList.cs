@@ -79,6 +79,7 @@ public class SyntaxList<TValue> : ISyntaxList<TValue>
 	/// <inheritdoc/>
 	public IEnumerable<ISyntaxNode> GetChildren() => _values;
 
+	public TextFragmentCollection GetFragments() => this.ToTextFragments();
 	public override string ToString() => this.Print();
 
 	/// <inheritdoc/>
@@ -160,6 +161,7 @@ public class SyntaxList<TValue, TSeparator> : ISyntaxList<TValue, TSeparator>
 	/// <inheritdoc/>
 	public IEnumerable<ISyntaxNode> GetChildren() => Nodes;
 
+	public TextFragmentCollection GetFragments() => this.ToTextFragments();
 	public override string ToString() => this.Print();
 	#endregion
 

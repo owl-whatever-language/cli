@@ -7,7 +7,7 @@ public readonly partial struct ClassificationKind :
 #if NET7_0_OR_GREATER
 	IEqualityOperators<ClassificationKind, ClassificationKind, bool>,
 #endif
-	IEquatable<ClassificationKind>
+	IEquatable<ClassificationKind>, IDebugTreePrintable
 {
 	#region Fields
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
@@ -76,6 +76,28 @@ public readonly partial struct ClassificationKind :
 		}
 
 		return kinds;
+	}
+
+	public TextFragmentCollection GetFragments()
+	{
+		List<TextFragment> fragments = [];
+
+		IReadOnlyList<ClassificationKind> parts = Split();
+
+		ClassificationKind? current = null;
+
+		for (int i = 0; i < parts.Count; i++)
+		{
+			if (i > 0)
+				fragments.Add(new(".", Punctuation));
+
+			ClassificationKind part = parts[i];
+			current = current is null ? part : current.Value + part.Name;
+
+			fragments.Add(new(part.Name, current));
+		}
+
+		return new(fragments);
 	}
 	#endregion
 

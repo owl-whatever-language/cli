@@ -79,13 +79,15 @@ public class DefaultDebugTreePrinter
 		branch = default;
 		return false;
 	}
+	protected virtual Segments ConvertPrintable(IDebugTreePrintable printable)
+	{
+		TextFragmentCollection fragments = printable.GetFragments();
+		return fragments.Style(Styles);
+	}
 	protected virtual Segments ConvertSimple(object? value)
 	{
-		if (value is ClassificationKind classification)
-			return ConvertClassification(classification);
-
-		if (value is ISyntaxNode node)
-			return ConvertSource(node);
+		if (value is IDebugTreePrintable printable)
+			return ConvertPrintable(printable);
 
 		string? text = value?.ToString();
 
@@ -94,31 +96,6 @@ public class DefaultDebugTreePrinter
 			text is null ? NullStyle : Style.Plain);
 
 		return [segment];
-	}
-	protected virtual Segments ConvertClassification(ClassificationKind classification)
-	{
-		List<Segment> segments = [];
-
-		IReadOnlyList<ClassificationKind> parts = classification.Split();
-
-		ClassificationKind? current = null;
-
-		for (int i = 0; i < parts.Count; i++)
-		{
-			if (i > 0)
-				segments.Add(new(".", PunctuationStyle, null));
-
-			ClassificationKind part = parts[i];
-			current = current is null ? part : current.Value + part.Name;
-
-			segments.Add(New(part.Name, current));
-		}
-
-		return segments;
-	}
-	protected virtual Segments ConvertSource(ISyntaxNode node)
-	{
-		return node.ToTextFragments(false).Style(Styles);
 	}
 	#endregion
 

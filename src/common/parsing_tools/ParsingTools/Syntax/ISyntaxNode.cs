@@ -1,6 +1,6 @@
 namespace OwlDomain.ParsingTools.Syntax;
 
-public interface ISyntaxNode
+public interface ISyntaxNode : IDebugTreePrintable
 {
 	#region Properties
 	SyntaxNodeKind NodeKind { get; }
@@ -56,6 +56,7 @@ public abstract class BaseSyntaxNode : ISyntaxNode
 			child.Parent = this;
 	}
 	public abstract IEnumerable<ISyntaxNode> GetChildren();
+	public TextFragmentCollection GetFragments() => this.ToTextFragments(false);
 	public override string ToString() => this.Print();
 	#endregion
 
