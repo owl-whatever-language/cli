@@ -5,6 +5,7 @@ public interface ISymbolScope
 	#region Properties
 	string Name { get; }
 	ISymbolScope? Parent { get; }
+	ICoreSymbolScope Core { get; }
 	#endregion
 
 	#region Methods
@@ -17,7 +18,7 @@ public interface ISymbolScope
 	#endregion
 }
 
-public sealed class SymbolScope : ISymbolScope
+public class SymbolScope : ISymbolScope
 {
 	#region Fields
 	private readonly Dictionary<string, SymbolGroup> _byName = [];
@@ -31,6 +32,7 @@ public sealed class SymbolScope : ISymbolScope
 	#region Properties
 	public string Name { get; }
 	public ISymbolScope? Parent { get; }
+	public virtual ICoreSymbolScope Core => Parent?.Core ?? ThrowHelper.ThrowInvalidOperationException<ICoreSymbolScope>("The root scope wasn't the core one.");
 	#endregion
 
 	#region Constructors

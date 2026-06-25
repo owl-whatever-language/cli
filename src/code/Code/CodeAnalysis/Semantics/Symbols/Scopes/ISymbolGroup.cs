@@ -8,7 +8,7 @@ public sealed class SymbolGroup : List<ISymbol>, ISymbolGroup
 {
 	#region Constructors
 	public SymbolGroup() { }
-	public SymbolGroup(IEnumerable<ISymbol> symbols) : base(symbols) { }
+	public SymbolGroup(params IEnumerable<ISymbol> symbols) : base(symbols) { }
 	#endregion
 }
 

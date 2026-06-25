@@ -94,8 +94,11 @@ public sealed class BuiltinResolver
 	{
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
-			SymbolScope core = new("core");
-			core.Add(new BuiltinType("text"));
+			CoreSymbolScope core = new();
+			BuiltinType text = new("text");
+
+			core.Add(text);
+			core.Text = text;
 
 			BuiltinResolver resolver = new(core);
 			resolver.Resolve(typeof(CoreBuiltins));
@@ -103,12 +106,13 @@ public sealed class BuiltinResolver
 			return new(performance, core);
 		}
 	}
-	private static BuiltinStandardResolutionResult ResolveStandard(ISymbolScope core)
+	private static BuiltinStandardResolutionResult ResolveStandard(ICoreSymbolScope core)
 	{
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
 			SymbolScope standard = new("standard", core);
-			IType textType = core.GetAll("text").OfType<INamedType>().Single(t => t.Name == "text");
+			IType textType = core.Text ?? ThrowHelper.ThrowInvalidDataException<IType>("The text type is required for the current builtins.");
+
 			standard.Add(new BuiltinFunction("print", [new(0, textType, "text")], new(SpecialTypes.Void)));
 
 			BuiltinResolver resolver = new(standard);
@@ -122,7 +126,7 @@ public sealed class BuiltinResolver
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
 			BuiltinCoreResolutionResult core = ResolveCore();
-			BuiltinStandardResolutionResult standard = ResolveStandard(core.ResultScope);
+			BuiltinStandardResolutionResult standard = ResolveStandard(core.ResultScope.Core);
 
 			return new(performance, core, standard);
 		}
