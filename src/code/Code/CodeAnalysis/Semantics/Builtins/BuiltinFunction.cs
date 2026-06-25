@@ -10,7 +10,7 @@ public sealed class BuiltinFunction : IFunction
 	#endregion
 
 	#region Constructors
-	public BuiltinFunction(string name, IReadOnlyList<IFunctionParameter> parameters, IFunctionReturn @return)
+	public BuiltinFunction(string name, IReadOnlyList<BuiltinFunctionParameter> parameters, BuiltinFunctionReturn @return)
 	{
 		Name = name;
 		Parameters = parameters;

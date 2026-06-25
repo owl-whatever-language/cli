@@ -84,9 +84,11 @@ public sealed class SymbolCollector : BaseConcreteVisitor, IDiagnosticProvider
 		{
 			foreach (IDeclaredFunctionParameter parameter in function.Parameters)
 				Add(parameter);
+
+			Dispatch(node.Body);
 		}
 
-		return true;
+		return false;
 	}
 	#endregion
 

@@ -95,6 +95,7 @@ public sealed class BuiltinResolver
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
 			SymbolScope core = new("core");
+			core.Add(new BuiltinType("text"));
 
 			BuiltinResolver resolver = new(core);
 			resolver.Resolve(typeof(CoreBuiltins));
@@ -107,6 +108,8 @@ public sealed class BuiltinResolver
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
 			SymbolScope standard = new("standard", core);
+			IType textType = core.GetAll("text").OfType<INamedType>().Single(t => t.Name == "text");
+			standard.Add(new BuiltinFunction("print", [new(0, textType, "text")], new(SpecialTypes.Void)));
 
 			BuiltinResolver resolver = new(standard);
 			resolver.Resolve(typeof(StandardBuiltins));

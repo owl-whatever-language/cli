@@ -20,6 +20,7 @@ document : list<statement> statements, token end_of_input
 
 ## Type names
 group type
+type @ symbolic : IType type_info
 empty type
 regular type : token name
 regular_type @ symbolic : ISymbolGroup symbols

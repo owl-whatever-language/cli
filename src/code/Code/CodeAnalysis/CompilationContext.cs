@@ -64,17 +64,28 @@ public class CompilationContext
 
 		HashSet<ISourceFile> toReparse = [.. added, .. changed];
 
-		ParallelParsingResult parsingResult = Parser.Parse(toReparse);
-		foreach (LexingAndParsingResult result in parsingResult.GetByFile().Values)
+		ParallelParsingResult parsing = Parser.Parse(toReparse);
+		foreach (LexingAndParsingResult result in parsing.GetByFile().Values)
 		{
 			SyntaxTreeBundle bundle = _trees[result.Source];
 			bundle.Concrete = result.Parsing.Tree;
 		}
 
-		SymbolCollectionResult collectionResult = SymbolCollector.Collect(BaseScope, Concrete);
+		SemanticResultGroup semanticGroup;
+		using (PerformanceResult.Scope(out IPerformanceResult semanticPerformance))
+		{
+			SymbolCollectionResult symbolCollection = SymbolCollector.Collect(BaseScope, Concrete);
+			ParallelSymbolResolutionResult symbolResolution = SymbolResolver.Resolve(symbolCollection.ResultScope, Concrete);
+			foreach (ISymbolicSyntaxTree tree in symbolResolution.Trees)
+			{
+				SyntaxTreeBundle bundle = _trees[tree.Source];
+				bundle.Symbolic = tree;
+			}
 
+			semanticGroup = new(semanticPerformance, symbolCollection, symbolResolution);
+		}
 
-		return new(performance, parsingResult, collectionResult);
+		return new(performance, parsing, semanticGroup);
 	}
 	#endregion
 
