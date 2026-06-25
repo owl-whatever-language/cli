@@ -136,6 +136,8 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	}
 	protected override DeclaredFunctionDeclarationStatementSyntax Convert(IConcreteFunctionDeclarationStatementSyntax concrete)
 	{
+		DeclaredFunctionDeclarationStatementSyntax declared;
+
 		Get(concrete, out IDeclaredFunction function);
 		using (EnterScope(concrete, out ISymbolScope scope))
 		{
@@ -146,14 +148,16 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 			var @return = Convert(concrete.Return);
 			var body = Convert(concrete.Body);
 
-			if (@return is ISemanticRegularFunctionReturnSyntax regularReturn)
+			if (@return is IDeclaredRegularFunctionReturnSyntax regularReturn)
 				function.Return.Type = regularReturn.ReturnType.TypeInfo;
 
-			DeclaredFunctionDeclarationStatementSyntax declared = new(name, start, parameters, end, @return, body, function, scope);
+			declared = new(name, start, parameters, end, @return, body, function, scope);
 			Update(function, declared);
-
-			return declared;
 		}
+
+		Update(concrete, declared);
+
+		return declared;
 	}
 	protected override DeclaredRegularFunctionParameterSyntax Convert(IConcreteRegularFunctionParameterSyntax concrete)
 	{
@@ -226,6 +230,10 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	private void Update(IDeclaredSymbol symbol, IDeclaredSyntaxNode declaration)
 	{
 		CurrentScope.Update(symbol, declaration);
+	}
+	private void Update(IConcreteSyntaxNode oldDeclaration, IDeclaredSyntaxNode newDeclaration)
+	{
+		CurrentScope.UpdateChild(oldDeclaration, newDeclaration);
 	}
 	#endregion
 

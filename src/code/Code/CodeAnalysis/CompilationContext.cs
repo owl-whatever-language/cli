@@ -82,7 +82,14 @@ public sealed class CompilationContext
 				bundle.Declared = tree;
 			}
 
-			semanticGroup = new(semanticPerformance, declarationDiscovery, symbolResolution);
+			ParallelSemanticResolutionResult semanticResolution = SemanticResolver.Resolve(declarationDiscovery.ResultScope, Declared);
+			foreach (ISemanticSyntaxTree tree in semanticResolution.Trees)
+			{
+				SyntaxTreeBundle bundle = _trees[tree.Source];
+				bundle.Semantic = tree;
+			}
+
+			semanticGroup = new(semanticPerformance, declarationDiscovery, symbolResolution, semanticResolution);
 		}
 
 		return new(performance, parsing, semanticGroup);

@@ -3,6 +3,7 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions.Declared;
 public interface IDeclaredFunction : IDeclaredSymbol<IConcreteFunctionDeclarationStatementSyntax>, IFunction
 {
 	#region Properties
+	new string? Name { get; }
 	new IReadOnlyList<IDeclaredFunctionParameter> Parameters { get; }
 	new IDeclaredFunctionReturn Return { get; }
 

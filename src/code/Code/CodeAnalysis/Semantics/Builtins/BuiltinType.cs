@@ -13,5 +13,6 @@ public class BuiltinType : INamedType
 	#region Methods
 	public bool CanAssignTo(IType target) => Equals(target) || target == SpecialTypes.Void;
 	public bool Equals(IType? other) => ReferenceEquals(this, other);
+	public override string ToString() => Name;
 	#endregion
 }

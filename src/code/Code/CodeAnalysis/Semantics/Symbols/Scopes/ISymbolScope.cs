@@ -15,6 +15,7 @@ public interface ISymbolScope
 	T Get<T>(ISyntaxNode declaration) where T : notnull, IDeclaredSymbol;
 	ISymbolScope GetChild(ISyntaxNode declaration);
 	void Update(IDeclaredSymbol symbol, ISyntaxNode declaration);
+	void UpdateChild(ISyntaxNode oldDeclaration, ISyntaxNode newDeclaration);
 	#endregion
 }
 
@@ -122,6 +123,18 @@ public class SymbolScope : ISymbolScope
 			_byNode.Add(declaration, symbol);
 		}
 	}
+	public void UpdateChild(ISyntaxNode oldDeclaration, ISyntaxNode newDeclaration)
+	{
+		oldDeclaration.ThrowIfInvalidShadow(newDeclaration);
+		using (_childrenLock.WriteLock())
+		{
+			_children.Remove(oldDeclaration, out ISymbolScope? actualScope);
+			if (actualScope is null)
+				ThrowHelper.ThrowArgumentException(nameof(oldDeclaration), "There was no existing child scope that was associated with the given declaration.");
+
+			_children.Add(newDeclaration, actualScope);
+		}
+	}
 	public void Add(ISyntaxNode declaration, ISymbolScope scope)
 	{
 		using (_childrenLock.WriteLock())
@@ -132,6 +145,7 @@ public class SymbolScope : ISymbolScope
 		using (_childrenLock.ReadLock())
 			return _children[declaration];
 	}
+
 	#endregion
 }
 
