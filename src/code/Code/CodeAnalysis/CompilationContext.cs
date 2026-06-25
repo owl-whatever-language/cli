@@ -72,17 +72,20 @@ public sealed class CompilationContext
 		}
 
 		SemanticResultGroup semanticGroup;
+		ISymbolScope userScope;
 		using (PerformanceResult.Scope(out IPerformanceResult semanticPerformance))
 		{
 			DeclarationDiscoveryResult declarationDiscovery = DeclarationFinder.Discover(BaseScope, Concrete);
-			ParallelDeclarationResolutionResult symbolResolution = SymbolResolver.Resolve(declarationDiscovery.ResultScope, Concrete);
+			userScope = declarationDiscovery.ResultScope;
+
+			ParallelDeclarationResolutionResult symbolResolution = SymbolResolver.Resolve(userScope, Concrete);
 			foreach (IDeclaredSyntaxTree tree in symbolResolution.Trees)
 			{
 				SyntaxTreeBundle bundle = _trees[tree.Source];
 				bundle.Declared = tree;
 			}
 
-			ParallelSemanticResolutionResult semanticResolution = SemanticResolver.Resolve(declarationDiscovery.ResultScope, Declared);
+			ParallelSemanticResolutionResult semanticResolution = SemanticResolver.Resolve(userScope, Declared);
 			foreach (ISemanticSyntaxTree tree in semanticResolution.Trees)
 			{
 				SyntaxTreeBundle bundle = _trees[tree.Source];
@@ -92,7 +95,14 @@ public sealed class CompilationContext
 			semanticGroup = new(semanticPerformance, declarationDiscovery, symbolResolution, semanticResolution);
 		}
 
-		return new(performance, parsing, semanticGroup);
+		ParallelAnnotationPreparingResult annotationPreparing = AnnotationPreparer.Prepare(userScope, Semantic);
+		foreach (IAnnotatedSyntaxTree tree in annotationPreparing.Trees)
+		{
+			SyntaxTreeBundle bundle = _trees[tree.Source];
+			bundle.Annotated = tree;
+		}
+
+		return new(performance, parsing, semanticGroup, annotationPreparing);
 	}
 	#endregion
 

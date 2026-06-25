@@ -169,6 +169,8 @@ public class DebugTreeFactory
 			}
 		}
 
+		toRemove.Reverse();
+
 		foreach (int index in toRemove)
 			target.RemoveAt(index);
 	}

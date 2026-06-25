@@ -142,14 +142,16 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	}
 	protected override SemanticFunctionDeclarationStatementSyntax Convert(IDeclaredFunctionDeclarationStatementSyntax declared)
 	{
+		SemanticFunctionDeclarationStatementSyntax semantic;
 		using (WithValue(ref _currentFunction, declared.Function))
 		using (EnterScope(declared))
 		{
-			var semantic = base.Convert(declared);
+			semantic = base.Convert(declared);
 			Update(semantic.Function, semantic);
-
-			return semantic;
 		}
+		Update(declared, semantic);
+
+		return semantic;
 	}
 	#endregion
 
@@ -290,6 +292,8 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			var arguments = Convert(declared.Arguments);
 			var end = Convert(declared.End);
 
+			// Todo(Nightowl): Check argument value types;
+
 			return new(expression, start, arguments, end, callable, callable?.Return.Type ?? SpecialTypes.Error);
 		}
 	}
@@ -371,6 +375,10 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	private void Update(IDeclaredSymbol symbol, ISemanticSyntaxNode declaration)
 	{
 		CurrentScope.Update(symbol, declaration);
+	}
+	private void Update(IDeclaredSyntaxNode oldDeclaration, ISemanticSyntaxNode newDeclaration)
+	{
+		CurrentScope.UpdateChild(oldDeclaration, newDeclaration);
 	}
 	private IType GetResultType(ISymbol? symbol, IndexedPositionRange position)
 	{

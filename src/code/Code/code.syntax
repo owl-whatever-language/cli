@@ -95,5 +95,6 @@ function_call expression : expression expression, token start, list<function_arg
 function_call @ semantic : ICallableType? callable
 
 group function_argument
+function_argument @ annotated : ICallableTypeParameter? parameter
 regular function_argument : expression value
 named function_argument  : token name, token separator, expression value
