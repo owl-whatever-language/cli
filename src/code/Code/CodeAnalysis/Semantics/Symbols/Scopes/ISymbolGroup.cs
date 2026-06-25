@@ -4,4 +4,20 @@ public interface ISymbolGroup : IReadOnlyList<ISymbol>
 {
 }
 
-public sealed class SymbolGroup : List<ISymbol>, ISymbolGroup { }
+public sealed class SymbolGroup : List<ISymbol>, ISymbolGroup
+{
+	#region Constructors
+	public SymbolGroup() { }
+	public SymbolGroup(IEnumerable<ISymbol> symbols) : base(symbols) { }
+	#endregion
+}
+
+public static class ISymbolGroupExtensions
+{
+	extension(IEnumerable<ISymbol> symbols)
+	{
+		#region Methods
+		public SymbolGroup ToGroup() => [.. symbols];
+		#endregion
+	}
+}
