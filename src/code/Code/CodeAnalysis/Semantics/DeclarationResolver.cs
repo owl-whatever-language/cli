@@ -1,20 +1,20 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics;
 
-public sealed class SymbolResolutionResult : IStageResultDiagnostics, IStageResultPerformance, ISourceStageResult
+public sealed class DeclarationResolutionResult : IStageResultDiagnostics, IStageResultPerformance, ISourceStageResult
 {
 	#region Properties
-	public string Stage => "symbol_resolution";
+	public string Stage => "declaration_resolution";
 	public IDiagnosticBag Diagnostics { get; }
 	public IPerformanceResult Performance { get; }
-	public ISymbolicSyntaxTree Tree { get; }
+	public IDeclaredSyntaxTree Tree { get; }
 	public ISourceFile Source => Tree.Source;
 	#endregion
 
 	#region Constructors
-	public SymbolResolutionResult(
+	public DeclarationResolutionResult(
 		IDiagnosticBag diagnostics,
 		IPerformanceResult performance,
-		ISymbolicSyntaxTree tree)
+		IDeclaredSyntaxTree tree)
 	{
 		Diagnostics = diagnostics;
 		Performance = performance;
@@ -23,17 +23,17 @@ public sealed class SymbolResolutionResult : IStageResultDiagnostics, IStageResu
 	#endregion
 }
 
-public sealed class ParallelSymbolResolutionResult : IParallelStageResult<SymbolResolutionResult>
+public sealed class ParallelDeclarationResolutionResult : IParallelStageResult<DeclarationResolutionResult>
 {
 	#region Properties
-	public string Stage => "parallel_symbol_resolution";
+	public string Stage => "parallel_declaration_resolution";
 	public IPerformanceResult Performance { get; }
-	public IReadOnlyCollection<SymbolResolutionResult> Children { get; }
-	public IEnumerable<ISymbolicSyntaxTree> Trees => Children.Select(r => r.Tree);
+	public IReadOnlyCollection<DeclarationResolutionResult> Children { get; }
+	public IEnumerable<IDeclaredSyntaxTree> Trees => Children.Select(r => r.Tree);
 	#endregion
 
 	#region Constructors
-	public ParallelSymbolResolutionResult(IPerformanceResult performance, IReadOnlyCollection<SymbolResolutionResult> children)
+	public ParallelDeclarationResolutionResult(IPerformanceResult performance, IReadOnlyCollection<DeclarationResolutionResult> children)
 	{
 		Performance = performance;
 		Children = children;
@@ -41,7 +41,7 @@ public sealed class ParallelSymbolResolutionResult : IParallelStageResult<Symbol
 	#endregion
 }
 
-public sealed class SymbolResolver : BaseConcreteToSymbolicTreeConverter, IDiagnosticProvider
+public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagnosticProvider
 {
 	#region Nested types
 	private readonly struct Scope(SymbolResolver resolver) : IDisposable
@@ -75,17 +75,17 @@ public sealed class SymbolResolver : BaseConcreteToSymbolicTreeConverter, IDiagn
 	#endregion
 
 	#region Functions
-	public static SymbolResolutionResult Resolve(ISymbolScope baseScope, IConcreteSyntaxTree concrete)
+	public static DeclarationResolutionResult Resolve(ISymbolScope baseScope, IConcreteSyntaxTree concrete)
 	{
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
 			SymbolResolver resolver = new(baseScope);
-			ISymbolicSyntaxTree symbolic = resolver.Convert(concrete);
+			IDeclaredSyntaxTree declared = resolver.Convert(concrete);
 
-			return new(resolver.Diagnostics, performance, symbolic);
+			return new(resolver.Diagnostics, performance, declared);
 		}
 	}
-	public static ParallelSymbolResolutionResult Resolve(ISymbolScope baseScope, IReadOnlyCollection<IConcreteSyntaxTree> trees)
+	public static ParallelDeclarationResolutionResult Resolve(ISymbolScope baseScope, IReadOnlyCollection<IConcreteSyntaxTree> trees)
 	{
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
@@ -94,11 +94,11 @@ public sealed class SymbolResolver : BaseConcreteToSymbolicTreeConverter, IDiagn
 
 			if (trees.Count is 1)
 			{
-				SymbolResolutionResult result = Resolve(baseScope, trees.Single());
+				DeclarationResolutionResult result = Resolve(baseScope, trees.Single());
 				return new(performance, [result]);
 			}
 
-			SymbolResolutionResult[] results = new SymbolResolutionResult[trees.Count];
+			DeclarationResolutionResult[] results = new DeclarationResolutionResult[trees.Count];
 
 			ParallelOptions options = new() { MaxDegreeOfParallelism = Environment.ProcessorCount };
 			Parallel.ForEach(trees, options, (tree, _, index) => results[index] = Resolve(baseScope, tree));
@@ -109,15 +109,15 @@ public sealed class SymbolResolver : BaseConcreteToSymbolicTreeConverter, IDiagn
 	#endregion
 
 	#region Methods
-	protected override SymbolicSyntaxTree Convert(IConcreteSyntaxTree tree)
+	protected override DeclaredSyntaxTree Convert(IConcreteSyntaxTree tree)
 	{
 		Source = tree.Source;
 		return base.Convert(tree);
 	}
 	#endregion
 
-	#region Refined declaration methods
-	protected override SymbolicVariableDeclarationStatementSyntax Convert(IConcreteVariableDeclarationStatementSyntax concrete)
+	#region Refine declaration methods
+	protected override DeclaredVariableDeclarationStatementSyntax Convert(IConcreteVariableDeclarationStatementSyntax concrete)
 	{
 		Get(concrete, out IDeclaredLocalVariable variable);
 
@@ -129,12 +129,12 @@ public sealed class SymbolResolver : BaseConcreteToSymbolicTreeConverter, IDiagn
 
 		variable.Type = type.TypeInfo;
 
-		SymbolicVariableDeclarationStatementSyntax symbolic = new(type, name, assignment, value, terminator, variable);
-		Update(variable, symbolic);
+		DeclaredVariableDeclarationStatementSyntax declared = new(type, name, assignment, value, terminator, variable);
+		Update(variable, declared);
 
-		return symbolic;
+		return declared;
 	}
-	protected override SymbolicFunctionDeclarationStatementSyntax Convert(IConcreteFunctionDeclarationStatementSyntax concrete)
+	protected override DeclaredFunctionDeclarationStatementSyntax Convert(IConcreteFunctionDeclarationStatementSyntax concrete)
 	{
 		Get(concrete, out IDeclaredFunction function);
 		using (EnterScope(concrete, out ISymbolScope scope))
@@ -149,13 +149,13 @@ public sealed class SymbolResolver : BaseConcreteToSymbolicTreeConverter, IDiagn
 			if (@return is ISemanticRegularFunctionReturnSyntax regularReturn)
 				function.Return.Type = regularReturn.ReturnType.TypeInfo;
 
-			SymbolicFunctionDeclarationStatementSyntax symbolic = new(name, start, parameters, end, @return, body, function, scope);
-			Update(function, symbolic);
+			DeclaredFunctionDeclarationStatementSyntax declared = new(name, start, parameters, end, @return, body, function, scope);
+			Update(function, declared);
 
-			return symbolic;
+			return declared;
 		}
 	}
-	protected override SymbolicRegularFunctionParameterSyntax Convert(IConcreteRegularFunctionParameterSyntax concrete)
+	protected override DeclaredRegularFunctionParameterSyntax Convert(IConcreteRegularFunctionParameterSyntax concrete)
 	{
 		Get(concrete, out IDeclaredFunctionParameter parameter);
 
@@ -164,22 +164,15 @@ public sealed class SymbolResolver : BaseConcreteToSymbolicTreeConverter, IDiagn
 
 		parameter.Type = type.TypeInfo;
 
-		SymbolicRegularFunctionParameterSyntax symbolic = new(type, name, parameter);
-		Update(parameter, symbolic);
+		DeclaredRegularFunctionParameterSyntax declared = new(type, name, parameter);
+		Update(parameter, declared);
 
-		return symbolic;
+		return declared;
 	}
 	#endregion
 
-	#region Get symbol group methods
-	protected override SymbolicGetExpressionSyntax Convert(IConcreteGetExpressionSyntax concrete)
-	{
-		ISymbolGroup symbols = GetAll(concrete.Name);
-		var name = Convert(concrete.Name);
-
-		return new(name, symbols);
-	}
-	protected override SymbolicRegularTypeSyntax Convert(IConcreteRegularTypeSyntax concrete)
+	#region Type methods
+	protected override DeclaredRegularTypeSyntax Convert(IConcreteRegularTypeSyntax concrete)
 	{
 		ISymbolGroup symbols = GetAll(concrete.Name);
 		var name = Convert(concrete.Name);
@@ -191,9 +184,9 @@ public sealed class SymbolResolver : BaseConcreteToSymbolicTreeConverter, IDiagn
 
 		return new(name, symbols, typed.SingleOrDefault() ?? SpecialTypes.Error);
 	}
-	protected override SymbolicEmptyTypeSyntax Convert(IConcreteEmptyTypeSyntax concrete) => new(SpecialTypes.Error);
-	protected override SymbolicNestedTypeSyntax Convert(IConcreteNestedTypeSyntax concrete) => throw new NotImplementedException();
-	protected override SymbolicGenericTypeSyntax Convert(IConcreteGenericTypeSyntax concrete) => throw new NotImplementedException();
+	protected override DeclaredEmptyTypeSyntax Convert(IConcreteEmptyTypeSyntax concrete) => new(SpecialTypes.Error);
+	protected override DeclaredNestedTypeSyntax Convert(IConcreteNestedTypeSyntax concrete) => throw new NotImplementedException();
+	protected override DeclaredGenericTypeSyntax Convert(IConcreteGenericTypeSyntax concrete) => throw new NotImplementedException();
 	#endregion
 
 	#region Scope helpers
@@ -230,7 +223,7 @@ public sealed class SymbolResolver : BaseConcreteToSymbolicTreeConverter, IDiagn
 	{
 		symbol = CurrentScope.Get<T>(declaration);
 	}
-	private void Update(IDeclaredSymbol symbol, ISymbolicSyntaxNode declaration)
+	private void Update(IDeclaredSymbol symbol, IDeclaredSyntaxNode declaration)
 	{
 		CurrentScope.Update(symbol, declaration);
 	}

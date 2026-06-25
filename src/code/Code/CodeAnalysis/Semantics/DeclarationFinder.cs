@@ -1,16 +1,16 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics;
 
-public sealed class SymbolCollectionResult : IStageResultDiagnostics, IStageResultPerformance
+public sealed class DeclarationDiscoveryResult : IStageResultDiagnostics, IStageResultPerformance
 {
 	#region Properties
-	public string Stage => "symbol_collection";
+	public string Stage => "declaration_discovery";
 	public IDiagnosticBag Diagnostics { get; }
 	public IPerformanceResult Performance { get; }
 	public ISymbolScope ResultScope { get; }
 	#endregion
 
 	#region Constructors
-	public SymbolCollectionResult(
+	public DeclarationDiscoveryResult(
 		IDiagnosticBag diagnostics,
 		IPerformanceResult performance,
 		ISymbolScope resultScope)
@@ -22,19 +22,19 @@ public sealed class SymbolCollectionResult : IStageResultDiagnostics, IStageResu
 	#endregion
 }
 
-public sealed class SymbolCollector : BaseConcreteVisitor, IDiagnosticProvider
+public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 {
 	#region Nested types
-	private readonly struct Scope(SymbolCollector collector) : IDisposable
+	private readonly struct Scope(DeclarationFinder finder) : IDisposable
 	{
 		#region Methods
-		public void Dispose() => collector.ExitScope();
+		public void Dispose() => finder.ExitScope();
 		#endregion
 	}
 	#endregion
 
 	#region Properties
-	public string Name => "symbol_collector";
+	public string Name => "declaration_finder";
 	private DiagnosticBag Diagnostics { get; } = [];
 	private SymbolScope ResultScope { get; }
 	private Stack<SymbolScope> Scopes { get; } = [];
@@ -42,7 +42,7 @@ public sealed class SymbolCollector : BaseConcreteVisitor, IDiagnosticProvider
 	#endregion
 
 	#region Constructors
-	private SymbolCollector(ISymbolScope baseScope)
+	private DeclarationFinder(ISymbolScope baseScope)
 	{
 		ResultScope = new("user_defined", baseScope);
 		CurrentScope = ResultScope;
@@ -50,21 +50,21 @@ public sealed class SymbolCollector : BaseConcreteVisitor, IDiagnosticProvider
 	#endregion
 
 	#region Functions
-	public static SymbolCollectionResult Collect(ISymbolScope baseScope, IReadOnlyCollection<IConcreteSyntaxTree> trees)
+	public static DeclarationDiscoveryResult Discover(ISymbolScope baseScope, IReadOnlyCollection<IConcreteSyntaxTree> trees)
 	{
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
-			SymbolCollector collector = new(baseScope);
+			DeclarationFinder finder = new(baseScope);
 
 			if (trees.Count is 1)
-				collector.Visit(trees.Single());
+				finder.Visit(trees.Single());
 			else if (trees.Count > 1)
 			{
 				ParallelOptions options = new() { MaxDegreeOfParallelism = Environment.ProcessorCount };
-				Parallel.ForEach(trees, options, collector.Visit);
+				Parallel.ForEach(trees, options, finder.Visit);
 			}
 
-			return new(collector.Diagnostics, performance, collector.ResultScope);
+			return new(finder.Diagnostics, performance, finder.ResultScope);
 		}
 	}
 	#endregion
@@ -93,7 +93,7 @@ public sealed class SymbolCollector : BaseConcreteVisitor, IDiagnosticProvider
 	#endregion
 
 	#region Scope methods
-	private void Add(ISymbol symbol) => CurrentScope.Add(symbol);
+	private void Add(IDeclaredSymbol symbol) => CurrentScope.Add(symbol);
 	private Scope NewScope(string kind, IDeclaredSymbol symbol)
 	{
 		Add(symbol);

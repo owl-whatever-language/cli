@@ -19,7 +19,7 @@ public sealed class CompilationUpdateResult : IStageResultPerformance, IStageRes
 	#endregion
 }
 
-public class CompilationContext
+public sealed class CompilationContext
 {
 	#region Fields
 	private readonly Dictionary<ISourceFile, SyntaxTreeBundle> _trees = [];
@@ -29,7 +29,7 @@ public class CompilationContext
 	public ISymbolScope BaseScope { get; }
 	public IReadOnlyDictionary<ISourceFile, ISyntaxTreeBundle> Trees => _trees.ToDictionary(pair => pair.Key, pair => (ISyntaxTreeBundle)pair.Value);
 	public IReadOnlyCollection<IConcreteSyntaxTree> Concrete => GetConcreteTrees().ToArray();
-	public IReadOnlyCollection<ISymbolicSyntaxTree> Symbolic => GetSymbolicTrees().ToArray();
+	public IReadOnlyCollection<IDeclaredSyntaxTree> Declared => GetDeclaredTrees().ToArray();
 	public IReadOnlyCollection<ISemanticSyntaxTree> Semantic => GetSemanticTrees().ToArray();
 	public IReadOnlyCollection<IAnnotatedSyntaxTree> Annotated => GetAnnotatedTrees().ToArray();
 	#endregion
@@ -74,15 +74,15 @@ public class CompilationContext
 		SemanticResultGroup semanticGroup;
 		using (PerformanceResult.Scope(out IPerformanceResult semanticPerformance))
 		{
-			SymbolCollectionResult symbolCollection = SymbolCollector.Collect(BaseScope, Concrete);
-			ParallelSymbolResolutionResult symbolResolution = SymbolResolver.Resolve(symbolCollection.ResultScope, Concrete);
-			foreach (ISymbolicSyntaxTree tree in symbolResolution.Trees)
+			DeclarationDiscoveryResult declarationDiscovery = DeclarationFinder.Discover(BaseScope, Concrete);
+			ParallelDeclarationResolutionResult symbolResolution = SymbolResolver.Resolve(declarationDiscovery.ResultScope, Concrete);
+			foreach (IDeclaredSyntaxTree tree in symbolResolution.Trees)
 			{
 				SyntaxTreeBundle bundle = _trees[tree.Source];
-				bundle.Symbolic = tree;
+				bundle.Declared = tree;
 			}
 
-			semanticGroup = new(semanticPerformance, symbolCollection, symbolResolution);
+			semanticGroup = new(semanticPerformance, declarationDiscovery, symbolResolution);
 		}
 
 		return new(performance, parsing, semanticGroup);
@@ -100,14 +100,14 @@ public class CompilationContext
 			yield return bundle.Concrete;
 		}
 	}
-	private IEnumerable<ISymbolicSyntaxTree> GetSymbolicTrees()
+	private IEnumerable<IDeclaredSyntaxTree> GetDeclaredTrees()
 	{
 		foreach (ISyntaxTreeBundle bundle in _trees.Values)
 		{
-			if (bundle.Symbolic is null)
-				ThrowHelper.ThrowInvalidOperationException("Expected the symbolic tree to be set.");
+			if (bundle.Declared is null)
+				ThrowHelper.ThrowInvalidOperationException("Expected the declared tree to be set.");
 
-			yield return bundle.Symbolic;
+			yield return bundle.Declared;
 		}
 	}
 	private IEnumerable<ISemanticSyntaxTree> GetSemanticTrees()

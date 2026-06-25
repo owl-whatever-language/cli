@@ -127,10 +127,10 @@ public sealed class PerformanceResult : IPerformanceResult
 		Dictionary<string, IPerformanceResult> breakdowns = [];
 		foreach (KeyValuePair<string, IPerformanceResult> pair in totals)
 		{
-			double systemShare = pair.Value.SystemTime / total.SystemTime;
-			double userShare = pair.Value.UserTime / total.UserTime;
-			double durationShare = pair.Value.Duration / total.Duration;
-			double memoryShare = pair.Value.MemoryUsed / (double)total.MemoryUsed;
+			double systemShare = Correct(pair.Value.SystemTime / total.SystemTime);
+			double userShare = Correct(pair.Value.UserTime / total.UserTime);
+			double durationShare = Correct(pair.Value.Duration / total.Duration);
+			double memoryShare = Correct(pair.Value.MemoryUsed / (double)total.MemoryUsed);
 
 			TimeSpan system = systemShare * parent.SystemTime;
 			TimeSpan user = userShare * parent.UserTime;
@@ -143,6 +143,11 @@ public sealed class PerformanceResult : IPerformanceResult
 
 		return breakdowns;
 	}
+	#endregion
+
+	#region Helpers
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static double Correct(double value) => double.IsNaN(value) ? 0 : value;
 	#endregion
 }
 
