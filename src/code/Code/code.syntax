@@ -22,6 +22,7 @@ document : list<statement> statements, token end_of_input
 group type
 empty type
 regular type : token name
+regular_type @ symbolic : ISymbolGroup symbols
 nested type : type left, token dot, token name
 generic type : type type, token start, list<type, token> generics, token end
 
@@ -39,12 +40,15 @@ value_return statement : token keyword, expression value, token terminator
 
 ### Declarations
 variable_declaration statement        : type type, token name, token assignment, expression value, token terminator
+variable_declaration @ symbolic       : IDeclaredLocalVariable variable
 
 #### Functions
 function_declaration statement        : token name, token start, list<function_parameter, token> parameters, token end, function_return return, function_body body
+function_declaration @ symbolic       : IDeclaredFunction function, ISymbolScope scope
 local_function_declaration statement  : token keyword, function_declaration_statement declaration
 
 group function_parameter : token name
+function_parameter @ symbolic : IDeclaredFunctionParameter parameter
 regular function_parameter : type type
 
 group function_return
@@ -64,6 +68,7 @@ binary expression     : expression left, token operator, expression right
 ternary expression    : expression condition, token question, expression true_clause, token colon, expression false_clause
 grouped expression    : token start, expression value, token end
 get expression        : token name
+get @ symbolic        : ISymbolGroup symbols
 
 ### Literals
 boolean_literal expression : token token
