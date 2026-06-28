@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Syntax;
+namespace OwlDomain.ParsingTools.Syntax.Kinds;
 
 partial struct SyntaxKind
 {

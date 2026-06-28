@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Syntax;
+namespace OwlDomain.ParsingTools.Syntax.Kinds;
 
 /// <summary>
 /// 	Represents a syntax category.
