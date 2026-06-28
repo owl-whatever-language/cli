@@ -6,13 +6,13 @@ global using Spectre.Console;
 global using Spectre.Console.Cli;
 
 global using OwlDomain.ParsingTools.Syntax;
+global using OwlDomain.ParsingTools.Syntax.Debugging;
 global using OwlDomain.ParsingTools.Classification;
 global using OwlDomain.ParsingTools.Sources;
 global using OwlDomain.ParsingTools.Results;
 global using OwlDomain.ParsingTools.Diagnostics;
 
 global using OwlDomain.Owl.Code.CodeAnalysis;
-global using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated;
 
 global using OwlDomain.Owl.CLI;
 global using OwlDomain.Owl.CLI.Commands;

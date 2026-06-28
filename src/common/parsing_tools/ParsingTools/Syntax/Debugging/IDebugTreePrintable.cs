@@ -1,4 +1,4 @@
-namespace OwlDomain.ParsingTools.Syntax;
+namespace OwlDomain.ParsingTools.Syntax.Debugging;
 
 public interface IDebugTreePrintable
 {

@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace OwlDomain.ParsingTools.Syntax;
+namespace OwlDomain.ParsingTools.Syntax.Debugging;
 
 public class DebugTreeFactory
 {
