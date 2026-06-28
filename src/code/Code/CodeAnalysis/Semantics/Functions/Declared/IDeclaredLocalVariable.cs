@@ -41,15 +41,15 @@ public sealed class DeclaredLocalVariable : IDeclaredLocalVariable
 	#endregion
 
 	#region Methods
-	public TextFragmentCollection GetFragments()
+	TextFragmentCollection IDebugTreePrintable.GetFragments()
 	{
-		List<TextFragment> fragments = [];
+		TextFragmentCollection fragments = [];
 
-		fragments.Add(Type);
+		fragments.AddRange(Type);
 		fragments.Add(" ", ClassificationKind.Whitespace);
 		fragments.Add(Name ?? "???", ClassificationKind.Variable);
 
-		return new(fragments);
+		return fragments;
 	}
 	#endregion
 }

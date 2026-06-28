@@ -51,7 +51,7 @@ public class SyntaxList<TValue> : ISyntaxList<TValue>
 
 	/// <inheritdoc/>
 	public int Count => _values.Count;
-	public bool IsFabricated => _values.OrderByDescending(static c => c is ISyntaxToken).All(static c => c.IsFabricated);
+	public bool IsFabricated => _values.Count is not 0 && _values.OrderByDescending(static c => c is ISyntaxToken).All(static c => c.IsFabricated);
 	#endregion
 
 	#region Indexers
@@ -78,9 +78,7 @@ public class SyntaxList<TValue> : ISyntaxList<TValue>
 
 	/// <inheritdoc/>
 	public IEnumerable<ISyntaxNode> GetChildren() => _values;
-
-	public TextFragmentCollection GetFragments() => this.ToTextFragments();
-	public override string ToString() => this.Print();
+	TextFragmentCollection IDebugTreePrintable.GetFragments() => this.GetDebugFragments();
 
 	/// <inheritdoc/>
 	public IEnumerator<TValue> GetEnumerator() => _values.GetEnumerator();
@@ -131,7 +129,7 @@ public class SyntaxList<TValue, TSeparator> : ISyntaxList<TValue, TSeparator>
 	public IndexedPositionRange FullPosition => Nodes.GetFullPosition();
 
 	/// <inheritdoc/>
-	public bool IsFabricated => Nodes.OrderByDescending(static c => c is ISyntaxToken).All(static c => c.IsFabricated);
+	public bool IsFabricated => Nodes.Count is not 0 && Nodes.OrderByDescending(static c => c is ISyntaxToken).All(static c => c.IsFabricated);
 	#endregion
 
 	#region Constructors
@@ -160,9 +158,7 @@ public class SyntaxList<TValue, TSeparator> : ISyntaxList<TValue, TSeparator>
 
 	/// <inheritdoc/>
 	public IEnumerable<ISyntaxNode> GetChildren() => Nodes;
-
-	public TextFragmentCollection GetFragments() => this.ToTextFragments();
-	public override string ToString() => this.Print();
+	TextFragmentCollection IDebugTreePrintable.GetFragments() => this.GetDebugFragments();
 	#endregion
 
 	#region Helpers

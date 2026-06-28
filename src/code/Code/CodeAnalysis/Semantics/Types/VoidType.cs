@@ -18,6 +18,6 @@ public sealed class VoidType : INamedType
 	public override bool Equals([NotNullWhen(true)] object? obj) => ReferenceEquals(this, obj);
 	public override int GetHashCode() => base.GetHashCode(); // Note(Nightowl): We want reference equality so this is ok;
 	public override string ToString() => "void";
-	public TextFragmentCollection GetFragments() => [new("void", ClassificationKind.Type)];
+	TextFragmentCollection IDebugTreePrintable.GetFragments() => [new("void", ClassificationKind.Type)];
 	#endregion
 }

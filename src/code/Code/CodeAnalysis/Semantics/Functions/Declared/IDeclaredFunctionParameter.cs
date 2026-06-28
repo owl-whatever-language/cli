@@ -45,15 +45,15 @@ public sealed class DeclaredFunctionParameter : IDeclaredFunctionParameter
 	#endregion
 
 	#region Methods
-	public TextFragmentCollection GetFragments()
+	TextFragmentCollection IDebugTreePrintable.GetFragments()
 	{
-		List<TextFragment> fragments = [];
+		TextFragmentCollection fragments = [];
 
-		fragments.Add(Type);
+		fragments.AddRange(Type);
 		fragments.Add(" ", ClassificationKind.Whitespace);
 		fragments.Add(Name ?? "???", ClassificationKind.Parameter);
 
-		return new(fragments);
+		return fragments;
 	}
 	#endregion
 }

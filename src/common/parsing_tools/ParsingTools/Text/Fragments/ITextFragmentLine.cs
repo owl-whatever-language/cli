@@ -1,0 +1,192 @@
+namespace OwlDomain.ParsingTools.Text.Fragments;
+
+public interface ITextFragmentLine : ITextFragmentCollection
+{
+	#region Properties
+	int? Line { get; }
+	TextFragment? Indentation { get; }
+	#endregion
+}
+
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
+public sealed class TextFragmentLine : TextFragmentCollection, ITextFragmentLine
+{
+	#region Properties
+	public int? Line { get; }
+	public TextFragment? Indentation
+	{
+		get
+		{
+			if (Count is 0)
+				return null;
+
+			TextFragment first = this[0];
+			if (first.Classification == ClassificationKind.Indentation)
+				return first;
+
+			return null;
+		}
+	}
+	#endregion
+
+	#region Constructors
+	public TextFragmentLine(int? line) => Line = line;
+	public TextFragmentLine(int? line, params IEnumerable<TextFragment> collection) : base(collection) => Line = line;
+	public TextFragmentLine(int? line, int capacity) : base(capacity) => Line = line;
+	#endregion
+
+	#region Methods
+	public override string ToString() => $"{Line} | {string.Concat(this)}";
+	private string DebuggerDisplay() => $"Line #{Line} | {string.Concat(this)}";
+	#endregion
+}
+
+public interface ITextFragmentLineCollection : IReadOnlyList<ITextFragmentLine>
+{
+	#region Properties
+	int LowestLine { get; }
+	int HighestLine { get; }
+	#endregion
+}
+
+public delegate TextFragmentCollection PrefixDelegate(TextFragmentLine line);
+
+public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFragmentLineCollection
+{
+	#region Properties
+	public int LowestLine => Find(l => l.Line is not null)?.Line ?? 0;
+	public int HighestLine => FindLast(l => l.Line is not null)?.Line ?? 0;
+	#endregion
+
+	#region Indexers
+	ITextFragmentLine IReadOnlyList<ITextFragmentLine>.this[int index] => this[index];
+	#endregion
+
+	#region Constructors
+	public TextFragmentLineCollection() { }
+	public TextFragmentLineCollection(IEnumerable<TextFragmentLine> collection) : base(collection) { }
+	public TextFragmentLineCollection(int capacity) : base(capacity) { }
+	#endregion
+
+	#region Methods
+	public int IndexOfLine(int lineNumber) => FindIndex(l => l.Line is not null && l.Line >= lineNumber);
+	public int IndexOfLine(int lineNumber, int fallback)
+	{
+		int index = IndexOfLine(lineNumber);
+		return index < 0 ? fallback : index;
+	}
+	public void InsertBeforeLine(int lineNumber, TextFragmentLine line)
+	{
+		int index = IndexOfLine(lineNumber, 0);
+		Insert(index, line);
+	}
+	public void InsertRangeBeforeLine(int lineNumber, IEnumerable<TextFragmentLine> lines)
+	{
+		int index = IndexOfLine(lineNumber, 0);
+		InsertRange(index, lines);
+	}
+
+	public void InsertAfterLine(int lineNumber, TextFragmentLine line)
+	{
+		int index = IndexOfLine(lineNumber + 1, 0);
+		Insert(index, line);
+	}
+	public void InsertRangeAfterLine(int lineNumber, IEnumerable<TextFragmentLine> lines)
+	{
+		int index = IndexOfLine(lineNumber + 1, 0);
+		InsertRange(index, lines);
+	}
+	public TextFragmentLine? TryGetLineAt(int lineNumber)
+	{
+		foreach (TextFragmentLine line in this)
+		{
+			if (line.Line == lineNumber)
+				return line;
+		}
+
+		return null;
+	}
+
+	public TextFragmentLineCollection Prefix(PrefixDelegate callback)
+	{
+		foreach (TextFragmentLine line in this)
+		{
+			TextFragmentCollection prefix = callback.Invoke(line);
+			line.InsertRange(0, prefix);
+		}
+
+		return this;
+	}
+
+	public TextFragmentLineCollection PrefixLineMargin(string marginText = "|", string numberFormat = "n0")
+	{
+		int maxNumberWidth = HighestLine.ToString(numberFormat).Length;
+
+		TextFragmentCollection GetPrefix(TextFragmentLine line)
+		{
+			string lineNumber = line.Line is null ? "" : line.Line.Value.ToString(numberFormat);
+
+			TextFragment number = new(lineNumber.PadLeft(maxNumberWidth), ClassificationKind.LineNumber);
+			TextFragment margin = new(marginText, ClassificationKind.Margin);
+			TextFragment space = new(" ", ClassificationKind.Whitespace);
+
+			return
+			[
+				space,
+				number,
+				space,
+				margin,
+				space
+			];
+		}
+
+		return Prefix(GetPrefix);
+	}
+
+	public TextFragmentLineCollection TrimFirstLines()
+	{
+		while (true)
+		{
+			if (Count is 0)
+				return this;
+
+			TextFragmentLine first = this[0];
+			if (first.Line is null || (first.IsWhitespace is false))
+				return this;
+
+			RemoveAt(0);
+		}
+	}
+	public TextFragmentLineCollection TrimLastLines()
+	{
+		while (true)
+		{
+			if (Count is 0)
+				return this;
+
+			TextFragmentLine last = this[^1];
+			if (last.Line is null || (last.IsWhitespace is false))
+				return this;
+
+			RemoveAt(Count - 1);
+		}
+	}
+	public TextFragmentLineCollection TrimIndividualLines()
+	{
+		foreach (TextFragmentLine line in this)
+			line.TrimEnd();
+
+		return this;
+	}
+	public TextFragmentLineCollection TrimLines()
+	{
+		TrimLastLines();
+		TrimFirstLines();
+		TrimIndividualLines();
+
+		return this;
+	}
+
+	IEnumerator<ITextFragmentLine> IEnumerable<ITextFragmentLine>.GetEnumerator() => GetEnumerator();
+	#endregion
+}

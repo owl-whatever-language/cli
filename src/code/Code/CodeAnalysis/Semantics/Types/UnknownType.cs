@@ -16,6 +16,6 @@ public sealed class UnknownType : IType
 	public override bool Equals(object? obj) => false;
 	public override int GetHashCode() => base.GetHashCode();
 	public override string ToString() => "unknown";
-	public TextFragmentCollection GetFragments() => [new("unknown", ClassificationKind.Error)];
+	TextFragmentCollection IDebugTreePrintable.GetFragments() => [new("unknown", ClassificationKind.Error)];
 	#endregion
 }

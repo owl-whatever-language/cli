@@ -1,0 +1,110 @@
+namespace OwlDomain.Owl.Code.CodeAnalysis.Diagnostics;
+
+public static class OwlDiagnosticExtensions
+{
+	extension(IDiagnostic diagnostic)
+	{
+		#region Relevant node methods
+		public ISyntaxNode? TryGetRelevantNode(CompilationContext context)
+		{
+			return TryGetRelevantNode(diagnostic, context.AvailableTrees);
+		}
+		public ISyntaxNode? TryGetRelevantNode(IEnumerable<ISyntaxTree> trees)
+		{
+			PositionRange? position;
+			ISyntaxTree? tree;
+
+			if (diagnostic.Location is DiagnosticSourceLocation location)
+			{
+				position = location.Position;
+				tree = trees.FirstOrDefault(p => p.Source == location.Source);
+			}
+			else
+				return null;
+
+			if (position is null || tree is null)
+				return null;
+
+			ISyntaxPart? part = tree.Document.Search<ISyntaxPart>(p => p.Position.WithoutIndex.Contains(position.Value.Start));
+			if (part is null)
+				return null;
+
+			ISyntaxNode relevantNode =
+					part.GetParent<IConcreteStatementSyntax>() ??
+					part.GetParent<IConcreteExpressionSyntax>() ??
+					(ISyntaxNode)part;
+
+			if (relevantNode is IConcreteFunctionDeclarationStatementSyntax && relevantNode.Parent is IConcreteLocalFunctionDeclarationStatementSyntax localFunction)
+				return localFunction;
+
+			return relevantNode;
+		}
+		#endregion
+	}
+
+	extension(IReadOnlyCollection<IDiagnostic> diagnostics)
+	{
+		#region Methods
+		public IReadOnlyDictionary<ISyntaxNode, IDiagnosticBag> ByRelevantNode(CompilationContext context)
+		{
+			return ByRelevantNode(diagnostics, context.AvailableTrees.ToArray());
+		}
+		public IReadOnlyDictionary<ISyntaxNode, IDiagnosticBag> ByRelevantNode(IReadOnlyCollection<ISyntaxTree> trees)
+		{
+			Dictionary<ISyntaxNode, DiagnosticBag> groups = [];
+
+			foreach (IDiagnostic diagnostic in diagnostics)
+			{
+				ISyntaxNode? relevant = diagnostic.TryGetRelevantNode(trees);
+				if (relevant is null)
+					continue;
+
+				if (groups.TryGetValue(relevant, out DiagnosticBag? bag) is false)
+				{
+					bag = [];
+					groups.Add(relevant, bag);
+				}
+
+				bag.Add(diagnostic);
+			}
+
+			return groups.ToDictionary(pair => pair.Key, pair => (IDiagnosticBag)pair.Value);
+		}
+		#endregion
+	}
+	extension(IReadOnlyDictionary<ISyntaxNode, IDiagnosticBag> groups)
+	{
+		#region Methods
+		public IReadOnlyDictionary<ISyntaxNode, IDiagnosticBag> Fold()
+		{
+			Dictionary<ISyntaxNode, DiagnosticBag> folded = [];
+
+			// Seed
+			foreach (KeyValuePair<ISyntaxNode, IDiagnosticBag> pair in groups)
+				folded.Add(pair.Key, [.. pair.Value]);
+
+			foreach (KeyValuePair<ISyntaxNode, DiagnosticBag> pair in folded)
+			{
+				ISyntaxNode? parent = pair.Key.Parent;
+				while (parent is not null)
+				{
+					if (pair.Value.Count is 0)
+						break;
+
+					if (folded.TryGetValue(parent, out DiagnosticBag? other))
+					{
+						other.AddRange(pair.Value);
+						pair.Value.Clear();
+					}
+
+					parent = parent.Parent;
+				}
+			}
+
+			return folded
+				.Where(p => p.Value.Count > 0)
+				.ToDictionary(pair => pair.Key, pair => (IDiagnosticBag)pair.Value);
+		}
+		#endregion
+	}
+}

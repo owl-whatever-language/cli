@@ -63,9 +63,9 @@ public sealed class CallableFunction : ICallableFunction
 		return code.ToHashCode();
 	}
 
-	public TextFragmentCollection GetFragments()
+	TextFragmentCollection IDebugTreePrintable.GetFragments()
 	{
-		List<TextFragment> fragments = [];
+		TextFragmentCollection fragments = [];
 
 		fragments.Add("callable", ClassificationKind.Type);
 		fragments.Add("(", ClassificationKind.Punctuation);
@@ -75,7 +75,7 @@ public sealed class CallableFunction : ICallableFunction
 			if (i > 0)
 				fragments.Add(", ", ClassificationKind.Punctuation);
 
-			fragments.Add(Parameters[i].Type);
+			fragments.AddRange(Parameters[i].Type);
 		}
 
 		fragments.Add(")", ClassificationKind.Punctuation);
@@ -83,10 +83,10 @@ public sealed class CallableFunction : ICallableFunction
 		if (Return.Type != SpecialTypes.Void)
 		{
 			fragments.Add(": ", ClassificationKind.Punctuation);
-			fragments.Add(Return.Type);
+			fragments.AddRange(Return.Type);
 		}
 
-		return new(fragments);
+		return fragments;
 	}
 	#endregion
 }

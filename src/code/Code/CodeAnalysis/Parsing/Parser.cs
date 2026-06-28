@@ -213,7 +213,18 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	#endregion
 
 	#region Statement methods
-	private IConcreteToken ExpectStatementTerminator() => Expect(SyntaxKind.Semicolon, ClassificationKind.Punctuation, "Expected a semi-colon ';' to end the statement.");
+	private IConcreteToken ExpectStatementTerminator()
+	{
+		if (Match(SyntaxKind.Semicolon, ClassificationKind.Punctuation, out IConcreteToken? terminator))
+			return terminator;
+
+		terminator = Fabricate(SyntaxKind.Semicolon, ClassificationKind.Punctuation);
+
+		IndexedPositionRange position = Previous?.Position ?? terminator.Position;
+		ReportExpectedToken(position, SyntaxKind.Semicolon, "Expected a semi-colon ';' to end the statement.");
+
+		return terminator;
+	}
 	private IConcreteStatementSyntax ParseStatement()
 	{
 		if (TryParseStatement(out IConcreteStatementSyntax? statement))
@@ -242,6 +253,8 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	{
 		if (Match(SyntaxKind.Semicolon, ClassificationKind.Punctuation, out IConcreteToken? terminator) is false)
 			return null;
+
+		AddSuggestion("remove_empty_statement", terminator.Position, "Remove empty statement.");
 
 		return new ConcreteOnlyTerminatedStatementSyntax(terminator);
 	}
@@ -955,6 +968,10 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	#endregion
 
 	#region Helpers
+	private void AddSuggestion(string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
+	{
+		AddDiagnostic(DiagnosticKind.Suggestion, id, position, message, stackTrace);
+	}
 	private void AddError(string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
 	{
 		AddDiagnostic(DiagnosticKind.Error, id, position, message, stackTrace);

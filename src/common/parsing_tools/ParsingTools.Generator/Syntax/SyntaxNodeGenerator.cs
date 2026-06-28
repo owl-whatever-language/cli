@@ -364,9 +364,6 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 					using (writer.Indented())
 						writer.WriteLine(": base(source, document) { }");
 				}
-
-				using (writer.Region("Methods"))
-					writer.WriteLine($"public override string ToString() => {document.Name.Pascal}.Print();");
 			}
 		}
 

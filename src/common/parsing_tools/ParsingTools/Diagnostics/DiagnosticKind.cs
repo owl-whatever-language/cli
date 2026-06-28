@@ -94,3 +94,22 @@ public readonly struct DiagnosticKind :
 	public static bool operator >=(DiagnosticKind left, DiagnosticKind right) => left.Level >= right.Level;
 	#endregion
 }
+
+public static class DiagnosticKindExtensions
+{
+	extension(DiagnosticKind kind)
+	{
+		#region Methods
+		public ClassificationKind ToClassification()
+		{
+			if (kind >= DiagnosticKind.Error)
+				return ClassificationKind.Error;
+
+			if (kind >= DiagnosticKind.Warning)
+				return ClassificationKind.Warning;
+
+			return ClassificationKind.Hint;
+		}
+		#endregion
+	}
+}

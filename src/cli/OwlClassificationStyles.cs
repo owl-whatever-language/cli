@@ -14,7 +14,14 @@ public class OwlClassificationStyles : ClassificationStyles
 		{ ClassificationKind.Parameter, new(Color.Cornsilk1) },
 		{ ClassificationKind.Variable, new(Color.White) },
 		{ ClassificationKind.Identifier, new(Color.Gray70) },
-		{ ClassificationKind.Error, new(Color.Red) }
+
+		{ ClassificationKind.Error, new(Color.Red, decoration: Decoration.Italic) },
+		{ ClassificationKind.Warning, new(Color.Orange1, decoration: Decoration.Italic) },
+		{ ClassificationKind.Hint, new(Color.Gray, decoration: Decoration.Italic) },
+
+		{ ClassificationKind.PrettySource, new(Color.Gray) },
+		{ ClassificationKind.Margin, new(Color.Gray) },
+		{ ClassificationKind.LineNumber, new(Color.Blue) },
 	};
 
 	public static OwlClassificationStyles Instance { get; } = new();

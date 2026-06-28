@@ -146,7 +146,7 @@ public class DebugTreeFactory
 
 			string trueValue = property.Value switch
 			{
-				ISyntaxNode node => node.Print(false), // Note(Nightowl): printer minimised the output;
+				ISyntaxNode node => node.GetDebugSource(),
 
 				_ => property.Value.ToString() ?? "",
 			};

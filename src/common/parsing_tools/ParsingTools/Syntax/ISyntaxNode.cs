@@ -56,12 +56,11 @@ public abstract class BaseSyntaxNode : ISyntaxNode
 			child.Parent = this;
 	}
 	public abstract IEnumerable<ISyntaxNode> GetChildren();
-	public TextFragmentCollection GetFragments() => this.ToTextFragments(false);
-	public override string ToString() => this.Print();
+	TextFragmentCollection IDebugTreePrintable.GetFragments() => this.GetDebugFragments();
 	#endregion
 
 	#region Helpers
-	private string DebuggerDisplay() => $"{GetType().Name}: {this.Print(false)}";
+	private string DebuggerDisplay() => $"{GetType().Name}: {this.GetDebugSource()}";
 	#endregion
 }
 
@@ -149,7 +148,23 @@ public static class ISyntaxNodeExtensions
 		#endregion
 
 		#region Flatten methods
-		public IReadOnlyList<ISyntaxToken> Flatten() => Flatten<ISyntaxToken>(node);
+		public IReadOnlyList<ISyntaxToken> ToTokens() => Flatten<ISyntaxToken>(node);
+		public IReadOnlyList<ISyntaxPart> ToParts() => Flatten<ISyntaxPart>(node);
+		public IEnumerable<ISyntaxPart> ToPartsWithoutOuterTrivia()
+		{
+			IReadOnlyList<ISyntaxPart> parts = node.ToParts();
+
+			int start = parts.FindIndex(static p => p is ISyntaxToken);
+			if (start < 0)
+				return [];
+
+			int last = parts.FindLastIndex(static p => p is ISyntaxToken);
+			Debug.Assert(last >= 0);
+
+			int amount = last - start + 1;
+
+			return parts.Skip(start).Take(amount);
+		}
 		public IReadOnlyList<T> Flatten<T>() where T : notnull, ISyntaxNode
 		{
 			List<T> target = [];
@@ -169,67 +184,6 @@ public static class ISyntaxNodeExtensions
 
 			foreach (ISyntaxNode child in current.GetChildren())
 				Flatten(target, child);
-		}
-		#endregion
-
-		#region Print methods
-		public IReadOnlyList<ISyntaxPart> ToParts(bool includeStartAndEndTrivia = true)
-		{
-			List<ISyntaxPart> parts = [];
-
-			ISyntaxToken? last = null;
-
-			foreach (ISyntaxToken token in Flatten(node))
-			{
-				if (last is not null)
-				{
-					foreach (ISyntaxTrivia trivia in last.TrailingTrivia)
-						parts.Add(trivia);
-				}
-
-				if (includeStartAndEndTrivia || last != null)
-				{
-					foreach (ISyntaxTrivia trivia in token.LeadingTrivia)
-						parts.Add(trivia);
-				}
-
-				parts.Add(token);
-				last = token;
-			}
-
-			if (includeStartAndEndTrivia && last is not null)
-			{
-				foreach (ISyntaxTrivia trivia in last.TrailingTrivia)
-					parts.Add(trivia);
-			}
-
-			return parts;
-		}
-
-		public string Print(bool includeStartAndEndTrivia = true)
-		{
-			StringBuilder builder = new();
-
-			foreach (ISyntaxPart part in ToParts(node, includeStartAndEndTrivia))
-				builder.Append(part.Lexeme);
-
-			string text = builder.ToString();
-			return text;
-		}
-		public TextFragmentCollection ToTextFragments(bool includeStartAndEndTrivia = true)
-		{
-			List<TextFragment> fragments = [];
-
-			foreach (ISyntaxPart part in ToParts(node, includeStartAndEndTrivia))
-			{
-				if (part.Lexeme is null)
-					continue;
-
-				TextFragment fragment = new(part.Lexeme, part.Classification, part);
-				fragments.Add(fragment);
-			}
-
-			return new(fragments);
 		}
 		#endregion
 

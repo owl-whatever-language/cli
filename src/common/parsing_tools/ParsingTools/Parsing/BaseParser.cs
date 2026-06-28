@@ -44,6 +44,8 @@ public abstract class BaseParser
 	/// <remarks>The parser might mutate some of the tokens for error recovery purposes.</remarks>
 	protected IReadOnlyList<ISyntaxToken> Tokens => _tokens;
 
+	protected ISyntaxToken? Previous => Peek(-1);
+
 	/// <summary>The current token.</summary>
 	protected ISyntaxToken? Current => Peek(0);
 
@@ -97,16 +99,13 @@ public abstract class BaseParser
 	/// <summary>Gets the token at the given <paramref name="offset"/> from the current position.</summary>
 	/// <param name="offset">The offset in terms of tokens.</param>
 	/// <returns>The token at the given offset, or <see langword="null"/> if the end of the input was reached.</returns>
-	/// <exception cref="ArgumentOutOfRangeException">Thrown if the given <paramref name="offset"/> is less than zero.</exception>
 	protected ISyntaxToken? Peek(int offset)
 	{
-		Guard.IsGreaterThanOrEqualTo(offset, 0);
-
 		if (IsAtEnd)
 			return default;
 
 		int index = _index + offset;
-		if (index < Tokens.Count)
+		if (index >= 0 && index < Tokens.Count)
 			return Tokens[index];
 
 		return null;

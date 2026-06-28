@@ -48,9 +48,9 @@ public sealed class DeclaredFunction : IDeclaredFunction
 	#endregion
 
 	#region Methods
-	public TextFragmentCollection GetFragments()
+	TextFragmentCollection IDebugTreePrintable.GetFragments()
 	{
-		List<TextFragment> fragments = [];
+		TextFragmentCollection fragments = [];
 
 		fragments.Add(Name ?? "???", ClassificationKind.Function);
 		fragments.Add("(", ClassificationKind.Punctuation);
@@ -60,7 +60,7 @@ public sealed class DeclaredFunction : IDeclaredFunction
 			if (i > 0)
 				fragments.Add(", ", ClassificationKind.Punctuation);
 
-			fragments.Add(Parameters[i]);
+			fragments.AddRange(Parameters[i]);
 		}
 
 		fragments.Add(")", ClassificationKind.Punctuation);
@@ -68,10 +68,10 @@ public sealed class DeclaredFunction : IDeclaredFunction
 		if (Return.Type != SpecialTypes.Void)
 		{
 			fragments.Add(": ", ClassificationKind.Punctuation);
-			fragments.Add(Return.Type);
+			fragments.AddRange(Return.Type);
 		}
 
-		return new(fragments);
+		return fragments;
 	}
 	#endregion
 }

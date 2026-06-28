@@ -21,9 +21,9 @@ public sealed class BuiltinFunction : IFunction
 	#endregion
 
 	#region Methods
-	public TextFragmentCollection GetFragments()
+	TextFragmentCollection IDebugTreePrintable.GetFragments()
 	{
-		List<TextFragment> fragments = [];
+		TextFragmentCollection fragments = [];
 
 		fragments.Add(Name, ClassificationKind.Function);
 		fragments.Add("(", ClassificationKind.Punctuation);
@@ -33,7 +33,7 @@ public sealed class BuiltinFunction : IFunction
 			if (i > 0)
 				fragments.Add(", ", ClassificationKind.Punctuation);
 
-			fragments.Add(Parameters[i]);
+			fragments.AddRange(Parameters[i]);
 		}
 
 		fragments.Add(")", ClassificationKind.Punctuation);
@@ -41,10 +41,10 @@ public sealed class BuiltinFunction : IFunction
 		if (Return.Type != SpecialTypes.Void)
 		{
 			fragments.Add(": ", ClassificationKind.Punctuation);
-			fragments.Add(Return.Type);
+			fragments.AddRange(Return.Type);
 		}
 
-		return new(fragments);
+		return fragments;
 	}
 	#endregion
 }
@@ -69,15 +69,15 @@ public sealed class BuiltinFunctionParameter : IFunctionParameter
 	#endregion
 
 	#region Methods
-	public TextFragmentCollection GetFragments()
+	TextFragmentCollection IDebugTreePrintable.GetFragments()
 	{
-		List<TextFragment> fragments = [];
+		TextFragmentCollection fragments = [];
 
-		fragments.Add(Type);
+		fragments.AddRange(Type);
 		fragments.Add(" ", ClassificationKind.Whitespace);
 		fragments.Add(Name, ClassificationKind.Parameter);
 
-		return new(fragments);
+		return fragments;
 	}
 	#endregion
 }

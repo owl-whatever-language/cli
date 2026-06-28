@@ -36,7 +36,7 @@ public sealed class FileSystemSourceFile : ISourceFile
 		string text = FileInfo.OpenText().ReadToEnd();
 		return new StringTextParser(text);
 	}
-	public TextFragmentCollection GetFragments() => [new(SimpleName), new(": ", ClassificationKind.Punctuation), new(Path)];
+	TextFragmentCollection IDebugTreePrintable.GetFragments() => [new(SimpleName), new(": ", ClassificationKind.Punctuation), new(Path)];
 	#endregion
 
 	#region Helpers

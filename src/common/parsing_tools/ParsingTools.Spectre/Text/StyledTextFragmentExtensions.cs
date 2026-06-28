@@ -59,4 +59,21 @@ public static class StyledTextFragmentExtensions
 		}
 		#endregion
 	}
+	extension(IReadOnlyList<ITextFragmentLine> lines)
+	{
+		#region Methods
+		public Rows Style(IClassificationStyles styles)
+		{
+			List<Markup> markups = [];
+
+			foreach (ITextFragmentLine line in lines)
+			{
+				Markup markup = line.StyleMarkup(styles);
+				markups.Add(markup);
+			}
+
+			return new(markups);
+		}
+		#endregion
+	}
 }

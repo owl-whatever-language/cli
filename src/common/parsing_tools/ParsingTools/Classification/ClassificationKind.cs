@@ -78,9 +78,9 @@ public readonly partial struct ClassificationKind :
 		return kinds;
 	}
 
-	public TextFragmentCollection GetFragments()
+	TextFragmentCollection IDebugTreePrintable.GetFragments()
 	{
-		List<TextFragment> fragments = [];
+		TextFragmentCollection fragments = [];
 
 		IReadOnlyList<ClassificationKind> parts = Split();
 
@@ -97,7 +97,7 @@ public readonly partial struct ClassificationKind :
 			fragments.Add(part.Name, current);
 		}
 
-		return new(fragments);
+		return fragments;
 	}
 	#endregion
 

@@ -72,7 +72,7 @@ public sealed class SyntaxTrivia : ISyntaxTrivia
 
 	#region Methods
 	public IEnumerable<ISyntaxNode> GetChildren() => [];
-	public TextFragmentCollection GetFragments() => this.ToTextFragments();
+	TextFragmentCollection IDebugTreePrintable.GetFragments() => this.GetDebugFragments();
 	#endregion
 
 	#region Helpers
@@ -143,7 +143,7 @@ public sealed class BadSyntaxTrivia : IBadSyntaxTrivia
 
 	#region Methods
 	public IEnumerable<ISyntaxNode> GetChildren() => [BadSyntax];
-	public TextFragmentCollection GetFragments() => this.ToTextFragments(false);
+	TextFragmentCollection IDebugTreePrintable.GetFragments() => this.GetDebugFragments();
 	#endregion
 
 	#region Helpers

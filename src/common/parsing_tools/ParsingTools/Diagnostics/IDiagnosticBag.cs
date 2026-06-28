@@ -55,6 +55,7 @@ public sealed class DiagnosticBag : IDiagnosticBag, ICollection<IDiagnostic>
 
 	/// <inheritdoc/>
 	public void Add(IDiagnostic item) => _diagnostics.Add(item);
+	public void AddRange(IEnumerable<IDiagnostic> items) => _diagnostics.AddRange(items);
 
 	/// <inheritdoc/>
 	public bool Contains(IDiagnostic item) => _diagnostics.Contains(item);

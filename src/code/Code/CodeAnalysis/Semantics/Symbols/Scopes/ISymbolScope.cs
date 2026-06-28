@@ -146,7 +146,7 @@ public class SymbolScope : ISymbolScope
 			return _children[declaration];
 	}
 
-	public TextFragmentCollection GetFragments() => [new(Name)];
+	TextFragmentCollection IDebugTreePrintable.GetFragments() => [new(Name)];
 	#endregion
 }
 

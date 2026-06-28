@@ -11,6 +11,18 @@ partial struct ClassificationKind
 
 	/// <summary>Represents a classification for errors.</summary>
 	public static ClassificationKind Error { get; } = new("error");
+
+	/// <summary>Represents a classification for warnings.</summary>
+	public static ClassificationKind Warning { get; } = new("warning");
+
+	/// <summary>Represents a classification for hints.</summary>
+	public static ClassificationKind Hint { get; } = new("hint");
+	#endregion
+
+	#region Source printing
+	public static ClassificationKind PrettySource { get; } = new("pretty_source");
+	public static ClassificationKind LineNumber { get; } = PrettySource + "line_number";
+	public static ClassificationKind Margin { get; } = PrettySource + "margin";
 	#endregion
 
 	#region Trivia

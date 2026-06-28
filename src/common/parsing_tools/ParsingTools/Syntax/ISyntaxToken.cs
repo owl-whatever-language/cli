@@ -113,8 +113,7 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 			child.Parent = this;
 	}
 	public IEnumerable<ISyntaxNode> GetChildren() => [LeadingTrivia, TrailingTrivia];
-	public TextFragmentCollection GetFragments() => this.ToTextFragments(false);
-	public override string ToString() => this.Print(false);
+	TextFragmentCollection IDebugTreePrintable.GetFragments() => this.GetDebugFragments();
 	#endregion
 
 	#region Helpers

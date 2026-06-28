@@ -29,7 +29,8 @@ public sealed class CompilationContext
 
 	#region Properties
 	public ISymbolScope BaseScope { get; }
-	public IReadOnlyDictionary<ISourceFile, ISyntaxTreeBundle> Trees => _trees.ToDictionary(pair => pair.Key, pair => (ISyntaxTreeBundle)pair.Value);
+	public IEnumerable<ISyntaxTreeBundle> Bundles => _trees.Values;
+	public IEnumerable<IConcreteSyntaxTree> AvailableTrees => Bundles.Where(b => b.LeastDetailed is not null).Select(b => b.LeastDetailed)!;
 	public IReadOnlyCollection<IConcreteSyntaxTree> Concrete => GetConcreteTrees().ToArray();
 	public IReadOnlyCollection<IDeclaredSyntaxTree> Declared => GetDeclaredTrees().ToArray();
 	public IReadOnlyCollection<ISemanticSyntaxTree> Semantic => GetSemanticTrees().ToArray();

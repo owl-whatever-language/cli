@@ -21,18 +21,18 @@ public sealed class CallableFunctionParameter : ICallableFunctionParameter
 	#endregion
 
 	#region Methods
-	public TextFragmentCollection GetFragments()
+	TextFragmentCollection IDebugTreePrintable.GetFragments()
 	{
-		List<TextFragment> fragments = [];
+		TextFragmentCollection fragments = [];
 
-		fragments.Add(Type);
+		fragments.AddRange(Type);
 		if (Name is not null)
 		{
 			fragments.Add(" ", ClassificationKind.Whitespace);
 			fragments.Add(Name, ClassificationKind.Parameter);
 		}
 
-		return new(fragments);
+		return fragments;
 	}
 	#endregion
 }
