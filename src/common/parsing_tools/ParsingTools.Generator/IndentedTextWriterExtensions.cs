@@ -118,7 +118,7 @@ internal static class IndentedTextWriterExtensions
 
 			return new TypeImplementationScope(writer);
 		}
-		public void WriteInterfaceProperties(IEnumerable<StructuredMemberInfo> members) => WriteInterfaceProperties(writer, members.ToArray());
+		public bool WriteInterfaceProperties(IEnumerable<StructuredMemberInfo> members) => WriteInterfaceProperties(writer, members.ToArray());
 		public bool WriteInterfaceProperties(IReadOnlyList<StructuredMemberInfo> members)
 		{
 			if (members.Count is 0)

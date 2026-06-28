@@ -332,7 +332,17 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		using (writer.Preamble(info.Namespace))
 		{
 			using (writer.InterfacePreamble(info.Interface))
-				writer.WriteInterfaceProperties(info.Members);
+			using (writer.Region("Properties"))
+			{
+				writer.WriteLine($"new {document.Interface.Name} Document {{ get; }}");
+				if (document.Shadows is null)
+					writer.WriteLine($"ISyntaxNode ISyntaxTree.Document => Document;");
+				else
+				{
+					Debug.Assert(info.Shadows is not null);
+					writer.WriteLine($"{document.Shadows.Interface.Name} {info.Shadows!.Interface.Name}.Document => Document;");
+				}
+			}
 
 			using (writer.ClassPreamble(info.Class))
 			{
@@ -340,11 +350,6 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				{
 					writer.WriteLine($"public override string Kind => \"{info.Kind.Original}\";");
 					writer.WriteLine($"public override int Level => {info.Level};");
-
-					if (info.Members.Any())
-						writer.WriteLine();
-
-					writer.WriteClassProperties(info.Members, skipRegion: true);
 				}
 
 				using (writer.Region("Constructors", lineAfter: true))
@@ -352,15 +357,12 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 					writer.Write($"public {info.Class.Name}(");
 					writer.WriteSeparated([
 						"ISourceFile source",
-						..info.Members.Select(m => $"{m.Type.TypeName} {m.Name.Camel}")
+						$"{document.Interface.Name} document"
 					]);
 					writer.WriteLine(")");
 
 					using (writer.Indented())
-						writer.WriteLine(": base(source)");
-
-					using (writer.Braced())
-						writer.WriteConstructorAssignments(info.Members);
+						writer.WriteLine(": base(source, document) { }");
 				}
 
 				using (writer.Region("Methods"))

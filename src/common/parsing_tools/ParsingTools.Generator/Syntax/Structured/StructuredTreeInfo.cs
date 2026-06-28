@@ -15,7 +15,6 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 	public StructuredTreeNodeInfo BaseNode { get; }
 	public StructuredInterfaceInfo Interface { get; }
 	public StructuredClassInfo Class { get; }
-	public IReadOnlyList<StructuredMemberInfo> Members { get; }
 	public StructuredTreeInfo? Shadows { get; }
 	public StructuredTreeInfo? ShadowedBy { get; private set; }
 	public List<StructuredNodeInfo> Nodes { get; } = [];
@@ -42,7 +41,6 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 		StructuredTreeNodeInfo baseNode,
 		StructuredInterfaceInfo @interface,
 		StructuredClassInfo @class,
-		IReadOnlyList<StructuredMemberInfo> members,
 		StructuredTreeInfo? shadowed)
 	{
 		Descriptions = descriptions;
@@ -58,8 +56,6 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 
 		Interface = @interface;
 		Class = @class;
-
-		Members = members;
 
 		Shadows = shadowed;
 		shadowed?.ShadowedBy = this;
@@ -143,7 +139,7 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 		treeClass = new(
 			$"{kind.Pascal}SyntaxTree",
 			ClassType.Sealed,
-			["BaseSyntaxTree", treeInterface.Name],
+			[$"BaseSyntaxTree<I{kind.Pascal}DocumentSyntax>", treeInterface.Name],
 			lastTree?.Class);
 	}
 	public static IReadOnlyList<StructuredTreeInfo> Convert(SyntaxDescriptionFile description)
@@ -172,17 +168,8 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 			StructuredTokenInfo tokenInfo = CreateToken(token, lastTree, baseNode);
 			Create(tree, lastTree, out StructuredInterfaceInfo treeInterface, out StructuredClassInfo treeClass);
 
-			List<StructuredMemberInfo> members = [
-				new(
-					document.Name,
-					treeInterface.Name,
-					new StructuredTypeInfo($"I{kind.Pascal}{document.Name.Pascal}Syntax"),
-					[lastTree?.Members.Single(m => m.Name == document.Name)]
-				)
-			];
-
 			string @namespace = rootNamespace + "." + kind.Pascal;
-			StructuredTreeInfo info = new(description, kind, rootNamespace, @namespace, tokenInfo, baseNode, treeInterface, treeClass, members, lastTree);
+			StructuredTreeInfo info = new(description, kind, rootNamespace, @namespace, tokenInfo, baseNode, treeInterface, treeClass, lastTree);
 			trees.Add(info);
 		}
 
