@@ -5,9 +5,9 @@ public static class OwlDiagnosticExtensions
 	extension(IDiagnostic diagnostic)
 	{
 		#region Relevant node methods
-		public ISyntaxNode? TryGetRelevantNode(CompilationContext context)
+		public ISyntaxNode? TryGetRelevantNode(AnalysisContext context)
 		{
-			return TryGetRelevantNode(diagnostic, context.AvailableTrees);
+			return TryGetRelevantNode(diagnostic, context.Trees);
 		}
 		public ISyntaxNode? TryGetRelevantNode(IEnumerable<ISyntaxTree> trees)
 		{
@@ -45,9 +45,9 @@ public static class OwlDiagnosticExtensions
 	extension(IReadOnlyCollection<IDiagnostic> diagnostics)
 	{
 		#region Methods
-		public IReadOnlyDictionary<ISyntaxNode, IDiagnosticBag> ByRelevantNode(CompilationContext context)
+		public IReadOnlyDictionary<ISyntaxNode, IDiagnosticBag> ByRelevantNode(AnalysisContext context)
 		{
-			return ByRelevantNode(diagnostics, context.AvailableTrees.ToArray());
+			return ByRelevantNode(diagnostics, context.Trees.ToArray());
 		}
 		public IReadOnlyDictionary<ISyntaxNode, IDiagnosticBag> ByRelevantNode(IReadOnlyCollection<ISyntaxTree> trees)
 		{

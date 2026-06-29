@@ -27,12 +27,12 @@ public sealed class RunCommand : Command<RunCommand.Settings>
 
 		BuiltinResolutionResult builtinResult = BuiltinResolver.Resolve();
 
-		CompilationContext compilation = new(builtinResult.ResultScope);
-		CompilationUpdateResult compilationResult = compilation.Update(added: [source]);
+		AnalysisContext analysis = new(builtinResult.ResultScope);
+		AnalysisUpdateResult analysisResult = analysis.Update(added: [source]);
 
-		ISyntaxTree? tree = compilation.AvailableTrees.SingleOrDefault();
+		ISyntaxTree? tree = analysis.Trees.SingleOrDefault();
 
-		IStageResult[] results = [builtinResult, compilationResult];
+		IStageResult[] results = [builtinResult, analysisResult];
 
 		if (tree is null || results.GetAllDiagnostics().Any())
 		{

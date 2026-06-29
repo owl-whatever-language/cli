@@ -1,15 +1,15 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis;
 
-public sealed class CompilationUpdateResult : IStageResultPerformance, IStageResultParent
+public sealed class AnalysisUpdateResult : IStageResultPerformance, IStageResultParent
 {
 	#region Properties
-	public string Stage => "compilation_update";
+	public string Stage => "analysis_update";
 	public IPerformanceResult Performance { get; }
 	public IReadOnlyCollection<IStageResult> Children { get; }
 	#endregion
 
 	#region Constructors
-	public CompilationUpdateResult(
+	public AnalysisUpdateResult(
 		IPerformanceResult performance,
 		params IReadOnlyCollection<IStageResult> children)
 	{
@@ -19,9 +19,9 @@ public sealed class CompilationUpdateResult : IStageResultPerformance, IStageRes
 	#endregion
 }
 
-public delegate void StageCompleteDelegate(CompilationContext context, IStageResult result);
+public delegate void AnalysisStageCompleteDelegate(AnalysisContext context, IStageResult result);
 
-public sealed class CompilationContext
+public sealed class AnalysisContext
 {
 	#region Fields
 	private readonly Dictionary<ISourceFile, SyntaxTreeBundle> _trees = [];
@@ -30,7 +30,7 @@ public sealed class CompilationContext
 	#region Properties
 	public ISymbolScope BaseScope { get; }
 	public IEnumerable<ISyntaxTreeBundle> Bundles => _trees.Values;
-	public IEnumerable<IConcreteSyntaxTree> AvailableTrees => Bundles.Where(b => b.LeastDetailed is not null).Select(b => b.LeastDetailed)!;
+	public IEnumerable<IConcreteSyntaxTree> Trees => Bundles.Where(b => b.LeastDetailed is not null).Select(b => b.LeastDetailed)!;
 	public IReadOnlyCollection<IConcreteSyntaxTree> Concrete => GetConcreteTrees().ToArray();
 	public IReadOnlyCollection<IDeclaredSyntaxTree> Declared => GetDeclaredTrees().ToArray();
 	public IReadOnlyCollection<ISemanticSyntaxTree> Semantic => GetSemanticTrees().ToArray();
@@ -38,18 +38,18 @@ public sealed class CompilationContext
 	#endregion
 
 	#region Constructors
-	public CompilationContext(ISymbolScope baseScope)
+	public AnalysisContext(ISymbolScope baseScope)
 	{
 		BaseScope = baseScope;
 	}
 	#endregion
 
 	#region Methods
-	public CompilationUpdateResult Update(
+	public AnalysisUpdateResult Update(
 		IReadOnlyCollection<ISourceFile>? added = null,
 		IReadOnlyCollection<ISourceFile>? removed = null,
 		IReadOnlyCollection<ISourceFile>? changed = null,
-		StageCompleteDelegate? stageCompleteCallback = null)
+		AnalysisStageCompleteDelegate? stageCompleteCallback = null)
 	{
 		added ??= [];
 		removed ??= [];
