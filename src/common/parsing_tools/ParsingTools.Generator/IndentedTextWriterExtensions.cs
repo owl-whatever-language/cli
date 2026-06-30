@@ -118,13 +118,16 @@ internal static class IndentedTextWriterExtensions
 
 			return new TypeImplementationScope(writer);
 		}
-		public bool WriteInterfaceProperties(IEnumerable<StructuredMemberInfo> members) => WriteInterfaceProperties(writer, members.ToArray());
-		public bool WriteInterfaceProperties(IReadOnlyList<StructuredMemberInfo> members)
+		public bool WriteInterfaceProperties(IEnumerable<StructuredMemberInfo> members, bool skipRegion = false)
+		{
+			return WriteInterfaceProperties(writer, members.ToArray(), skipRegion: skipRegion);
+		}
+		public bool WriteInterfaceProperties(IReadOnlyList<StructuredMemberInfo> members, bool skipRegion = false)
 		{
 			if (members.Count is 0)
 				return false;
 
-			using (writer.Region("Properties"))
+			using (skipRegion ? null : (RegionScope?)writer.Region("Properties"))
 			{
 				IReadOnlyList<StructuredMemberInfo> withShadows = members.Where(m => m.Shadows.Any()).ToArray();
 				IReadOnlyList<StructuredMemberInfo> withoutShadows = members.Where(m => m.Shadows.Count is 0).ToArray();

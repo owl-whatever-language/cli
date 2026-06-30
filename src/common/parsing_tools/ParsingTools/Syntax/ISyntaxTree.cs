@@ -6,13 +6,13 @@ public interface ISyntaxTree
 	string Kind { get; }
 	int Level { get; }
 	ISourceFile Source { get; }
-	ISyntaxNode Document { get; }
+	ISyntaxDocument Document { get; }
 	#endregion
 }
 
 [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public abstract class BaseSyntaxTree<TDocument> : ISyntaxTree
-	where TDocument : notnull, ISyntaxNode
+	where TDocument : notnull, ISyntaxDocument
 {
 	#region Properties
 	public abstract string Kind { get; }
@@ -21,7 +21,7 @@ public abstract class BaseSyntaxTree<TDocument> : ISyntaxTree
 	public TDocument Document { get; }
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	ISyntaxNode ISyntaxTree.Document => Document;
+	ISyntaxDocument ISyntaxTree.Document => Document;
 	#endregion
 
 	#region Constructors
@@ -29,6 +29,8 @@ public abstract class BaseSyntaxTree<TDocument> : ISyntaxTree
 	{
 		Source = source;
 		Document = document;
+
+		document.Tree = this;
 	}
 	#endregion
 

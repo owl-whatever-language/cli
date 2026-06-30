@@ -5,6 +5,15 @@ public class FlowPass : IAnalysisPass<AnalysisPassResult>, IDiagnosticProvider
 	#region Nested types
 	private sealed class Annotator : BaseAnnotatedVisitor
 	{
+		#region Properties
+		private FlowPass Pass { get; }
+		public DiagnosticBag Diagnostics { get; } = [];
+		#endregion
+
+		#region Constructors
+		public Annotator(FlowPass pass) => Pass = pass;
+		#endregion
+
 		#region Methods
 		public void Annotate(IAnnotatedSyntaxTree tree) => Visit(tree);
 
@@ -32,6 +41,15 @@ public class FlowPass : IAnalysisPass<AnalysisPassResult>, IDiagnosticProvider
 		{
 			VisitChildren(node);
 			TryInheritGraph(node, node.Body);
+
+			if (node.Function.Return.Type != SpecialTypes.Void)
+			{
+				if (node.AlwaysReturnsValue is false)
+				{
+					ISourceFile source = node.GetTree().Source;
+					Diagnostics.Add(Pass, DiagnosticKind.Error, "missing_return", source, node.Name.Position, "Function body is missing a return.");
+				}
+			}
 
 			return false;
 		}
@@ -79,11 +97,18 @@ public class FlowPass : IAnalysisPass<AnalysisPassResult>, IDiagnosticProvider
 	{
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
-			DiagnosticBag diagnostics = [];
-			ParallelOptions options = new() { MaxDegreeOfParallelism = Environment.ProcessorCount };
+			DiagnosticBag[] results = new DiagnosticBag[context.Annotated.Count];
+			DiagnosticBag Annotate(IAnnotatedSyntaxTree tree)
+			{
+				Annotator annotator = new(this);
+				annotator.Annotate(tree);
 
-			Annotator annotator = new();
-			Parallel.ForEach(context.Annotated, options, annotator.Annotate);
+				return annotator.Diagnostics;
+			}
+			ParallelOptions options = new() { MaxDegreeOfParallelism = Environment.ProcessorCount };
+			Parallel.ForEach(context.Annotated, options, (tree, _, index) => results[index] = Annotate(tree));
+
+			DiagnosticBag diagnostics = [.. results.SelectMany(d => d)];
 
 			return new(this, performance, diagnostics);
 		}

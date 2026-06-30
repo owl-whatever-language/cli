@@ -244,6 +244,8 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 
 		Name name = description.Name;
 
+		bool isDocument = description.Name == "document" && description.Kind == "node";
+
 		StructuredGroupInfo? group = tree.Groups.FirstOrDefault(g => g.MatchesName(description.Kind));
 
 		Name nameWithGroup = new(name, group?.Name);
@@ -265,6 +267,7 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 		StructuredInterfaceInfo @interface = new(
 			"I" + coreName,
 			[
+				isDocument && shadows is null ? "ISyntaxDocument" : null,
 				group is not null ? group.Interface.Name : tree.BaseNode.Interface.Name,
 				shadows?.Interface.Name
 			],
@@ -275,7 +278,6 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 			ClassType.Sealed,
 			[tree.BaseNode.Class.Name, @interface.Name],
 			shadows?.Class);
-
 
 		foreach (MemberDescription member in description.Members.Concat(modifier?.Members ?? []))
 		{

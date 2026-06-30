@@ -247,6 +247,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			TryParseLocalFunctionDeclaration() ??
 			TryParseBlockStatement() ??
 			TryParseVariableDeclaration() ??
+			TryParseReturnStatement() ??
 			TryParseExpressionStatement();
 	}
 	private IConcreteStatementSyntax? TryParseOnlyTerminatedStatement()
@@ -291,6 +292,23 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBrace, ClassificationKind.Punctuation, start, "Expected a closing brace '}' to match this one.");
 
 		return new ConcreteBlockStatementSyntax(start, statements, end);
+	}
+	private IConcreteStatementSyntax? TryParseReturnStatement()
+	{
+		if (Match(SyntaxKind.Return, ClassificationKind.Keyword, out IConcreteToken? keyword) is false)
+			return null;
+
+		IConcreteToken terminator;
+		if (Current?.Kind != SyntaxKind.Semicolon)
+		{
+			IConcreteExpressionSyntax value = ParseExpression();
+			terminator = ExpectStatementTerminator();
+
+			return new ConcreteValueReturnStatementSyntax(keyword, value, terminator);
+		}
+
+		terminator = ExpectStatementTerminator();
+		return new ConcreteReturnStatementSyntax(keyword, terminator);
 	}
 	#endregion
 

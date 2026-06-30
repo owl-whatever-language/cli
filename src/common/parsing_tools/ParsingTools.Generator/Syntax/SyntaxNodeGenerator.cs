@@ -357,7 +357,12 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 						using (writer.Region("Methods"))
 						{
 							string tokenName = node.Tree.Token.Interface.Name;
+							string documentName = node.Tree.Document.Interface.Name;
+							string treeName = node.Tree.Interface.Name;
+
 							writer.WriteLine($"public IReadOnlyList<{tokenName}> Flatten() => node.Flatten<{tokenName}>();");
+							writer.WriteLine($"public {documentName} GetDocument() => node.GetDocument<{documentName}>();");
+							writer.WriteLine($"public {treeName} GetTree() => node.GetTree<{treeName}>();");
 						}
 					}
 				}
@@ -382,7 +387,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				writer.WriteLine();
 				writer.WriteLine("[DebuggerBrowsable(DebuggerBrowsableState.Never)]");
 				if (document.Shadows is null)
-					writer.WriteLine($"ISyntaxNode ISyntaxTree.Document => Document;");
+					writer.WriteLine($"ISyntaxDocument ISyntaxTree.Document => Document;");
 				else
 				{
 					Debug.Assert(info.Shadows is not null);
@@ -433,15 +438,66 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 	{
 		IndentedTextWriter writer = GetWriter(out StringWriter result);
 
+		bool isDocument = info.Name == "document";
+
 		using (writer.Preamble(info.Namespace))
 		{
 			using (writer.InterfacePreamble(info.Interface))
-				writer.WriteInterfaceProperties(info.InterfaceMembers);
+			{
+				if (isDocument)
+				{
+					using (writer.Region("Properties"))
+					{
+						writer.WriteLine("[DisallowNull]");
+						writer.WriteLine($"new {info.Tree.Interface.Name}? Tree {{ get; set; }}");
+						writer.WriteLine();
+
+						writer.WriteLine("[DisallowNull]");
+						if (info.Tree.Shadows is not null)
+							writer.WriteLine($"{info.Tree.Shadows.Interface.Name} {info.Shadows!.Interface.Name}.Tree");
+						else
+							writer.WriteLine("ISyntaxTree? ISyntaxDocument.Tree");
+						using (writer.Braced())
+						{
+							writer.WriteLine("get => Tree!; // I don't know why C# is complaining, both properties say they allow nullable.");
+							writer.WriteLine($"set => Tree = ({info.Tree.Interface.Name})value;");
+						}
+
+						if (info.InterfaceMembers.Any())
+							writer.WriteLine();
+
+						writer.WriteInterfaceProperties(info.InterfaceMembers, true);
+					}
+				}
+				else
+					writer.WriteInterfaceProperties(info.InterfaceMembers);
+			}
 
 			using (writer.ClassPreamble(info.Class))
 			{
 				using (writer.Region("Properties", lineAfter: true))
 				{
+					if (isDocument)
+					{
+						writer.WriteLine("[DisallowNull]");
+						writer.WriteLine($"public {info.Tree.Interface.Name}? Tree");
+						using (writer.Braced())
+						{
+							writer.WriteLine("get => field;");
+							writer.WriteLine("set");
+							using (writer.Braced())
+							{
+								writer.WriteLine($"if (field is not null)");
+								using (writer.Indented())
+									writer.WriteLine($"throw new ArgumentException(\"The tree has already been assigned.\", nameof(value));");
+
+								writer.WriteLine();
+								writer.WriteLine("field = value;");
+							}
+						}
+						writer.WriteLine();
+					}
+
 					string treeKind = $"\"{info.Kind.Original}\"";
 					string nodeKind = $"\"{info.Name.Original}\"";
 					string? groupKind = info.Group is null ? "null" : $"\"{info.Group.Name.Original}\"";

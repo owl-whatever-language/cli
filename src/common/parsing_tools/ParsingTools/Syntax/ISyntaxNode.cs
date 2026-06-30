@@ -120,6 +120,26 @@ public static class ISyntaxNodeExtensions
 
 			return node;
 		}
+		public ISyntaxDocument GetDocument()
+		{
+			ISyntaxNode root = node.GetRoot();
+			if (root is ISyntaxDocument document)
+				return document;
+
+			ThrowHelper.ThrowInvalidOperationException($"Expected the root of the node to be a document, calling this method before the tree is build is not allowed.");
+			return default;
+		}
+		public T GetDocument<T>() where T : notnull, ISyntaxDocument => (T)node.GetDocument();
+		public ISyntaxTree GetTree()
+		{
+			ISyntaxDocument document = node.GetDocument();
+
+			if (document.Tree is null)
+				ThrowHelper.ThrowInvalidOperationException("Expected the tree to be accessible.");
+
+			return document.Tree;
+		}
+		public T GetTree<T>() where T : notnull, ISyntaxTree => (T)node.GetTree();
 		#endregion
 
 		#region Search methods
