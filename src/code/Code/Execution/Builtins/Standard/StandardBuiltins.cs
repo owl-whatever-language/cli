@@ -10,4 +10,13 @@ internal partial class StandardBuiltins
 	{
 		Console.WriteLine(text.Value);
 	}
+
+	[Name("input")]
+	public static Text Input(IExecutionContext context, Text prompt)
+	{
+		Console.Write(prompt.Value);
+		string input = Console.ReadLine() ?? string.Empty;
+
+		return new(input);
+	}
 }

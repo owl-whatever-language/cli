@@ -1,0 +1,3 @@
+// "Hoot User" example that gets the user's name.
+text name = input(prompt: "Name: ");
+print($"Hoot Hoot {name}!");
