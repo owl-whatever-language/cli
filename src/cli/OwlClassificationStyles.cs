@@ -10,7 +10,7 @@ public class OwlClassificationStyles : ClassificationStyles
 		{ ClassificationKind.Keyword, new(new(61, 141, 233)) }, // blue
 		{ ClassificationKind.Type, new(Color.DarkCyan) },
 		{ ClassificationKind.String, new(Color.Tan) },
-		{ ClassificationKind.Function, new(Color.MediumPurple3) },
+		{ ClassificationKind.Function, new(new(128,105,152)) }, // purple
 		{ ClassificationKind.Parameter, new(Color.Cornsilk1) },
 		{ ClassificationKind.Variable, new(Color.White) },
 		{ ClassificationKind.Identifier, new(Color.Gray70) },
