@@ -138,7 +138,11 @@ internal static class IndentedTextWriterExtensions
 				foreach (StructuredMemberInfo member in withShadows)
 				{
 					foreach (StructuredMemberInfo shadow in member.Shadows)
+					{
+						writer.WriteLine();
+						writer.WriteLine("[DebuggerBrowsable(DebuggerBrowsableState.Never)]");
 						writer.WriteLine($"{shadow.Type.TypeName} {shadow.Owner}.{shadow.Name.Pascal} => {member.Name.Pascal};");
+					}
 				}
 
 				if (withShadows.Any() && withoutShadows.Any())

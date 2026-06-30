@@ -19,6 +19,8 @@ public abstract class BaseSyntaxTree<TDocument> : ISyntaxTree
 	public abstract int Level { get; }
 	public ISourceFile Source { get; }
 	public TDocument Document { get; }
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	ISyntaxNode ISyntaxTree.Document => Document;
 	#endregion
 

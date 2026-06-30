@@ -378,6 +378,9 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			using (writer.Region("Properties"))
 			{
 				writer.WriteLine($"new {document.Interface.Name} Document {{ get; }}");
+
+				writer.WriteLine();
+				writer.WriteLine("[DebuggerBrowsable(DebuggerBrowsableState.Never)]");
 				if (document.Shadows is null)
 					writer.WriteLine($"ISyntaxNode ISyntaxTree.Document => Document;");
 				else
