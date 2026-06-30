@@ -1,18 +1,23 @@
-namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Builtins;
+using System.Reflection;
 
-public sealed class BuiltinFunction : IFunction
+namespace OwlDomain.Owl.Code.Execution.Builtins;
+
+internal sealed class BuiltinFunction : IFunction
 {
 	#region Properties
 	public string Name { get; }
+	public MethodInfo Method { get; }
 	public IReadOnlyList<IFunctionParameter> Parameters { get; }
 	public IFunctionReturn Return { get; }
 	public ICallableFunction AsCallable { get; }
 	#endregion
 
 	#region Constructors
-	public BuiltinFunction(string name, IReadOnlyList<BuiltinFunctionParameter> parameters, BuiltinFunctionReturn @return)
+	public BuiltinFunction(string name, MethodInfo method, IReadOnlyList<BuiltinFunctionParameter> parameters, BuiltinFunctionReturn @return)
 	{
 		Name = name;
+		Method = method;
+
 		Parameters = parameters;
 		Return = @return;
 
@@ -21,6 +26,19 @@ public sealed class BuiltinFunction : IFunction
 	#endregion
 
 	#region Methods
+	public InterpreterValue Execute(IExecutionContext context, IReadOnlyList<InterpreterValue> values)
+	{
+		object?[] arguments =
+		[
+			context,
+			.. values.Select(v => v.Value)
+		];
+
+		object? result = Method.Invoke(null, arguments);
+
+		return Return.Type == SpecialTypes.Void ? InterpreterValue.Void : new(Return.Type, result);
+	}
+
 	TextFragmentCollection IDebugTreePrintable.GetFragments()
 	{
 		TextFragmentCollection fragments = [];
@@ -49,7 +67,7 @@ public sealed class BuiltinFunction : IFunction
 	#endregion
 }
 
-public sealed class BuiltinFunctionParameter : IFunctionParameter
+internal sealed class BuiltinFunctionParameter : IFunctionParameter
 {
 	#region Properties
 	public int Index { get; }
@@ -82,7 +100,7 @@ public sealed class BuiltinFunctionParameter : IFunctionParameter
 	#endregion
 }
 
-public sealed class BuiltinFunctionReturn : IFunctionReturn
+internal sealed class BuiltinFunctionReturn : IFunctionReturn
 {
 	#region Properties
 	public IType Type { get; }

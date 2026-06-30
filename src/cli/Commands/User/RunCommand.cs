@@ -1,5 +1,5 @@
 using System.IO;
-using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Builtins;
+using OwlDomain.Owl.Code.Execution.Builtins;
 
 namespace OwlDomain.Owl.CLI.Commands.User;
 
@@ -30,7 +30,7 @@ public sealed class RunCommand : Command<RunCommand.Settings>
 		AnalysisContext analysis = new(builtinResult.ResultScope);
 		AnalysisUpdateResult analysisResult = analysis.Update(added: [source]);
 
-		ISyntaxTree? tree = analysis.Trees.SingleOrDefault();
+		IAnnotatedSyntaxTree? tree = analysis.Annotated.SingleOrDefault();
 
 		IStageResult[] results = [builtinResult, analysisResult];
 
@@ -40,7 +40,14 @@ public sealed class RunCommand : Command<RunCommand.Settings>
 			return -1;
 		}
 
-		throw new NotImplementedException("Interpreting has not been added back in yet.");
+		InterpretingResult interpreting = Interpreter.Interpret(tree);
+		if (interpreting.Diagnostics.Any())
+		{
+			Display(interpreting.Diagnostics);
+			return -1;
+		}
+
+		return 0;
 	}
 
 	private void Display(IEnumerable<IDiagnostic> diagnostics)
