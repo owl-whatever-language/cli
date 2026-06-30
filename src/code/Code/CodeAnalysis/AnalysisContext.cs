@@ -21,10 +21,18 @@ public sealed class AnalysisUpdateResult : IStageResultPerformance, IStageResult
 
 public delegate void AnalysisStageCompleteDelegate(AnalysisContext context, IStageResult result);
 
-public sealed class AnalysisContext
+public interface IAnalysisContext
+{
+	#region Properties
+	IReadOnlyCollection<IAnnotatedSyntaxTree> Annotated { get; }
+	#endregion
+}
+
+public sealed class AnalysisContext : IAnalysisContext
 {
 	#region Fields
 	private readonly Dictionary<ISourceFile, SyntaxTreeBundle> _trees = [];
+	private readonly List<IAnalysisPass> _passes = [];
 	#endregion
 
 	#region Properties
@@ -45,6 +53,19 @@ public sealed class AnalysisContext
 	#endregion
 
 	#region Methods
+	public AnalysisContext RegisterPass(IAnalysisPass pass)
+	{
+		_passes.Add(pass);
+		return this;
+	}
+	public AnalysisContext RegisterPass<T>() where T : notnull, IAnalysisPass, new()
+	{
+		T pass = new();
+		_passes.Add(pass);
+
+		return this;
+	}
+
 	public AnalysisUpdateResult Update(
 		IReadOnlyCollection<ISourceFile>? added = null,
 		IReadOnlyCollection<ISourceFile>? removed = null,
@@ -113,7 +134,30 @@ public sealed class AnalysisContext
 		}
 		stageCompleteCallback?.Invoke(this, annotationPreparing);
 
-		return new(performance, parsing, semanticGroup, annotationPreparing);
+		List<IStageResult> results = [parsing, semanticGroup, annotationPreparing];
+
+		if (_passes.Any())
+		{
+			AnalysisPassResultGroup passResult = RunPasses();
+			results.Add(passResult);
+		}
+
+		return new(performance, results);
+	}
+	private AnalysisPassResultGroup RunPasses()
+	{
+		using (PerformanceResult.Scope(out IPerformanceResult performance))
+		{
+			List<IAnalysisPassResult> results = [];
+
+			foreach (IAnalysisPass pass in _passes)
+			{
+				IAnalysisPassResult result = pass.Run(this);
+				results.Add(result);
+			}
+
+			return new(performance, results);
+		}
 	}
 	#endregion
 

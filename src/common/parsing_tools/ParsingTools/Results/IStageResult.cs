@@ -59,6 +59,7 @@ public interface IOrderedStageResultParent<out T> : IOrderedStageResultParent, I
 	new IReadOnlyList<T> Children { get; }
 	IReadOnlyList<IStageResult> IOrderedStageResultParent.Children => Children;
 	IReadOnlyCollection<T> IStageResultParent<T>.Children => Children;
+	IReadOnlyCollection<IStageResult> IStageResultParent.Children => Children;
 	#endregion
 }
 
