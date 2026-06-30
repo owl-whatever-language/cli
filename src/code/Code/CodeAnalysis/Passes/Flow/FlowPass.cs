@@ -10,17 +10,46 @@ public class FlowPass : IAnalysisPass<AnalysisPassResult>, IDiagnosticProvider
 
 		protected override bool Visit(IAnnotatedDocumentSyntax node)
 		{
-			FlowGraph graph = FlowGraph.Build(node.Statements);
+			FlowGraph graph = FlowGraph.Build(node, node.Statements);
 			node.Annotations.AddFlowGraph(graph);
 
 			return true;
 		}
 		protected override bool Visit(IAnnotatedBlockStatementSyntax node)
 		{
-			FlowGraph graph = FlowGraph.Build(node.Statements);
+			FlowGraph graph = FlowGraph.Build(node, node.Statements);
 			node.Annotations.AddFlowGraph(graph);
 
 			return true;
+		}
+
+		protected override bool Visit(IAnnotatedFunctionDeclarationStatementSyntax node)
+		{
+			VisitChildren(node);
+
+			if (node.Body is IAnnotatedBlockFunctionBodySyntax block)
+				TryInheritGraph(node, block.Block);
+
+			return false;
+		}
+		protected override bool Visit(IAnnotatedLocalFunctionDeclarationStatementSyntax node)
+		{
+			VisitChildren(node);
+
+			TryInheritGraph(node, node.Declaration);
+
+			return false;
+		}
+
+		private void TryInheritGraph(IAnnotatedSyntaxNode target, IAnnotatedSyntaxNode from)
+		{
+			if (from.Annotations.TryGet(out FlowGraphAnnotation? annotation) is false)
+				return;
+
+			IFlowGraph graph = annotation.Graph;
+			FlowGraph newGraph = new(target, graph.Start, graph.End, graph.Blocks, graph.Branches);
+
+			target.Annotations.AddFlowGraph(newGraph);
 		}
 		#endregion
 	}

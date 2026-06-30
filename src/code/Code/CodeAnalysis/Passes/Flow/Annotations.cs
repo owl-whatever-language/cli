@@ -46,6 +46,7 @@ public static class FlowGraphAnnotationExtensions
 			annotations.Add(annotation);
 		}
 
+		public IFlowGraph? TryGetFlowGraph() => annotations.TryGet<FlowGraphAnnotation>()?.Graph;
 		public IFlowGraph GetFlowGraph() => annotations.Get<FlowGraphAnnotation>().Graph;
 		public IFlowBlock GetFlowBlock() => annotations.Get<FlowBlockAnnotation>().Block;
 		#endregion

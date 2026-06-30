@@ -4,6 +4,7 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.Passes.Flow;
 public interface IFlowGraph
 {
 	#region Properties
+	IAnnotatedSyntaxNode Node { get; }
 	IFlowBlock Start { get; }
 	IFlowBlock End { get; }
 	IReadOnlyList<IFlowBlock> Blocks { get; }
@@ -26,7 +27,7 @@ public sealed class FlowGraph : IFlowGraph
 		#endregion
 
 		#region Methods
-		public FlowGraph Build(List<FlowBlock> blocks)
+		public FlowGraph Build(IAnnotatedSyntaxNode node, List<FlowBlock> blocks)
 		{
 			if (blocks.Any())
 				Connect(_start, blocks[0]);
@@ -79,7 +80,7 @@ public sealed class FlowGraph : IFlowGraph
 			blocks.Insert(0, _start);
 			blocks.Add(_end);
 
-			return new(_start, _end, blocks, _branches);
+			return new(node, _start, _end, blocks, _branches);
 		}
 		#endregion
 
@@ -97,6 +98,7 @@ public sealed class FlowGraph : IFlowGraph
 	#endregion
 
 	#region Properties
+	public IAnnotatedSyntaxNode Node { get; }
 	public IFlowBlock Start { get; }
 	public IFlowBlock End { get; }
 	public IReadOnlyList<IFlowBlock> Blocks { get; }
@@ -106,11 +108,13 @@ public sealed class FlowGraph : IFlowGraph
 
 	#region Constructors
 	public FlowGraph(
+		IAnnotatedSyntaxNode node,
 		IFlowBlock start,
 		IFlowBlock end,
 		IReadOnlyList<IFlowBlock> blocks,
 		IReadOnlyList<IFlowBranch> branches)
 	{
+		Node = node;
 		Start = start;
 		End = end;
 		Blocks = blocks;
@@ -119,18 +123,18 @@ public sealed class FlowGraph : IFlowGraph
 	#endregion
 
 	#region Functions
-	public static FlowGraph Build(IReadOnlyList<IAnnotatedStatementSyntax> statements)
+	public static FlowGraph Build(IAnnotatedSyntaxNode node, IReadOnlyList<IAnnotatedStatementSyntax> statements)
 	{
 		List<FlowBlock> blocks = FlowBlock.Build(statements);
-		FlowGraph graph = Build(blocks);
+		FlowGraph graph = Build(node, blocks);
 
 		return graph;
 	}
-	public static FlowGraph Build(List<FlowBlock> blocks)
+	public static FlowGraph Build(IAnnotatedSyntaxNode node, List<FlowBlock> blocks)
 	{
 		Builder builder = new();
 
-		return builder.Build(blocks);
+		return builder.Build(node, blocks);
 	}
 	#endregion
 }

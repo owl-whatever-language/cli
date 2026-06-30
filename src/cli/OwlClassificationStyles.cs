@@ -5,9 +5,9 @@ public class OwlClassificationStyles : ClassificationStyles
 	#region Properties
 	private static IReadOnlyDictionary<ClassificationKind, Style> Styles { get; } = new Dictionary<ClassificationKind, Style>
 	{
-		{ ClassificationKind.Comment, new(Color.DarkGreen) },
+		{ ClassificationKind.Comment, new(new(88,144,88)) }, // dark green
 		{ ClassificationKind.Punctuation, new(Color.Gray50) },
-		{ ClassificationKind.Keyword, new(Color.Blue)  },
+		{ ClassificationKind.Keyword, new(new(61, 141, 233)) }, // blue
 		{ ClassificationKind.Type, new(Color.DarkCyan) },
 		{ ClassificationKind.String, new(Color.Tan) },
 		{ ClassificationKind.Function, new(Color.MediumPurple3) },
@@ -21,7 +21,7 @@ public class OwlClassificationStyles : ClassificationStyles
 
 		{ ClassificationKind.PrettySource, new(Color.Gray) },
 		{ ClassificationKind.Margin, new(Color.Gray) },
-		{ ClassificationKind.LineNumber, new(Color.Blue) },
+		{ ClassificationKind.LineNumber, new(new(61, 141, 233)) }, // blue
 	};
 
 	public static OwlClassificationStyles Instance { get; } = new();
