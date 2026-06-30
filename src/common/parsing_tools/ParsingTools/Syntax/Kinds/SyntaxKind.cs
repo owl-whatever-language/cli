@@ -36,6 +36,8 @@ public readonly partial struct SyntaxKind :
 	/// <exception cref="ArgumentException">Thrown if the given <paramref name="category"/> is unknown.</exception>
 	public SyntaxKind(string name, SyntaxCategory category)
 	{
+		Guard.IsNotEqualTo(name, "unknown");
+		Guard.IsInterned(name);
 		Guard.IsNotDefault(category);
 
 		_name = name;
@@ -53,7 +55,7 @@ public readonly partial struct SyntaxKind :
 	public bool Equals(SyntaxKind other)
 	{
 		return
-			Name == other.Name &&
+			ReferenceEquals(_name, other._name) &&
 			Category == other.Category;
 	}
 
@@ -67,7 +69,7 @@ public readonly partial struct SyntaxKind :
 	}
 
 	/// <inheritdoc/>
-	public override int GetHashCode() => HashCode.Combine(Name, Category);
+	public override int GetHashCode() => HashCode.Combine(_name, Category);
 
 	/// <inheritdoc/>
 	public override string ToString()

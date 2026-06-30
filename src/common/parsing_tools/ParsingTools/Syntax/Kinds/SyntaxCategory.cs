@@ -31,12 +31,18 @@ public readonly struct SyntaxCategory :
 
 	/// <summary>Creates a new syntax category with the given <paramref name="name"/>.</summary>
 	/// <param name="name">The name of the syntax category.</param>
-	public SyntaxCategory(string name) => _name = name;
+	public SyntaxCategory(string name)
+	{
+		Guard.IsNotEqualTo(name, "unknown");
+		Guard.IsInterned(name);
+
+		_name = name;
+	}
 	#endregion
 
 	#region Methods
 	/// <inheritdoc/>
-	public bool Equals(SyntaxCategory other) => Name == other.Name;
+	public bool Equals(SyntaxCategory other) => ReferenceEquals(_name, other._name);
 
 	/// <inheritdoc/>
 	public override bool Equals([NotNullWhen(true)] object? obj)
@@ -48,7 +54,7 @@ public readonly struct SyntaxCategory :
 	}
 
 	/// <inheritdoc/>
-	public override int GetHashCode() => Name.GetHashCode();
+	public override int GetHashCode() => HashCode.Combine(_name);
 
 	/// <inheritdoc/>
 	public override string ToString() => Name;
