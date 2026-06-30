@@ -33,6 +33,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		IReadOnlyList<StructuredTreeInfo> order = StructuredTreeInfo.Convert(description);
 
 		GenerateGlobal(context, order.Last());
+		GenerateSyntaxNodeKind(context, order[0]);
 		foreach (StructuredTreeInfo info in order)
 		{
 			GenerateToken(context, info.Token);
@@ -68,7 +69,42 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		string source = result.ToString();
 		context.AddSource("global.Syntax.g.cs", source);
 	}
+	static void GenerateSyntaxNodeKind(SourceProductionContext context, StructuredTreeInfo tree)
+	{
+		IndentedTextWriter writer = GetWriter(out StringWriter result);
+		using (writer.Preamble(tree.RootNamespace))
+		using (writer.TypePreamble())
+		{
+			writer.WriteLine("public enum SyntaxNodeEnum");
+			using (writer.Braced())
+			{
+				writer.WriteLine($"Unknown = 0,");
+				writer.WriteLine();
+				writer.WriteLine("Token,");
+				foreach (StructuredNodeInfo node in tree.Nodes.Where(n => n.Group is null))
+				{
+					writer.Write(node.NameWithGroup.Pascal);
+					writer.WriteLine(",");
+				}
 
+				if (tree.Groups.Any())
+				{
+					foreach (StructuredGroupInfo group in tree.Groups)
+					{
+						writer.WriteLine();
+						using (writer.Region(group.Name.Plural.Natural))
+						{
+							foreach (StructuredNodeInfo node in group.Nodes)
+								writer.WriteLine($"{node.NameWithGroup.Pascal},");
+						}
+					}
+				}
+			}
+		}
+
+		string source = result.ToString();
+		context.AddSource("SyntaxNodeEnum.g.cs", source);
+	}
 	static void GenerateSyntaxBundle(SourceProductionContext context, IReadOnlyList<StructuredTreeInfo> order)
 	{
 		IndentedTextWriter writer = GetWriter(out StringWriter result);
@@ -228,8 +264,9 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			{
 				using (writer.Region("Properties", lineAfter: true))
 				{
-					writer.WriteLine($"protected override string? TreeKind => {$"\"{token.Kind.Original}\""};");
 					writer.WriteLine($"public override int Level => {token.Tree.Level};");
+					writer.WriteLine($"protected override string? TreeKind => {$"\"{token.Kind.Original}\""};");
+					writer.WriteLine("public SyntaxNodeEnum NodeEnum => SyntaxNodeEnum.Token;");
 
 					if (token.ClassMembers.Any())
 						writer.WriteLine();
@@ -295,12 +332,18 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		{
 			using (writer.InterfacePreamble(node.Interface))
 			{
+				if (node.Shadows is null)
+				{
+					using (writer.Region("Properties"))
+						writer.WriteLine($"SyntaxNodeEnum NodeEnum {{ get; }}");
+				}
 			}
 			using (writer.ClassPreamble(node.Class))
 			{
 				using (writer.Region("Properties"))
 				{
 					writer.WriteLine($"public sealed override int Level => {node.Tree.Level};");
+					writer.WriteLine($"public abstract SyntaxNodeEnum NodeEnum {{ get; }}");
 				}
 			}
 			using (writer.TypePreamble())
@@ -401,6 +444,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 					string? groupKind = info.Group is null ? "null" : $"\"{info.Group.Name.Original}\"";
 
 					writer.WriteLine($"public override SyntaxNodeKind NodeKind => new({treeKind}, {nodeKind}, {groupKind});");
+					writer.WriteLine($"public override SyntaxNodeEnum NodeEnum => SyntaxNodeEnum.{info.NameWithGroup.Pascal};");
 
 					if (info.ClassMembers.Any())
 						writer.WriteLine();

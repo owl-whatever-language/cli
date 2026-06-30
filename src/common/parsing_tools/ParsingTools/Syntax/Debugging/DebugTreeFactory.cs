@@ -93,7 +93,7 @@ public class DebugTreeFactory
 		if (property.Name is "Annotations")
 			return false;
 
-		if (container is ISyntaxNode && property.Name is nameof(ISyntaxNode.NodeKind) or nameof(ISyntaxNode.Level))
+		if (container is ISyntaxNode && property.Name is nameof(ISyntaxNode.NodeKind) or nameof(ISyntaxNode.Level) or "NodeEnum")
 			return false;
 
 		if (container is ISyntaxTree && property.Name is nameof(ISyntaxTree.Kind) or nameof(ISyntaxTree.Level))
