@@ -10,37 +10,51 @@ public class FlowPass : IAnalysisPass<AnalysisPassResult>, IDiagnosticProvider
 
 		protected override bool Visit(IAnnotatedDocumentSyntax node)
 		{
-			FlowGraph graph = FlowGraph.Build(node, node.Statements);
-			node.Annotations.AddFlowGraph(graph);
-
+			AttachGraph(node, node.Statements);
 			return true;
 		}
 		protected override bool Visit(IAnnotatedBlockStatementSyntax node)
 		{
-			FlowGraph graph = FlowGraph.Build(node, node.Statements);
-			node.Annotations.AddFlowGraph(graph);
-
+			AttachGraph(node, node.Statements);
 			return true;
 		}
+		#endregion
 
-		protected override bool Visit(IAnnotatedFunctionDeclarationStatementSyntax node)
-		{
-			VisitChildren(node);
-
-			if (node.Body is IAnnotatedBlockFunctionBodySyntax block)
-				TryInheritGraph(node, block.Block);
-
-			return false;
-		}
+		#region Function
 		protected override bool Visit(IAnnotatedLocalFunctionDeclarationStatementSyntax node)
 		{
 			VisitChildren(node);
-
 			TryInheritGraph(node, node.Declaration);
 
 			return false;
 		}
+		protected override bool Visit(IAnnotatedFunctionDeclarationStatementSyntax node)
+		{
+			VisitChildren(node);
+			TryInheritGraph(node, node.Body);
 
+			return false;
+		}
+		protected override bool Visit(IAnnotatedBlockFunctionBodySyntax node)
+		{
+			VisitChildren(node);
+			TryInheritGraph(node, node.Block);
+
+			return false;
+		}
+		protected override bool Visit(IAnnotatedShortFunctionBodySyntax node)
+		{
+			AttachGraph(node, node);
+			return true;
+		}
+		#endregion
+
+		#region Helpers
+		private void AttachGraph(IAnnotatedSyntaxNode target, params IReadOnlyList<IAnnotatedSyntaxNode> nodes)
+		{
+			FlowGraph graph = FlowGraph.Build(target, nodes);
+			target.Annotations.AddFlowGraph(graph);
+		}
 		private void TryInheritGraph(IAnnotatedSyntaxNode target, IAnnotatedSyntaxNode from)
 		{
 			if (from.Annotations.TryGet(out FlowGraphAnnotation? annotation) is false)

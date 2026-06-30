@@ -19,7 +19,7 @@ public sealed class FlowGraph : IFlowGraph
 	private sealed class Builder
 	{
 		#region Fields
-		private readonly Dictionary<IAnnotatedStatementSyntax, FlowBlock> _byStatement = [];
+		private readonly Dictionary<IAnnotatedSyntaxNode, FlowBlock> _byNode = [];
 
 		private readonly FlowBlock _start = new(FlowBlockKind.Start);
 		private readonly FlowBlock _end = new(FlowBlockKind.End);
@@ -27,7 +27,7 @@ public sealed class FlowGraph : IFlowGraph
 		#endregion
 
 		#region Methods
-		public FlowGraph Build(IAnnotatedSyntaxNode node, List<FlowBlock> blocks)
+		public FlowGraph Build(IAnnotatedSyntaxNode parent, List<FlowBlock> blocks)
 		{
 			if (blocks.Any())
 				Connect(_start, blocks[0]);
@@ -36,9 +36,9 @@ public sealed class FlowGraph : IFlowGraph
 
 			foreach (FlowBlock block in blocks)
 			{
-				foreach (IAnnotatedStatementSyntax statement in block.Statements)
+				foreach (IAnnotatedSyntaxNode node in block.Nodes)
 				{
-					_byStatement.Add(statement, block);
+					_byNode.Add(node, block);
 				}
 			}
 
@@ -47,12 +47,12 @@ public sealed class FlowGraph : IFlowGraph
 				FlowBlock current = blocks[i];
 				FlowBlock next = i == blocks.Count - 1 ? _end : blocks[i + 1];
 
-				foreach (IAnnotatedStatementSyntax statement in current.Statements)
+				foreach (IAnnotatedSyntaxNode node in current.Nodes)
 				{
-					bool isLast = current.Statements.Last(s => s is not IAnnotatedLocalFunctionDeclarationStatementSyntax) == statement;
+					bool isLast = current.Nodes.Last(s => s is not IAnnotatedLocalFunctionDeclarationStatementSyntax) == node;
 
 #pragma warning disable IDE0010 // Add missing cases
-					switch (statement.NodeEnum)
+					switch (node.NodeEnum)
 					{
 						case SyntaxNodeEnum.LocalFunctionDeclarationStatement:
 						case SyntaxNodeEnum.OnlyTerminatedStatement:
@@ -60,6 +60,7 @@ public sealed class FlowGraph : IFlowGraph
 
 						case SyntaxNodeEnum.ReturnStatement:
 						case SyntaxNodeEnum.ValueReturnStatement:
+						case SyntaxNodeEnum.ShortFunctionBody:
 							Connect(current, _end);
 							break;
 
@@ -70,7 +71,7 @@ public sealed class FlowGraph : IFlowGraph
 							break;
 
 						default:
-							ThrowHelper.ThrowInvalidOperationException($"The statement type '{statement.GetType().Name}' is currently not supported by the flow graph builder.");
+							ThrowHelper.ThrowInvalidOperationException($"The statement type '{node.GetType().Name}' is currently not supported by the flow graph builder.");
 							return default;
 					}
 #pragma warning restore IDE0010 // Add missing cases
@@ -80,7 +81,7 @@ public sealed class FlowGraph : IFlowGraph
 			blocks.Insert(0, _start);
 			blocks.Add(_end);
 
-			return new(node, _start, _end, blocks, _branches);
+			return new(parent, _start, _end, blocks, _branches);
 		}
 		#endregion
 
@@ -123,9 +124,9 @@ public sealed class FlowGraph : IFlowGraph
 	#endregion
 
 	#region Functions
-	public static FlowGraph Build(IAnnotatedSyntaxNode node, IReadOnlyList<IAnnotatedStatementSyntax> statements)
+	public static FlowGraph Build(IAnnotatedSyntaxNode node, IReadOnlyList<IAnnotatedSyntaxNode> nodes)
 	{
-		List<FlowBlock> blocks = FlowBlock.Build(statements);
+		List<FlowBlock> blocks = FlowBlock.Build(nodes);
 		FlowGraph graph = Build(node, blocks);
 
 		return graph;

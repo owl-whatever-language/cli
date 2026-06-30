@@ -15,7 +15,7 @@ public interface IFlowBlock
 	FlowBlockKind Kind { get; }
 	IReadOnlyList<IFlowBranch> Incoming { get; }
 	IReadOnlyList<IFlowBranch> Outgoing { get; }
-	IReadOnlyList<IAnnotatedStatementSyntax> Statements { get; }
+	IReadOnlyList<IAnnotatedSyntaxNode> Nodes { get; }
 	bool IsReachable { get; }
 	bool HasReturnValue { get; }
 	#endregion
@@ -28,17 +28,17 @@ public sealed class FlowBlock : IFlowBlock
 	private sealed class Builder
 	{
 		#region Fields
-		private readonly List<IAnnotatedStatementSyntax> _statements = [];
+		private readonly List<IAnnotatedSyntaxNode> _nodes = [];
 		private readonly List<FlowBlock> _blocks = [];
 		#endregion
 
 		#region Methods
-		public List<FlowBlock> Build(IReadOnlyList<IAnnotatedStatementSyntax> statements)
+		public List<FlowBlock> Build(IReadOnlyList<IAnnotatedSyntaxNode> nodes)
 		{
-			foreach (IAnnotatedStatementSyntax statement in statements)
+			foreach (IAnnotatedSyntaxNode node in nodes)
 			{
 #pragma warning disable IDE0010 // Add missing cases
-				switch (statement.NodeEnum)
+				switch (node.NodeEnum)
 				{
 					case SyntaxNodeEnum.LocalFunctionDeclarationStatement:
 					case SyntaxNodeEnum.OnlyTerminatedStatement:
@@ -46,17 +46,18 @@ public sealed class FlowBlock : IFlowBlock
 
 					case SyntaxNodeEnum.ReturnStatement:
 					case SyntaxNodeEnum.ValueReturnStatement:
-						_statements.Add(statement);
+					case SyntaxNodeEnum.ShortFunctionBody:
+						_nodes.Add(node);
 						PrepareForNewBlock();
 						break;
 
 					case SyntaxNodeEnum.VariableDeclarationStatement:
 					case SyntaxNodeEnum.ExpressionStatement:
-						_statements.Add(statement);
+						_nodes.Add(node);
 						break;
 
 					default:
-						ThrowHelper.ThrowInvalidOperationException($"The statement type '{statement.GetType().Name}' is currently not supported by the flow block builder.");
+						ThrowHelper.ThrowInvalidOperationException($"The statement type '{node.GetType().Name}' is currently not supported by the flow block builder.");
 						return default;
 				}
 #pragma warning restore IDE0010 // Add missing cases
@@ -72,17 +73,17 @@ public sealed class FlowBlock : IFlowBlock
 		private void PrepareForNewBlock() => TryEndExistingBlock();
 		private void TryEndExistingBlock()
 		{
-			if (_statements.Count is 0)
+			if (_nodes.Count is 0)
 				return;
 
 			FlowBlock block = new();
-			block.Statements.AddRange(_statements);
+			block.Nodes.AddRange(_nodes);
 
-			foreach (IAnnotatedStatementSyntax statement in _statements)
-				statement.Annotations.AddFlowBlock(block);
+			foreach (IAnnotatedSyntaxNode node in _nodes)
+				node.Annotations.AddFlowBlock(block);
 
 			_blocks.Add(block);
-			_statements.Clear();
+			_nodes.Clear();
 		}
 		#endregion
 	}
@@ -92,9 +93,9 @@ public sealed class FlowBlock : IFlowBlock
 	public FlowBlockKind Kind { get; }
 	public List<FlowBranch> Incoming { get; } = [];
 	public List<FlowBranch> Outgoing { get; } = [];
-	public List<IAnnotatedStatementSyntax> Statements { get; } = [];
+	public List<IAnnotatedSyntaxNode> Nodes { get; } = [];
 	public bool IsReachable => Incoming.Count is not 0 && Incoming.Any(b => b.From.IsReachable);
-	public bool HasReturnValue => Statements.Any(s => s is IAnnotatedValueReturnStatementSyntax);
+	public bool HasReturnValue => Nodes.Any(s => s is IAnnotatedValueReturnStatementSyntax);
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	IReadOnlyList<IFlowBranch> IFlowBlock.Incoming => Incoming;
@@ -103,7 +104,7 @@ public sealed class FlowBlock : IFlowBlock
 	IReadOnlyList<IFlowBranch> IFlowBlock.Outgoing => Outgoing;
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	IReadOnlyList<IAnnotatedStatementSyntax> IFlowBlock.Statements => Statements;
+	IReadOnlyList<IAnnotatedSyntaxNode> IFlowBlock.Nodes => Nodes;
 	#endregion
 
 	#region Constructors
@@ -118,14 +119,13 @@ public sealed class FlowBlock : IFlowBlock
 	#endregion
 
 	#region Functions
-	public static List<FlowBlock> Build(IReadOnlyList<IAnnotatedStatementSyntax> statements)
+	public static List<FlowBlock> Build(IReadOnlyList<IAnnotatedSyntaxNode> nodes)
 	{
 		Builder builder = new();
 
-		return builder.Build(statements);
+		return builder.Build(nodes);
 	}
 	#endregion
-
 
 	#region Helpers
 	private string GetDebugName()
@@ -134,7 +134,7 @@ public sealed class FlowBlock : IFlowBlock
 		{
 			FlowBlockKind.Start => "Start",
 			FlowBlockKind.End => "End",
-			FlowBlockKind.Middle => Statements.Any() ? Statements[0].GetDebugSource() : "<empty>",
+			FlowBlockKind.Middle => Nodes.Any() ? Nodes[0].GetDebugSource() : "<empty>",
 
 			_ => ThrowHelper.ThrowInvalidOperationException<string>($"Unknown flow block kind '{Kind}'.")
 		};
