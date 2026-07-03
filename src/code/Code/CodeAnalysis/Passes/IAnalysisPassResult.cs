@@ -43,3 +43,42 @@ public sealed class AnalysisPassResultGroup : IOrderedStageResultParent<IAnalysi
 	}
 	#endregion
 }
+
+public sealed class AnalysisPassTreeResult : AnalysisPassResult, ISourceStageResult
+{
+	#region Properties
+	public IAnnotatedSyntaxTree Tree { get; }
+	public ISourceFile Source => Tree.Source;
+	#endregion
+
+	#region Constructors
+	public AnalysisPassTreeResult(
+		IAnalysisPass pass,
+		IPerformanceResult performance,
+		IDiagnosticBag diagnostics,
+		IAnnotatedSyntaxTree tree)
+		: base(pass, performance, diagnostics)
+	{
+		Tree = tree;
+	}
+	#endregion
+}
+
+public sealed class ParallelAnalysisPassTreeResult : AnalysisPassResult, IParallelStageResult<AnalysisPassTreeResult>
+{
+	#region Properties
+	public IReadOnlyCollection<AnalysisPassTreeResult> Children { get; }
+	#endregion
+
+	#region Constructors
+	public ParallelAnalysisPassTreeResult(
+		IAnalysisPass pass,
+		IPerformanceResult performance,
+		IDiagnosticBag diagnostics,
+		IReadOnlyCollection<AnalysisPassTreeResult> results)
+		: base(pass, performance, diagnostics)
+	{
+		Children = results;
+	}
+	#endregion
+}
