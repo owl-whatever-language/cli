@@ -1,20 +1,20 @@
 using OwlDomain.ParsingTools.Syntax.Printing;
 
-namespace OwlDomain.Owl.Code.CodeAnalysis.Passes.Flow;
+namespace OwlDomain.Owl.Code.CodeAnalysis.Passes.ControlFlow;
 
-public enum FlowBlockKind
+public enum ControlFlowBlockKind
 {
 	Start,
 	Middle,
 	End,
 }
 
-public interface IFlowBlock
+public interface IControlFlowBlock
 {
 	#region Properties
-	FlowBlockKind Kind { get; }
-	IReadOnlyList<IFlowBranch> Incoming { get; }
-	IReadOnlyList<IFlowBranch> Outgoing { get; }
+	ControlFlowBlockKind Kind { get; }
+	IReadOnlyList<IControlFlowBranch> Incoming { get; }
+	IReadOnlyList<IControlFlowBranch> Outgoing { get; }
 	IReadOnlyList<IAnnotatedSyntaxNode> Nodes { get; }
 	bool IsReachable { get; }
 	bool HasReturnValue { get; }
@@ -22,18 +22,18 @@ public interface IFlowBlock
 }
 
 [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
-public sealed class FlowBlock : IFlowBlock
+public sealed class ControlFlowBlock : IControlFlowBlock
 {
 	#region Nested types
 	private sealed class Builder
 	{
 		#region Fields
 		private readonly List<IAnnotatedSyntaxNode> _nodes = [];
-		private readonly List<FlowBlock> _blocks = [];
+		private readonly List<ControlFlowBlock> _blocks = [];
 		#endregion
 
 		#region Methods
-		public List<FlowBlock> Build(IReadOnlyList<IAnnotatedSyntaxNode> nodes)
+		public List<ControlFlowBlock> Build(IReadOnlyList<IAnnotatedSyntaxNode> nodes)
 		{
 			foreach (IAnnotatedSyntaxNode node in nodes)
 			{
@@ -57,7 +57,7 @@ public sealed class FlowBlock : IFlowBlock
 						break;
 
 					default:
-						ThrowHelper.ThrowInvalidOperationException($"The statement type '{node.GetType().Name}' is currently not supported by the flow block builder.");
+						ThrowHelper.ThrowInvalidOperationException($"The statement type '{node.GetType().Name}' is currently not supported by the control flow block builder.");
 						return default;
 				}
 #pragma warning restore IDE0010 // Add missing cases
@@ -76,11 +76,11 @@ public sealed class FlowBlock : IFlowBlock
 			if (_nodes.Count is 0)
 				return;
 
-			FlowBlock block = new();
+			ControlFlowBlock block = new();
 			block.Nodes.AddRange(_nodes);
 
 			foreach (IAnnotatedSyntaxNode node in _nodes)
-				node.Annotations.AddFlowBlock(block);
+				node.Annotations.AddControlFlowBlock(block);
 
 			_blocks.Add(block);
 			_nodes.Clear();
@@ -90,36 +90,36 @@ public sealed class FlowBlock : IFlowBlock
 	#endregion
 
 	#region Properties
-	public FlowBlockKind Kind { get; }
-	public List<FlowBranch> Incoming { get; } = [];
-	public List<FlowBranch> Outgoing { get; } = [];
+	public ControlFlowBlockKind Kind { get; }
+	public List<ControlFlowBranch> Incoming { get; } = [];
+	public List<ControlFlowBranch> Outgoing { get; } = [];
 	public List<IAnnotatedSyntaxNode> Nodes { get; } = [];
 	public bool IsReachable => Incoming.Count is not 0 && Incoming.Any(b => b.From.IsReachable);
 	public bool HasReturnValue => Nodes.Any(s => s is IAnnotatedValueReturnStatementSyntax);
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	IReadOnlyList<IFlowBranch> IFlowBlock.Incoming => Incoming;
+	IReadOnlyList<IControlFlowBranch> IControlFlowBlock.Incoming => Incoming;
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	IReadOnlyList<IFlowBranch> IFlowBlock.Outgoing => Outgoing;
+	IReadOnlyList<IControlFlowBranch> IControlFlowBlock.Outgoing => Outgoing;
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	IReadOnlyList<IAnnotatedSyntaxNode> IFlowBlock.Nodes => Nodes;
+	IReadOnlyList<IAnnotatedSyntaxNode> IControlFlowBlock.Nodes => Nodes;
 	#endregion
 
 	#region Constructors
-	public FlowBlock() => Kind = FlowBlockKind.Middle;
-	public FlowBlock(FlowBlockKind kind)
+	public ControlFlowBlock() => Kind = ControlFlowBlockKind.Middle;
+	public ControlFlowBlock(ControlFlowBlockKind kind)
 	{
-		if (kind is not FlowBlockKind.Start and not FlowBlockKind.End)
-			ThrowHelper.ThrowArgumentOutOfRangeException(nameof(kind), kind, "When manually creating a flow block, it must either be a start or an end block.");
+		if (kind is not ControlFlowBlockKind.Start and not ControlFlowBlockKind.End)
+			ThrowHelper.ThrowArgumentOutOfRangeException(nameof(kind), kind, "When manually creating a control flow block, it must either be a start or an end block.");
 
 		Kind = kind;
 	}
 	#endregion
 
 	#region Functions
-	public static List<FlowBlock> Build(IReadOnlyList<IAnnotatedSyntaxNode> nodes)
+	public static List<ControlFlowBlock> Build(IReadOnlyList<IAnnotatedSyntaxNode> nodes)
 	{
 		Builder builder = new();
 
@@ -132,22 +132,22 @@ public sealed class FlowBlock : IFlowBlock
 	{
 		return Kind switch
 		{
-			FlowBlockKind.Start => "Start",
-			FlowBlockKind.End => "End",
-			FlowBlockKind.Middle => Nodes.Any() ? Nodes[0].GetDebugSource() : "<empty>",
+			ControlFlowBlockKind.Start => "Start",
+			ControlFlowBlockKind.End => "End",
+			ControlFlowBlockKind.Middle => Nodes.Any() ? Nodes[0].GetDebugSource() : "<empty>",
 
-			_ => ThrowHelper.ThrowInvalidOperationException<string>($"Unknown flow block kind '{Kind}'.")
+			_ => ThrowHelper.ThrowInvalidOperationException<string>($"Unknown control flow block kind '{Kind}'.")
 		};
 	}
 	private string DebuggerDisplay()
 	{
-		if (Kind is FlowBlockKind.Start)
+		if (Kind is ControlFlowBlockKind.Start)
 		{
 			Debug.Assert(Outgoing.Count is 1);
 			return $"Start -> {Outgoing[0].To.GetDebugName()}";
 		}
 
-		if (Kind is FlowBlockKind.End)
+		if (Kind is ControlFlowBlockKind.End)
 			return $"End";
 
 		return $"Block: {GetDebugName()}";
@@ -157,11 +157,11 @@ public sealed class FlowBlock : IFlowBlock
 
 public static class IFlowBlockExtensions
 {
-	extension(IFlowBlock block)
+	extension(IControlFlowBlock block)
 	{
 		#region Properties
-		public bool IsStart => block.Kind == FlowBlockKind.Start;
-		public bool IsEnd => block.Kind == FlowBlockKind.End;
+		public bool IsStart => block.Kind == ControlFlowBlockKind.Start;
+		public bool IsEnd => block.Kind == ControlFlowBlockKind.End;
 		#endregion
 	}
 }

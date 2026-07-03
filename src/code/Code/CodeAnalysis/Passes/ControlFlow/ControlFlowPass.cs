@@ -1,17 +1,17 @@
-namespace OwlDomain.Owl.Code.CodeAnalysis.Passes.Flow;
+namespace OwlDomain.Owl.Code.CodeAnalysis.Passes.ControlFlow;
 
-public class FlowPass : IAnalysisPass<AnalysisPassResult>, IDiagnosticProvider
+public class ControlFlowPass : IAnalysisPass<AnalysisPassResult>, IDiagnosticProvider
 {
 	#region Nested types
 	private sealed class Annotator : BaseAnnotatedVisitor
 	{
 		#region Properties
-		private FlowPass Pass { get; }
+		private ControlFlowPass Pass { get; }
 		public DiagnosticBag Diagnostics { get; } = [];
 		#endregion
 
 		#region Constructors
-		public Annotator(FlowPass pass) => Pass = pass;
+		public Annotator(ControlFlowPass pass) => Pass = pass;
 		#endregion
 
 		#region Methods
@@ -70,26 +70,26 @@ public class FlowPass : IAnalysisPass<AnalysisPassResult>, IDiagnosticProvider
 		#region Helpers
 		private void AttachGraph(IAnnotatedSyntaxNode target, params IReadOnlyList<IAnnotatedSyntaxNode> nodes)
 		{
-			FlowGraph graph = FlowGraph.Build(target, nodes);
-			target.Annotations.AddFlowGraph(graph);
+			ControlFlowGraph graph = ControlFlowGraph.Build(target, nodes);
+			target.Annotations.AddControlFlowGraph(graph);
 		}
 		private void TryInheritGraph(IAnnotatedSyntaxNode target, IAnnotatedSyntaxNode from)
 		{
-			if (from.Annotations.TryGet(out FlowGraphAnnotation? annotation) is false)
+			if (from.Annotations.TryGet(out ControlFlowGraphAnnotation? annotation) is false)
 				return;
 
-			IFlowGraph graph = annotation.Graph;
-			FlowGraph newGraph = new(target, graph.Start, graph.End, graph.Blocks, graph.Branches);
+			IControlFlowGraph graph = annotation.Graph;
+			ControlFlowGraph newGraph = new(target, graph.Start, graph.End, graph.Blocks, graph.Branches);
 
-			target.Annotations.AddFlowGraph(newGraph);
+			target.Annotations.AddControlFlowGraph(newGraph);
 		}
 		#endregion
 	}
 	#endregion
 
 	#region Properties
-	public string Kind => "flow";
-	public string Name => "flow_analyser";
+	public string Kind => "control_flow";
+	public string Name => "control_flow_analyser";
 	#endregion
 
 	#region Methods

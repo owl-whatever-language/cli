@@ -1,40 +1,40 @@
 
-namespace OwlDomain.Owl.Code.CodeAnalysis.Passes.Flow;
+namespace OwlDomain.Owl.Code.CodeAnalysis.Passes.ControlFlow;
 
-public interface IFlowGraph
+public interface IControlFlowGraph
 {
 	#region Properties
 	IAnnotatedSyntaxNode Node { get; }
-	IFlowBlock Start { get; }
-	IFlowBlock End { get; }
-	IReadOnlyList<IFlowBlock> Blocks { get; }
-	IReadOnlyList<IFlowBranch> Branches { get; }
+	IControlFlowBlock Start { get; }
+	IControlFlowBlock End { get; }
+	IReadOnlyList<IControlFlowBlock> Blocks { get; }
+	IReadOnlyList<IControlFlowBranch> Branches { get; }
 	bool AlwaysReturnsValue { get; }
 	#endregion
 }
 
-public sealed class FlowGraph : IFlowGraph
+public sealed class ControlFlowGraph : IControlFlowGraph
 {
 	#region Nested types
 	private sealed class Builder
 	{
 		#region Fields
-		private readonly Dictionary<IAnnotatedSyntaxNode, FlowBlock> _byNode = [];
+		private readonly Dictionary<IAnnotatedSyntaxNode, ControlFlowBlock> _byNode = [];
 
-		private readonly FlowBlock _start = new(FlowBlockKind.Start);
-		private readonly FlowBlock _end = new(FlowBlockKind.End);
-		private readonly List<FlowBranch> _branches = [];
+		private readonly ControlFlowBlock _start = new(ControlFlowBlockKind.Start);
+		private readonly ControlFlowBlock _end = new(ControlFlowBlockKind.End);
+		private readonly List<ControlFlowBranch> _branches = [];
 		#endregion
 
 		#region Methods
-		public FlowGraph Build(IAnnotatedSyntaxNode parent, List<FlowBlock> blocks)
+		public ControlFlowGraph Build(IAnnotatedSyntaxNode parent, List<ControlFlowBlock> blocks)
 		{
 			if (blocks.Any())
 				Connect(_start, blocks[0]);
 			else
 				Connect(_start, _end);
 
-			foreach (FlowBlock block in blocks)
+			foreach (ControlFlowBlock block in blocks)
 			{
 				foreach (IAnnotatedSyntaxNode node in block.Nodes)
 				{
@@ -44,8 +44,8 @@ public sealed class FlowGraph : IFlowGraph
 
 			for (int i = 0; i < blocks.Count; i++)
 			{
-				FlowBlock current = blocks[i];
-				FlowBlock next = i == blocks.Count - 1 ? _end : blocks[i + 1];
+				ControlFlowBlock current = blocks[i];
+				ControlFlowBlock next = i == blocks.Count - 1 ? _end : blocks[i + 1];
 
 				foreach (IAnnotatedSyntaxNode node in current.Nodes)
 				{
@@ -71,7 +71,7 @@ public sealed class FlowGraph : IFlowGraph
 							break;
 
 						default:
-							ThrowHelper.ThrowInvalidOperationException($"The statement type '{node.GetType().Name}' is currently not supported by the flow graph builder.");
+							ThrowHelper.ThrowInvalidOperationException($"The statement type '{node.GetType().Name}' is currently not supported by the control flow graph builder.");
 							return default;
 					}
 #pragma warning restore IDE0010 // Add missing cases
@@ -86,9 +86,9 @@ public sealed class FlowGraph : IFlowGraph
 		#endregion
 
 		#region Helpers
-		private void Connect(FlowBlock from, FlowBlock to)
+		private void Connect(ControlFlowBlock from, ControlFlowBlock to)
 		{
-			FlowBranch branch = new(from, to);
+			ControlFlowBranch branch = new(from, to);
 			_branches.Add(branch);
 
 			from.Outgoing.Add(branch);
@@ -100,20 +100,20 @@ public sealed class FlowGraph : IFlowGraph
 
 	#region Properties
 	public IAnnotatedSyntaxNode Node { get; }
-	public IFlowBlock Start { get; }
-	public IFlowBlock End { get; }
-	public IReadOnlyList<IFlowBlock> Blocks { get; }
-	public IReadOnlyList<IFlowBranch> Branches { get; }
+	public IControlFlowBlock Start { get; }
+	public IControlFlowBlock End { get; }
+	public IReadOnlyList<IControlFlowBlock> Blocks { get; }
+	public IReadOnlyList<IControlFlowBranch> Branches { get; }
 	public bool AlwaysReturnsValue => End.Incoming.All(b => b.From.HasReturnValue);
 	#endregion
 
 	#region Constructors
-	public FlowGraph(
+	public ControlFlowGraph(
 		IAnnotatedSyntaxNode node,
-		IFlowBlock start,
-		IFlowBlock end,
-		IReadOnlyList<IFlowBlock> blocks,
-		IReadOnlyList<IFlowBranch> branches)
+		IControlFlowBlock start,
+		IControlFlowBlock end,
+		IReadOnlyList<IControlFlowBlock> blocks,
+		IReadOnlyList<IControlFlowBranch> branches)
 	{
 		Node = node;
 		Start = start;
@@ -124,14 +124,14 @@ public sealed class FlowGraph : IFlowGraph
 	#endregion
 
 	#region Functions
-	public static FlowGraph Build(IAnnotatedSyntaxNode node, IReadOnlyList<IAnnotatedSyntaxNode> nodes)
+	public static ControlFlowGraph Build(IAnnotatedSyntaxNode node, IReadOnlyList<IAnnotatedSyntaxNode> nodes)
 	{
-		List<FlowBlock> blocks = FlowBlock.Build(nodes);
-		FlowGraph graph = Build(node, blocks);
+		List<ControlFlowBlock> blocks = ControlFlowBlock.Build(nodes);
+		ControlFlowGraph graph = Build(node, blocks);
 
 		return graph;
 	}
-	public static FlowGraph Build(IAnnotatedSyntaxNode node, List<FlowBlock> blocks)
+	public static ControlFlowGraph Build(IAnnotatedSyntaxNode node, List<ControlFlowBlock> blocks)
 	{
 		Builder builder = new();
 

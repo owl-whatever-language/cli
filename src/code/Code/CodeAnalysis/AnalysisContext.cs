@@ -50,7 +50,7 @@ public sealed class AnalysisContext : IAnalysisContext
 	{
 		BaseScope = baseScope;
 
-		RegisterPass<Passes.Flow.FlowPass>();
+		RegisterPass<Passes.ControlFlow.ControlFlowPass>();
 	}
 	#endregion
 
