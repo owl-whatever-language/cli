@@ -16,3 +16,4 @@ global using OwlDomain.ParsingTools.Syntax.Printing;
 global using OwlDomain.ParsingTools.Trivia;
 global using OwlDomain.ParsingTools.Diagnostics;
 global using OwlDomain.ParsingTools.Classification;
+global using OwlDomain.ParsingTools.Styling;

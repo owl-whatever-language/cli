@@ -18,3 +18,4 @@ global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callable;
 global using OwlDomain.Owl.Code.CodeAnalysis.Annotation;
 global using OwlDomain.Owl.Code.CodeAnalysis.Passes;
+global using OwlDomain.ParsingTools.Styling;

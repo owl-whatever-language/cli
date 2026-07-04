@@ -6,16 +6,17 @@ using Segments = IReadOnlyList<AnsiMarkupSegment>;
 public class DefaultDebugTreePrinter
 {
 	#region Properties
+	// Note(Nightowl): These should probably eventually be part of the styling too, but it's debug trees so they shouldn't be seen by the end user and only by me;
 	protected virtual Style LabelStyle { get; } = new Style(Color.Gray35);
 	protected virtual Style PunctuationStyle { get; } = new Style(Color.Gray23);
 	protected virtual Style ElementIndexStyle { get; } = new Style(Color.Blue);
 	protected virtual Style NullStyle { get; } = new Style(Color.Gray, decoration: Decoration.Italic);
 
-	protected IClassificationStyles Styles { get; }
+	protected IClassificationStyling Styles { get; }
 	#endregion
 
 	#region Constructors
-	public DefaultDebugTreePrinter(IClassificationStyles styles) => Styles = styles;
+	public DefaultDebugTreePrinter(IClassificationStyling styles) => Styles = styles;
 	#endregion
 
 	#region Methods
@@ -104,7 +105,7 @@ public class DefaultDebugTreePrinter
 	protected virtual Segment New(string text, Style style) => new(text, style, null);
 	protected virtual Segment New(string text, ClassificationKind? classification)
 	{
-		Style style = Styles.GetStyle(classification);
+		Style style = Styles.Get(classification).AsSpectre;
 		return new(text, style, null);
 	}
 	#endregion
