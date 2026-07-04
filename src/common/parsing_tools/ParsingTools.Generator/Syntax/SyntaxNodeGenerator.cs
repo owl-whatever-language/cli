@@ -595,7 +595,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				{
 					using (writer.Region("Methods"))
 					{
-						writer.WriteLine($"protected virtual {target.Class.Name} Convert({from.Interface.Name} tree)");
+						writer.WriteLine($"public virtual {target.Class.Name} Convert({from.Interface.Name} tree)");
 						using (writer.Braced())
 						{
 							writer.WriteLine($"{target.Document.Class.Name} {target.Document.Name.Camel} = Convert(tree.{from.Document.Name.Pascal});");
@@ -820,7 +820,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				{
 					using (writer.Region("Methods", lineAfter: true))
 					{
-						writer.WriteLine($"protected virtual void Visit({tree.Interface.Name} tree) => Dispatch(tree.{tree.Document.Name.Pascal});");
+						writer.WriteLine($"public virtual void Visit({tree.Interface.Name} tree) => Dispatch(tree.{tree.Document.Name.Pascal});");
 
 						writer.WriteLine($"protected virtual void VisitChildren(ISyntaxNode node)");
 						using (writer.Braced())

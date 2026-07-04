@@ -49,6 +49,8 @@ public sealed class AnalysisContext : IAnalysisContext
 	public AnalysisContext(ISymbolScope baseScope)
 	{
 		BaseScope = baseScope;
+
+		RegisterPass<ControlFlow.ControlFlowAnalyser>();
 	}
 	#endregion
 

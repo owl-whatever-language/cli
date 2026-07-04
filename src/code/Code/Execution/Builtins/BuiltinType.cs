@@ -21,7 +21,7 @@ internal class BuiltinType : INamedType
 		object? instance = Activator.CreateInstance(Type, [value]);
 		return new(this, instance);
 	}
-	public bool CanAssignTo(IType target) => Equals(target) || target == SpecialTypes.Void;
+	public bool CanAssignTo(IType target) => Equals(target);
 	public bool Equals(IType? other) => ReferenceEquals(this, other);
 	public override string ToString() => Name;
 	TextFragmentCollection IDebugTreePrintable.GetFragments() => [new(Name, ClassificationKind.Type)];

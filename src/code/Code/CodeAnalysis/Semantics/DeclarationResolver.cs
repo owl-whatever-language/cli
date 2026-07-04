@@ -54,21 +54,16 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 
 	#region Properties
 	public string Name => "symbol_resolver";
+	private ISourceFile Source { get; }
 	private DiagnosticBag Diagnostics { get; } = [];
 	private ISymbolScope BaseScope { get; }
 	private ISymbolScope CurrentScope { get; set; }
-
-	[NotNull]
-	private ISourceFile? Source
-	{
-		get => field ?? ThrowHelper.ThrowInvalidOperationException<ISourceFile>("The source file hasn't been assigned yet.");
-		set;
-	}
 	#endregion
 
 	#region Constructors
-	private SymbolResolver(ISymbolScope baseScope)
+	private SymbolResolver(ISourceFile source, ISymbolScope baseScope)
 	{
+		Source = source;
 		BaseScope = baseScope;
 		CurrentScope = baseScope;
 	}
@@ -79,7 +74,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	{
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
-			SymbolResolver resolver = new(baseScope);
+			SymbolResolver resolver = new(concrete.Source, baseScope);
 			IDeclaredSyntaxTree declared = resolver.Convert(concrete);
 
 			return new(resolver.Diagnostics, performance, declared);
@@ -105,14 +100,6 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 
 			return new(performance, results);
 		}
-	}
-	#endregion
-
-	#region Methods
-	protected override DeclaredSyntaxTree Convert(IConcreteSyntaxTree tree)
-	{
-		Source = tree.Source;
-		return base.Convert(tree);
 	}
 	#endregion
 

@@ -80,5 +80,14 @@ public sealed class ParallelAnalysisPassTreeResult : AnalysisPassResult, IParall
 	{
 		Children = results;
 	}
+
+	public ParallelAnalysisPassTreeResult(
+		IAnalysisPass pass,
+		IPerformanceResult performance,
+		IReadOnlyCollection<AnalysisPassTreeResult> results)
+		: base(pass, performance)
+	{
+		Children = results;
+	}
 	#endregion
 }

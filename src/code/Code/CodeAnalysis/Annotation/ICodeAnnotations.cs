@@ -133,28 +133,20 @@ public static class ICodeAnnotationsExtensions
 		#endregion
 	}
 
-	private static void Collect<T>(List<T> target, ISyntaxNode current) where T : notnull, ICodeAnnotation
-	{
-		if (current is IAnnotatedSyntaxNode annotated && annotated.Annotations.TryGet(out T? annotation))
-			target.Add(annotation);
-
-		foreach (ISyntaxNode child in current.GetChildren())
-			Collect(target, child);
-	}
-
 	extension(IAnnotatedSyntaxTree tree)
 	{
 		#region Methods
-		public IReadOnlyCollection<T> CollectAnnotations<T>() where T : notnull, ICodeAnnotation
+		public IReadOnlyList<T> CollectAnnotations<T>() where T : notnull, ICodeAnnotation
 		{
 			return tree.Document.CollectAnnotations<T>();
 		}
 		#endregion
 	}
+
 	extension(IAnnotatedSyntaxNode node)
 	{
 		#region Methods
-		public IReadOnlyCollection<T> CollectAnnotations<T>() where T : notnull, ICodeAnnotation
+		public IReadOnlyList<T> CollectAnnotations<T>() where T : notnull, ICodeAnnotation
 		{
 			List<T> target = [];
 			Collect(target, node);
@@ -163,6 +155,7 @@ public static class ICodeAnnotationsExtensions
 		}
 		#endregion
 	}
+
 	extension(IEnumerable<IAnnotatedSyntaxNode> nodes)
 	{
 		#region Methods
@@ -177,4 +170,15 @@ public static class ICodeAnnotationsExtensions
 		}
 		#endregion
 	}
+
+	#region Helpers
+	private static void Collect<T>(List<T> target, ISyntaxNode current) where T : notnull, ICodeAnnotation
+	{
+		if (current is IAnnotatedSyntaxNode annotated && annotated.Annotations.TryGet(out T? annotation))
+			target.Add(annotation);
+
+		foreach (ISyntaxNode child in current.GetChildren())
+			Collect(target, child);
+	}
+	#endregion
 }
