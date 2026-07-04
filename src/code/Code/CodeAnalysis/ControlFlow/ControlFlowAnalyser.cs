@@ -70,7 +70,7 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 
 			foreach (IControlFlowIncomingBranch branch in end.Incoming)
 			{
-				// Note(Nightowl): 
+				// Note(Nightowl):
 				// We only call this function for block body functions so there won't
 				// be any expression blocks that directly connect to the end block;
 				IControlFlowStatementBlock from = (IControlFlowStatementBlock)branch.From;
@@ -104,61 +104,65 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 			ControlFlowGraphAnnotation annotation = new(graph);
 			graph.Node.Annotations.Add(annotation);
 
-			IReadOnlyList<IMutableControlFlowBlock> blocks = GetBlocks(graph.Node);
+			IReadOnlyList<IMutableControlFlowBlock> blocks = GetBlocks(blockNumber: 1, graph.Node);
+
+			foreach (IMutableControlFlowBlock block in blocks)
+				graph.Add(block);
+
 			ConnectBlocks(graph, blocks);
 		}
 		#endregion
 
 		#region Block generation methods
-		private IReadOnlyList<IMutableControlFlowBlock> GetBlocks(IAnnotatedSyntaxNode node)
+		private IReadOnlyList<IMutableControlFlowBlock> GetBlocks(int blockNumber, IAnnotatedSyntaxNode node)
 		{
 			return node switch
 			{
-				IAnnotatedDocumentSyntax document => GetBlocks(document),
-				IAnnotatedFunctionDeclarationStatementSyntax function => GetBlocks(function),
+				IAnnotatedDocumentSyntax document => GetBlocks(blockNumber, document),
+				IAnnotatedFunctionDeclarationStatementSyntax function => GetBlocks(blockNumber, function),
 
 				_ => ThrowHelper.ThrowInvalidOperationException<IReadOnlyList<IMutableControlFlowBlock>>($"Unsupported syntax node type ({node.GetType().Name}).")
 			};
 		}
-		private IReadOnlyList<IMutableControlFlowBlock> GetBlocks(IAnnotatedDocumentSyntax node)
+		private IReadOnlyList<IMutableControlFlowBlock> GetBlocks(int blockNumber, IAnnotatedDocumentSyntax node)
 		{
-			return GetStatementBlocks(node.Statements);
+			return GetStatementBlocks(blockNumber, node.Statements);
 		}
-		private IReadOnlyList<IMutableControlFlowBlock> GetBlocks(IAnnotatedFunctionDeclarationStatementSyntax node)
+		private IReadOnlyList<IMutableControlFlowBlock> GetBlocks(int blockNumber, IAnnotatedFunctionDeclarationStatementSyntax node)
 		{
 			return node.Body switch
 			{
-				IAnnotatedShortFunctionBodySyntax body => GetBlocks(body),
-				IAnnotatedBlockFunctionBodySyntax body => GetBlocks(body),
+				IAnnotatedShortFunctionBodySyntax body => GetBlocks(blockNumber, body),
+				IAnnotatedBlockFunctionBodySyntax body => GetBlocks(blockNumber, body),
 				IAnnotatedOnlyTerminatedFunctionBodySyntax => [],
 				IAnnotatedEmptyFunctionBodySyntax => [],
 
 				_ => ThrowHelper.ThrowInvalidOperationException<IReadOnlyList<IMutableControlFlowBlock>>($"Unsupported function body type ({node.GetType().Name}).")
 			};
 		}
-		private IReadOnlyList<IMutableControlFlowBlock> GetBlocks(IAnnotatedShortFunctionBodySyntax node)
+		private IReadOnlyList<IMutableControlFlowBlock> GetBlocks(int blockNumber, IAnnotatedShortFunctionBodySyntax node)
 		{
-			ControlFlowExpressionBlock entry = GetExpressionBlocks(node.Expression);
+			ControlFlowExpressionBlock entry = GetExpressionBlocks(blockNumber, node.Expression);
 
 			return [entry];
 		}
-		private IReadOnlyList<IMutableControlFlowBlock> GetBlocks(IAnnotatedBlockFunctionBodySyntax node)
+		private IReadOnlyList<IMutableControlFlowBlock> GetBlocks(int blockNumber, IAnnotatedBlockFunctionBodySyntax node)
 		{
-			return GetStatementBlocks(node.Block);
+			return GetStatementBlocks(blockNumber, node.Block);
 		}
-		private IReadOnlyList<IMutableControlFlowBlock> GetStatementBlocks(params IReadOnlyList<IAnnotatedStatementSyntax> statements)
+		private IReadOnlyList<IMutableControlFlowBlock> GetStatementBlocks(int blockNumber, params IReadOnlyList<IAnnotatedStatementSyntax> statements)
 		{
 			List<IMutableControlFlowBlock> blocks = [];
-			ControlFlowStatementBlock current = new();
+			ControlFlowStatementBlock current = new(blockNumber);
 
-			#region Helper functions	
+			#region Helper functions
 			void EndLastBlock()
 			{
 				if (current.Statements.Count is 0)
 					return;
 
 				blocks.Add(current);
-				current = new();
+				current = new(blockNumber + blocks.Count + 1);
 			}
 			#endregion
 
@@ -184,7 +188,7 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 				if (statement is IAnnotatedBlockStatementSyntax block && WillBranch(block))
 				{
 					EndLastBlock();
-					IReadOnlyList<IMutableControlFlowBlock> subBlocks = GetStatementBlocks(block.Statements);
+					IReadOnlyList<IMutableControlFlowBlock> subBlocks = GetStatementBlocks(blockNumber + blocks.Count + 1, block.Statements);
 					blocks.AddRange(subBlocks);
 
 					// Note(Nightowl): Specifically do not add the block statement;
@@ -218,12 +222,12 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 			return blocks;
 		}
 
-		private ControlFlowExpressionBlock GetExpressionBlocks(IAnnotatedExpressionSyntax expression)
+		private ControlFlowExpressionBlock GetExpressionBlocks(int blockNumber, IAnnotatedExpressionSyntax expression)
 		{
 			if (WillBranch(expression))
 				return GetBranchedExpressionBlocks(expression);
 
-			ControlFlowExpressionBlock block = new(expression);
+			ControlFlowExpressionBlock block = new(blockNumber, expression);
 			return block;
 		}
 		private ControlFlowExpressionBlock GetBranchedExpressionBlocks(IAnnotatedExpressionSyntax expression)
@@ -266,11 +270,13 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 		#region Block connection methods
 		private void ConnectBlocks(IMutableControlFlowGraph graph, IReadOnlyList<IMutableControlFlowBlock> blocks)
 		{
-			static void Connect(IMutableControlFlowBlock from, IMutableControlFlowBlock to)
+			void Connect(IMutableControlFlowBlock from, IMutableControlFlowBlock to)
 			{
 				UnconditionalControlFlowBranch branch = new(from, to);
 				from.AddOutgoing(branch);
 				to.AddIncoming(branch);
+
+				graph.Add(branch);
 			}
 
 			if (blocks.Count is 0)

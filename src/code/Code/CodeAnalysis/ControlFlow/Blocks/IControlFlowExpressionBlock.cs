@@ -10,12 +10,15 @@ public interface IControlFlowExpressionBlock : IControlFlowBlock
 public sealed class ControlFlowExpressionBlock : MutableControlFlowBlock, IControlFlowExpressionBlock
 {
 	#region Properties
+	public int BlockNumber { get; }
+	public override string Id => $"{Expression.NodeKind}#{BlockNumber}";
 	public IAnnotatedExpressionSyntax Expression { get; }
 	#endregion
 
 	#region Constructors
-	public ControlFlowExpressionBlock(IAnnotatedExpressionSyntax expression)
+	public ControlFlowExpressionBlock(int blockNumber, IAnnotatedExpressionSyntax expression)
 	{
+		BlockNumber = blockNumber;
 		Expression = expression;
 	}
 	#endregion

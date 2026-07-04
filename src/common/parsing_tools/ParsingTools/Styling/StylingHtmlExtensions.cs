@@ -8,7 +8,7 @@ public static class StylingHtmlExtensions
 	{
 		#region Properties
 		public string ToHtml => ColorTranslator.ToHtml(color);
-		public string ToCss => $"color:{color.ToHtml};";
+		public string ToCss => $"color:{color.ToHtml}";
 		#endregion
 	}
 
@@ -22,19 +22,19 @@ public static class StylingHtmlExtensions
 				List<string> parts = [];
 
 				if (effect.HasFlag(StylingEffect.Bold))
-					parts.Add("font-weight:bold;");
+					parts.Add("font-weight:bold");
 
 				if (effect.HasFlag(StylingEffect.Italic))
-					parts.Add("font-style:italic;");
+					parts.Add("font-style:italic");
 
 				if (effect.HasFlag(StylingEffect.Wavy))
-					parts.Add("text-decoration-style:wavy;");
+					parts.Add("text-decoration-style:wavy");
 				else if (effect.HasFlag(StylingEffect.Dotted))
-					parts.Add("text-decoration-style:dotted;");
+					parts.Add("text-decoration-style:dotted");
 				else if (effect.HasFlag(StylingEffect.Underline))
-					parts.Add("text-decoration-line:underline;");
+					parts.Add("text-decoration-line:underline");
 
-				return string.Concat(parts);
+				return string.Join(";", parts);
 			}
 		}
 		#endregion
@@ -60,7 +60,7 @@ public static class StylingHtmlExtensions
 			{
 				return (style.Color, style.Effect) switch
 				{
-					(Color color, StylingEffect effect) => string.Concat(color.ToCss, effect.ToCss),
+					(Color color, StylingEffect effect) => string.Concat(color.ToCss, ";", effect.ToCss),
 					(_, StylingEffect effect) => effect.ToCss,
 					(Color color, _) => color.ToCss,
 					_ => ""

@@ -21,6 +21,7 @@ public sealed class ControlFlowStartBlock : IControlFlowStartBlock, IMutableCont
 	#endregion
 
 	#region Properties
+	public string Id => "start_node";
 	public IControlFlowGraph Graph { get; }
 	public IReadOnlyList<IControlFlowOutgoingBranch> Outgoing => _outgoing;
 	#endregion

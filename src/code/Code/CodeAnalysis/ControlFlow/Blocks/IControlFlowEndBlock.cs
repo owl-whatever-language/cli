@@ -18,6 +18,7 @@ public sealed class ControlFlowEndBlock : IControlFlowEndBlock, IMutableControlF
 	#endregion
 
 	#region Properties
+	public string Id => "end_node";
 	public IReadOnlyList<IControlFlowIncomingBranch> Incoming => _incoming;
 	#endregion
 

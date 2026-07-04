@@ -5,6 +5,7 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Blocks;
 public interface IControlFlowBlock
 {
 	#region Properties
+	string Id { get; }
 	IReadOnlyList<IControlFlowIncomingBranch> Incoming { get; }
 	IReadOnlyList<IControlFlowOutgoingBranch> Outgoing { get; }
 	#endregion
@@ -29,6 +30,7 @@ public abstract class MutableControlFlowBlock : IMutableControlFlowBlock
 	#endregion
 
 	#region Properties
+	public abstract string Id { get; }
 	public IReadOnlyList<IControlFlowIncomingBranch> Incoming => _incoming;
 	public IReadOnlyList<IControlFlowOutgoingBranch> Outgoing => _outgoing;
 	#endregion
