@@ -118,6 +118,12 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 		if (node is not null)
 			return new StructuredSyntaxTypeInfo(node.Interface.Name, node.Class.Name);
 
+		if (key.Contains('_'))
+		{
+			string names = string.Join(", ", Nodes.Select(n => n.Name.Original));
+			throw new InvalidOperationException($"The key '{key}' looked like a node id, but couldn't find a node that matched the name. Available node names: {names}.");
+		}
+
 		return new StructuredTypeInfo(key);
 	}
 	#endregion

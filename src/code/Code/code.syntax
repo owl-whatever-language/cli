@@ -44,7 +44,8 @@ variable_declaration statement        : type type, token name, token assignment,
 variable_declaration @ declared       : IDeclaredLocalVariable variable
 
 #### Functions
-function_declaration statement        : token name, token start, list<function_parameter, token> parameters, token end, function_return return, function_body body
+function_declaration_signature        : token name, token start, list<function_parameter, token> parameters, token end, function_return return
+function_declaration statement        : function_declaration_signature signature, function_body body
 function_declaration @ declared       : IDeclaredFunction function, ISymbolScope scope
 local_function_declaration statement  : token keyword, function_declaration_statement declaration
 

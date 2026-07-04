@@ -339,6 +339,13 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	}
 	private ConcreteFunctionDeclarationStatementSyntax ParseFunctionDeclaration(IConcreteToken name, IConcreteToken start)
 	{
+		IConcreteFunctionDeclarationSignatureSyntax signature = ParseFunctionSignature(name, start);
+		IConcreteFunctionBodySyntax body = ParseFunctionBody();
+
+		return new(signature, body);
+	}
+	private ConcreteFunctionDeclarationSignatureSyntax ParseFunctionSignature(IConcreteToken name, IConcreteToken start)
+	{
 		List<IConcreteSyntaxNode> nodes = [];
 		List<IConcreteFunctionParameterSyntax> parameters = [];
 		List<IConcreteToken> separators = [];
@@ -394,16 +401,15 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		}
 
 		IConcreteFunctionReturnSyntax @return = ParseFunctionReturn();
-		IConcreteFunctionBodySyntax body = ParseFunctionBody();
 
 		return new(
 			name,
 			start,
 			new SyntaxList<IConcreteFunctionParameterSyntax, IConcreteToken>(nodes, parameters, separators),
 			end,
-			@return,
-			body);
+			@return);
 	}
+
 	private IConcreteFunctionParameterSyntax? TryParseFunctionParameter()
 	{
 		return TryParseRegularFunctionParameter();

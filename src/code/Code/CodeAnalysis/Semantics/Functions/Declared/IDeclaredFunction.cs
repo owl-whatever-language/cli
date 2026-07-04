@@ -24,7 +24,7 @@ public sealed class DeclaredFunction : IDeclaredFunction
 			field = value;
 		}
 	}
-	public string? Name => Declaration.Name.Value as string;
+	public string? Name => Declaration.Signature.Name.Value as string;
 	string ISymbol.Name => Name ?? SymbolHelpers.ThrowSymbolWithoutNameException<string>();
 	public IReadOnlyList<IDeclaredFunctionParameter> Parameters { get; }
 	public IDeclaredFunctionReturn Return { get; }
@@ -36,12 +36,12 @@ public sealed class DeclaredFunction : IDeclaredFunction
 	{
 		Declaration = declaration;
 
-		DeclaredFunctionParameter[] parameters = new DeclaredFunctionParameter[declaration.Parameters.Values.Count];
+		DeclaredFunctionParameter[] parameters = new DeclaredFunctionParameter[declaration.Signature.Parameters.Values.Count];
 		for (int i = 0; i < parameters.Length; i++)
-			parameters[i] = new(declaration.Parameters.Values[i], i);
+			parameters[i] = new(declaration.Signature.Parameters.Values[i], i);
 
 		Parameters = parameters;
-		Return = new DeclaredFunctionReturn(declaration.Return);
+		Return = new DeclaredFunctionReturn(declaration.Signature.Return);
 
 		AsCallable = new CallableFunction(this);
 	}

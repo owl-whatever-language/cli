@@ -128,22 +128,18 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 		Get(concrete, out IDeclaredFunction function);
 		using (EnterScope(concrete, out ISymbolScope scope))
 		{
-			var name = Convert(concrete.Name);
-			var start = Convert(concrete.Start);
-			var parameters = Convert(concrete.Parameters);
-			var end = Convert(concrete.End);
-			var @return = Convert(concrete.Return);
+			var signature = Convert(concrete.Signature);
 			var body = Convert(concrete.Body);
 
-			function.Return.Type = @return switch
+			function.Return.Type = signature.Return switch
 			{
 				IDeclaredRegularFunctionReturnSyntax regular => regular.ReturnType.TypeInfo,
 				IDeclaredEmptyFunctionReturnSyntax => SpecialTypes.Void,
 
-				_ => ThrowHelper.ThrowInvalidOperationException<IType>($"Unhandled function return type {@return.GetType().Name}"),
+				_ => ThrowHelper.ThrowInvalidOperationException<IType>($"Unhandled function return type {signature.Return.GetType().Name}"),
 			};
 
-			declared = new(name, start, parameters, end, @return, body, function, scope);
+			declared = new(signature, body, function, scope);
 			Update(function, declared);
 		}
 
