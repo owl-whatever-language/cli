@@ -24,7 +24,7 @@ The output won't be much, just the prints from the example source code.
 ## Nicer example previews
 
 Since quite a bit of the output is still just for debugging, and not a part of
-the main project, I think I'll be nice to show it here, just as a preview of 
+the main project, I think it'll be nice to show it here, just as a preview of 
 what's to come.
 
 ![hoot_hoot](res/examples/hoot_hoot.png)
