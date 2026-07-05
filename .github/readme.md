@@ -3,12 +3,13 @@
 This repository will eventually contain the overall CLI for the OWL project.
 However right now, it includes the entire compiler.
 
-## Examples
+## Running examples
 
-It can't do much right now, but it can interpret the main example, which is the
-[`hoot_hoot.owl`](../src/examples/hoot_hoot.owl) file.
+It can't do much right now, but it can interpret the example files, which are in
+the [`examples`](../src/examples) directory.
 
-If you'd like to do so, you can run the following in the root of this repository:
+If you'd like to do so, you can run the following in the root of this repository
+*(to run the [`hoot_hoot.owl`](../src/examples/hoot_hoot.owl) example)*:
 ```sh
 dotnet run --project src/cli -- run src/examples/hoot_hoot.owl
 ```
@@ -20,9 +21,20 @@ dotnet run -c Release --project src/cli -- run src/examples/hoot_hoot.owl
 
 The output won't be much, just the prints from the example source code.
 
-But, here's a nicer preview from some debug output:
+## Nicer example previews
 
-![preview](res/preview.png)
+Since quite a bit of the output is still just for debugging, and not a part of
+the main project, I think I'll be nice to show it here, just as a preview of 
+what's to come.
+
+![hoot_hoot](res/examples/hoot_hoot.png)
+
+![hoot_hoot](res/examples/hoot_user.png)
+
+![hoot_hoot](res/examples/eat_snacks.png)
+
+*(These nice terminal 'screenshots' have been created with 
+[termshot](https://github.com/homeport/termshot)).*
 
 ## Versions
 

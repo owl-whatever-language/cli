@@ -5,6 +5,7 @@ public interface IPerformanceResult
 	#region Properties
 	TimeSpan SystemTime { get; }
 	TimeSpan UserTime { get; }
+	TimeSpan CpuTime { get; }
 	TimeSpan Duration { get; }
 	long MemoryUsed { get; }
 	#endregion
@@ -32,6 +33,9 @@ internal sealed class PerformanceResultScope : IPerformanceResult
 
 	/// <inheritdoc/>
 	public TimeSpan UserTime => _userTimeAtEnd is null ? default : _userTimeAtEnd.Value - _userTimeAtStart;
+
+	/// <inheritdoc/>
+	public TimeSpan CpuTime => SystemTime + UserTime;
 
 	/// <inheritdoc/>
 	public TimeSpan Duration => _timestampAtEnd is null ? default : Stopwatch.GetElapsedTime(_timestampAtStart, _timestampAtEnd.Value);
@@ -84,6 +88,7 @@ public sealed class PerformanceResult : IPerformanceResult
 	#region Properties
 	public TimeSpan SystemTime { get; }
 	public TimeSpan UserTime { get; }
+	public TimeSpan CpuTime => SystemTime + UserTime;
 	public TimeSpan Duration { get; }
 	public long MemoryUsed { get; }
 	#endregion
