@@ -664,7 +664,13 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 				if (MatchAny(out IConcreteToken? @operator, ClassificationKind.Operator, SyntaxKind.BinaryOperators))
 				{
 					IConcreteExpressionSyntax right = ParseExpression(power);
-					expression = new ConcreteBinaryExpressionSyntax(expression, @operator, right);
+
+					if (@operator.Kind == SyntaxKind.EqualSign)
+						expression = new ConcreteAssignmentExpressionSyntax(expression, @operator, right);
+					if (@operator.Kind.IsCompoundAssignmentOperator())
+						expression = new ConcreteCompoundAssignmentExpressionSyntax(expression, @operator, right);
+					else
+						expression = new ConcreteBinaryExpressionSyntax(expression, @operator, right);
 				}
 			}
 

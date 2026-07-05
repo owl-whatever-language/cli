@@ -8,6 +8,12 @@ internal partial class StandardBuiltins
 	[Name("print")]
 	public static void Print(IExecutionContext context, Text text)
 	{
+		Console.Write(text.Value);
+	}
+
+	[Name("println")]
+	public static void Println(IExecutionContext context, Text text)
+	{
 		Console.WriteLine(text.Value);
 	}
 

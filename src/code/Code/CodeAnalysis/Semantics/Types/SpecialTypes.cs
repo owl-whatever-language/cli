@@ -1,5 +1,73 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 
+public abstract class SpecialType : INamedType
+{
+	#region Properties
+	public abstract string Name { get; }
+	protected virtual ClassificationKind Classification => ClassificationKind.Type;
+	string ISymbol.Name => Name ?? SymbolHelpers.ThrowSymbolWithoutNameException<string>();
+	#endregion
+
+	#region Constructors
+	protected SpecialType() { }
+	#endregion
+
+	#region Methods
+	public virtual bool CanAssignTo(IType target) => false;
+	public virtual bool Equals([NotNullWhen(true)] IType? other) => ReferenceEquals(this, other);
+	public override bool Equals([NotNullWhen(true)] object? obj) => ReferenceEquals(this, obj);
+	public override int GetHashCode() => base.GetHashCode(); // Note(Nightowl): We want reference equality so this is ok;
+	public override string ToString() => Name;
+	TextFragmentCollection IDebugTreePrintable.GetFragments() => [new(Name, Classification)];
+	public bool FindOperation(IType left, IType right, OperatorKind @operator, [NotNullWhen(true)] out IFunction? function)
+	{
+		function = default;
+		return false;
+	}
+	#endregion
+}
+
+public abstract class SpecialType<T> : SpecialType
+	where T : notnull, SpecialType<T>, new()
+{
+	#region Properties
+	public static T Instance { get; } = new();
+	#endregion
+}
+
+public sealed class VoidType : SpecialType<VoidType>
+{
+	public override string Name => "void";
+}
+
+public sealed class UnknownType : SpecialType<UnknownType>
+{
+	#region Properties
+	protected override ClassificationKind Classification => ClassificationKind.Error;
+	public override string Name => "unknown";
+	#endregion
+
+	#region Methods
+	public override bool Equals([NotNullWhen(true)] IType? other) => false;
+	public override bool Equals([NotNullWhen(true)] object? obj) => false;
+	public override int GetHashCode() => base.GetHashCode();
+	#endregion
+}
+
+public sealed class ErrorType : SpecialType<ErrorType>
+{
+	#region Properties
+	protected override ClassificationKind Classification => ClassificationKind.Error;
+	public override string Name => "error";
+	#endregion
+
+	#region Methods
+	public override bool Equals([NotNullWhen(true)] IType? other) => false;
+	public override bool Equals([NotNullWhen(true)] object? obj) => false;
+	public override int GetHashCode() => base.GetHashCode();
+	#endregion
+}
+
 public static class SpecialTypes
 {
 	#region Properties

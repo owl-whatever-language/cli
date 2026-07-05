@@ -88,5 +88,11 @@ public sealed class CallableFunction : ICallableFunction
 
 		return fragments;
 	}
+
+	public bool FindOperation(IType left, IType right, OperatorKind @operator, [NotNullWhen(true)] out IFunction? function)
+	{
+		function = default;
+		return false;
+	}
 	#endregion
 }

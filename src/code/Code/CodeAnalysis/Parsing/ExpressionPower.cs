@@ -6,11 +6,11 @@ public enum ExpressionPrecedence
 
 	#region Order
 	Suffix,
+	LogicalAnd,
+	LogicalOr,
 	Equality,
 	Multiplication,
 	Addition,
-	LogicalAnd,
-	LogicalOr,
 	#endregion
 
 	#region Aliases

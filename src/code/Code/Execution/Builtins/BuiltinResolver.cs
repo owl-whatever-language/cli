@@ -138,6 +138,7 @@ public sealed class BuiltinResolver
 	private void Resolve(Type container)
 	{
 		Type[] types = container.GetNestedTypes();
+		List<BuiltinType> builtinTypes = [];
 
 		foreach (Type type in types)
 		{
@@ -146,21 +147,46 @@ public sealed class BuiltinResolver
 
 			string name = GetName(type);
 			BuiltinType builtinType = new(name, type);
+			builtinTypes.Add(builtinType);
 
 			TypeLookup.Add(type, builtinType);
 			CurrentScope.Add(builtinType);
 		}
 
-		MethodInfo[] functions = container.GetMethods(BindingFlags.Static | BindingFlags.Public);
-		foreach (MethodInfo function in functions)
+		foreach (BuiltinType builtinType in builtinTypes)
 		{
-			if (ShouldIgnore(function))
-				continue;
+			MethodInfo[] typeOperators = builtinType.Type
+				.GetMethods(BindingFlags.Static | BindingFlags.Public)
+				.Where(ShouldInclude)
+				.Where(IsOperator)
+				.ToArray();
 
-			ResolveFunction(function);
+			string[] operators = Enum.GetNames<OperatorKind>();
+			foreach (MethodInfo method in typeOperators)
+			{
+				BuiltinFunction function = CreateFunction(method);
+
+				if (operators.Contains(function.Name) is false)
+					ThrowHelper.ThrowInvalidOperationException($"Unknown operator kind '{function.Name}'.");
+
+				builtinType.Operations.Add(function);
+			}
 		}
+
+		MethodInfo[] functions = container
+			.GetMethods(BindingFlags.Static | BindingFlags.Public)
+			.Where(ShouldInclude)
+			.ToArray();
+
+		foreach (MethodInfo function in functions)
+			ResolveFunction(function);
 	}
 	private void ResolveFunction(MethodInfo function)
+	{
+		BuiltinFunction builtin = CreateFunction(function);
+		CurrentScope.Add(builtin);
+	}
+	private BuiltinFunction CreateFunction(MethodInfo function)
 	{
 		string name = GetName(function);
 
@@ -185,8 +211,7 @@ public sealed class BuiltinResolver
 		IType returnType = function.ReturnType == typeof(void) ? SpecialTypes.Void : TypeLookup[function.ReturnType];
 		BuiltinFunctionReturn @return = new(returnType);
 
-		BuiltinFunction builtin = new(name, function, builtinParameters, @return);
-		CurrentScope.Add(builtin);
+		return new(name, function, builtinParameters, @return);
 	}
 	#endregion
 
@@ -201,6 +226,11 @@ public sealed class BuiltinResolver
 	#endregion
 
 	#region Attribute helpers
+	private static bool IsOperator(MethodInfo method)
+	{
+		return method.GetCustomAttribute<OperatorAttribute>() is not null;
+	}
+	private static bool ShouldInclude(MemberInfo member) => ShouldIgnore(member) is false;
 	private static bool ShouldIgnore(MemberInfo member)
 	{
 		return member.GetCustomAttribute<IgnoreAttribute>() is not null;

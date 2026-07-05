@@ -187,6 +187,34 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return semantic;
 	}
+
+	protected override SemanticIfStatementSyntax Convert(IDeclaredIfStatementSyntax declared)
+	{
+		var semantic = base.Convert(declared);
+
+		if (semantic.Condition.ResultType != CoreScope.Bool)
+			AddError("invalid_condition_type", semantic.Condition.Position, "Expected the condition to be a boolean expression.");
+
+		return semantic;
+	}
+	protected override SemanticIfElseStatementSyntax Convert(IDeclaredIfElseStatementSyntax declared)
+	{
+		var semantic = base.Convert(declared);
+
+		if (semantic.Condition.ResultType != CoreScope.Bool)
+			AddError("invalid_condition_type", semantic.Condition.Position, "Expected the condition to be a boolean expression.");
+
+		return semantic;
+	}
+	protected override SemanticWhileStatementSyntax Convert(IDeclaredWhileStatementSyntax declared)
+	{
+		var semantic = base.Convert(declared);
+
+		if (semantic.Condition.ResultType != CoreScope.Bool)
+			AddError("invalid_condition_type", semantic.Condition.Position, "Expected the condition to be a boolean expression.");
+
+		return semantic;
+	}
 	#endregion
 
 	#region Get expression methods
@@ -227,10 +255,79 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		var op = Convert(declared.Operator);
 		var right = Convert(declared.Right);
 
-		AddError("unknown_operator", op.Position, $"Unknown binary expression operator '{op.Lexeme}'.");
+		OperatorKind kind = op.Kind.GetOperator();
+		IFunction? operation =
+			left.ResultType.FindOperation(left.ResultType, right.ResultType, kind) ??
+			right.ResultType.FindOperation(left.ResultType, right.ResultType, kind)
+		;
+		if (operation is null)
+			AddError("unknown_operator", op.Position, $"Unknown binary expression operator '{left.ResultType} {op.Lexeme} {right.ResultType}'.");
 
-		return new(left, op, right, SpecialTypes.Error);
+		return new(left, op, right, operation, operation?.Return.Type ?? SpecialTypes.Error);
 	}
+	protected override SemanticAssignmentExpressionSyntax Convert(IDeclaredAssignmentExpressionSyntax declared)
+	{
+		var expression = Convert(declared.Expression);
+		var op = Convert(declared.Operator);
+		var value = Convert(declared.Value);
+
+		ISymbol? symbol = null;
+		IType? resultType = null;
+		if (expression is ISemanticGetExpressionSyntax get)
+		{
+			if (get.Symbol is ILocalVariable variable)
+			{
+				symbol = variable;
+				resultType = variable.Type;
+			}
+			else if (get.Symbol is IFunctionParameter parameter)
+			{
+				symbol = parameter;
+				resultType = parameter.Type;
+			}
+			else
+				AddError("invalid_assignment", op.Position, $"Cannot assign a value to the symbol '{get.Symbol.Name}'.");
+		}
+		else if (IsLiteral(expression))
+			AddError("invalid_assignment", op.Position, "Literals cannot be assigned to.");
+
+		return new(expression, op, value, symbol ?? SpecialSymbols.NotFound, resultType ?? SpecialTypes.Error);
+	}
+	protected override SemanticCompoundAssignmentExpressionSyntax Convert(IDeclaredCompoundAssignmentExpressionSyntax declared)
+	{
+		var expression = Convert(declared.Expression);
+		var op = Convert(declared.Operator);
+		var value = Convert(declared.Value);
+
+		ISymbol? symbol = null;
+		if (expression is ISemanticGetExpressionSyntax get)
+		{
+			if (get.Symbol is ILocalVariable or IFunctionParameter)
+				symbol = get.Symbol;
+			else
+				AddError("invalid_assignment", op.Position, $"Cannot assign a value to the symbol '{get.Symbol.Name}'.");
+		}
+		else if (IsLiteral(expression))
+			AddError("invalid_assignment", op.Position, "Literals cannot be assigned to.");
+
+		OperatorKind kind = op.Kind.GetOperator();
+		IFunction? operation;
+		if (symbol is null)
+			operation = null;
+		else
+		{
+			operation =
+				expression.ResultType.FindOperation(expression.ResultType, value.ResultType, kind) ??
+				value.ResultType.FindOperation(expression.ResultType, value.ResultType, kind)
+			;
+
+			if (operation is null)
+				AddError("unknown_operator", op.Position, $"Unknown compound assignment operator '{expression.ResultType} {op.Lexeme} {value.ResultType}'.");
+		}
+
+		return new(expression, op, value, symbol ?? SpecialSymbols.NotFound, operation, operation?.Return.Type ?? SpecialTypes.Error);
+	}
+
 	protected override SemanticTernaryExpressionSyntax Convert(IDeclaredTernaryExpressionSyntax declared) => throw new NotImplementedException();
 	protected override SemanticGroupedExpressionSyntax Convert(IDeclaredGroupedExpressionSyntax declared) => throw new NotImplementedException();
 	protected override SemanticBooleanLiteralExpressionSyntax Convert(IDeclaredBooleanLiteralExpressionSyntax declared) => throw new NotImplementedException();
@@ -330,6 +427,23 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 			return new(expression, start, arguments, end, callable, callable?.Return.Type ?? SpecialTypes.Error);
 		}
+	}
+	#endregion
+
+	#region Helpers
+	private static bool IsLiteral(IDeclaredExpressionSyntax expression) => IsLiteral(expression.NodeEnum);
+	private static bool IsLiteral(SyntaxNodeEnum value)
+	{
+		return value is
+			SyntaxNodeEnum.BaseIntegerLiteralExpression or
+			SyntaxNodeEnum.IntegerLiteralExpression or
+			SyntaxNodeEnum.DecimalLiteralExpression or
+
+			SyntaxNodeEnum.StringLiteralExpression or
+			SyntaxNodeEnum.InterpolatedStringExpression or
+
+			SyntaxNodeEnum.BooleanLiteralExpression
+		;
 	}
 	#endregion
 

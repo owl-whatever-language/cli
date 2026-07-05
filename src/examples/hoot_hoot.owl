@@ -1,11 +1,11 @@
 // "Hoot Hoot" examples (an OWL equivalent to "Hello World").
 
 // Direct (print will most definitely be removed later).
-print("Hoot Hoot!");
+println("Hoot Hoot!");
 
 // From variable
 text output = "Hoot Hoot (from variable)!";
-print(output);
+println(output);
 
 // From function
 HootTheUser("<user>");
@@ -15,7 +15,7 @@ fun HootTheUser(text user)
 {
 	// Using named parameter
 	text output = GetHootText(target: user);
-	print(output);
+	println(output);
 }
 
 // Showing off function body shorthand syntax.

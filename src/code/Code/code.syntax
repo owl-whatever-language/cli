@@ -67,7 +67,12 @@ block function_body : block_statement block
 group expression
 expression @ semantic : IType result_type
 empty expression
+assignment expression : expression expression, token operator, expression value
+assignment @ semantic : ISymbol symbol
+compound_assignment expression : expression expression, token operator, expression value
+compound_assignment @ semantic : ISymbol symbol, IFunction? operation
 binary expression     : expression left, token operator, expression right
+binary @ semantic     : IFunction? operation
 ternary expression    : expression condition, token question, expression true_clause, token colon, expression false_clause
 grouped expression    : token start, expression value, token end
 get expression        : token name

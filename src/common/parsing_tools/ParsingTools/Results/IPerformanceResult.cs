@@ -17,13 +17,13 @@ internal sealed class PerformanceResultScope : IPerformanceResult
 	private readonly TimeSpan _systemTimeAtStart, _userTimeAtStart;
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	private readonly long _memoryAtStart;
+	private readonly long _memoryAtStart, _timestampAtStart;
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	private TimeSpan? _systemTimeAtEnd, _userTimeAtEnd;
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	private long? _memoryAtEnd;
+	private long? _memoryAtEnd, _timestampAtEnd;
 	#endregion
 
 	#region Properties
@@ -34,7 +34,7 @@ internal sealed class PerformanceResultScope : IPerformanceResult
 	public TimeSpan UserTime => _userTimeAtEnd is null ? default : _userTimeAtEnd.Value - _userTimeAtStart;
 
 	/// <inheritdoc/>
-	public TimeSpan Duration => SystemTime + UserTime;
+	public TimeSpan Duration => _timestampAtEnd is null ? default : Stopwatch.GetElapsedTime(_timestampAtStart, _timestampAtEnd.Value);
 
 	/// <inheritdoc/>
 	public long MemoryUsed => _memoryAtEnd is null ? 0 : Math.Max(0, _memoryAtEnd.Value - _memoryAtStart);
@@ -47,6 +47,7 @@ internal sealed class PerformanceResultScope : IPerformanceResult
 		_systemTimeAtStart = cpu.PrivilegedTime;
 		_userTimeAtStart = cpu.UserTime;
 		_memoryAtStart = GC.GetTotalMemory(true);
+		_timestampAtStart = Stopwatch.GetTimestamp();
 	}
 	#endregion
 
@@ -57,6 +58,7 @@ internal sealed class PerformanceResultScope : IPerformanceResult
 		_systemTimeAtEnd = cpu.PrivilegedTime;
 		_userTimeAtEnd = cpu.UserTime;
 		_memoryAtEnd = GC.GetTotalMemory(true);
+		_timestampAtEnd = Stopwatch.GetTimestamp();
 	}
 	#endregion
 }

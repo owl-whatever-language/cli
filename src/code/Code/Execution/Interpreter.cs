@@ -1,5 +1,6 @@
 using System.Text;
 using OwlDomain.Owl.Code.Execution.Builtins;
+using OwlDomain.Owl.Code.Execution.Builtins.Core;
 
 namespace OwlDomain.Owl.Code.Execution;
 
@@ -64,6 +65,22 @@ public class Interpreter
 			ThrowHelper.ThrowInvalidOperationException($"The symbol '{symbol}' hasn't been declared yet.");
 			return default;
 		}
+		public void Store(ISymbol symbol, InterpreterValue value)
+		{
+			if (Values.ContainsKey(symbol))
+			{
+				Values[symbol] = value;
+				return;
+			}
+
+			if (Parent is not null)
+			{
+				Parent.Store(symbol, value);
+				return;
+			}
+
+			ThrowHelper.ThrowInvalidOperationException($"The symbol '{symbol.Name}' hasn't been declared yet.");
+		}
 		#endregion
 	}
 	private sealed class ReturnControlException(InterpreterValue value) : Exception
@@ -107,6 +124,19 @@ public class Interpreter
 		foreach (IAnnotatedStatementSyntax statement in statements)
 			Interpret(statement);
 	}
+	private void InterpretValueScope(IAnnotatedStatementSyntax body)
+	{
+		var old = Values;
+		Values = new(Values);
+		try
+		{
+			Interpret(body);
+		}
+		finally
+		{
+			Values = old;
+		}
+	}
 	private void Interpret(IAnnotatedStatementSyntax statement)
 	{
 		if (statement is IAnnotatedExpressionStatementSyntax expression)
@@ -127,16 +157,57 @@ public class Interpreter
 			InterpreterValue value = Evaluate(@return.Value);
 			throw new ReturnControlException(value);
 		}
+		else if (statement is IAnnotatedWhileStatementSyntax @while)
+			Interpret(@while);
+		else if (statement is IAnnotatedIfStatementSyntax @if)
+			Interpret(@if);
+		else if (statement is IAnnotatedIfElseStatementSyntax ifElse)
+			Interpret(ifElse);
+		else
+			ThrowHelper.ThrowInvalidOperationException($"Unhandled statement type ({statement.GetType().Name}).");
+	}
+	private void Interpret(IAnnotatedWhileStatementSyntax @while)
+	{
+		while (EvaluateCondition(@while.Condition))
+			InterpretValueScope(@while.Body);
+	}
+	private void Interpret(IAnnotatedIfStatementSyntax @if)
+	{
+		if (EvaluateCondition(@if.Condition))
+			InterpretValueScope(@if.TrueClause);
+	}
+	private void Interpret(IAnnotatedIfElseStatementSyntax @if)
+	{
+		if (EvaluateCondition(@if.Condition))
+			InterpretValueScope(@if.TrueClause);
+		else
+			InterpretValueScope(@if.FalseClause);
 	}
 	#endregion
 
 	#region Evaluate methods
+	private bool EvaluateCondition(IAnnotatedExpressionSyntax condition)
+	{
+		InterpreterValue result = Evaluate(condition);
+		if (result.Value is CoreBuiltins.Bool typed)
+			return typed.Value;
+
+		ThrowHelper.ThrowInvalidOperationException($"Expected the result of the condition ({result.Value?.GetType()}) be a boolean.");
+		return default;
+	}
 	private InterpreterValue Evaluate(IAnnotatedExpressionSyntax expression)
 	{
 		return expression switch
 		{
 			IAnnotatedStringLiteralExpressionSyntax str => Evaluate(str),
 			IAnnotatedInterpolatedStringExpressionSyntax str => Evaluate(str),
+
+			IAnnotatedIntegerLiteralExpressionSyntax num => Evaluate(num),
+
+			IAnnotatedBinaryExpressionSyntax binary => Evaluate(binary),
+			IAnnotatedAssignmentExpressionSyntax assignment => Evaluate(assignment),
+			IAnnotatedCompoundAssignmentExpressionSyntax assignment => Evaluate(assignment),
+
 			IAnnotatedGetExpressionSyntax get => Evaluate(get),
 			IAnnotatedFunctionCallExpressionSyntax call => Evaluate(call),
 
@@ -186,6 +257,54 @@ public class Interpreter
 		string finalValue = builder.ToString();
 		return type.CreateInstance(finalValue);
 	}
+
+	private InterpreterValue Evaluate(IAnnotatedIntegerLiteralExpressionSyntax expression)
+	{
+		if (expression.Value is null)
+			ThrowHelper.ThrowInvalidOperationException("Expected the integer literal to have a value.");
+
+		BuiltinType type = (BuiltinType)expression.ResultType;
+
+		long value = expression.Value.Value;
+		return type.CreateInstance(value);
+	}
+
+	private InterpreterValue Evaluate(IAnnotatedBinaryExpressionSyntax expression)
+	{
+		if (expression.Operation is null)
+			ThrowHelper.ThrowInvalidOperationException("Expected the operator function to be available.");
+
+		BuiltinFunction operation = (BuiltinFunction)expression.Operation;
+
+		InterpreterValue left = Evaluate(expression.Left);
+		InterpreterValue right = Evaluate(expression.Right);
+
+		InterpreterValue result = operation.Execute(Context, [left, right]);
+		return result;
+	}
+	private InterpreterValue Evaluate(IAnnotatedAssignmentExpressionSyntax assignment)
+	{
+		InterpreterValue value = Evaluate(assignment.Value);
+		Values.Store(assignment.Symbol, value);
+
+		return value;
+	}
+	private InterpreterValue Evaluate(IAnnotatedCompoundAssignmentExpressionSyntax assignment)
+	{
+		if (assignment.Operation is null)
+			ThrowHelper.ThrowInvalidOperationException("Expected the operator function to be available.");
+
+		BuiltinFunction operation = (BuiltinFunction)assignment.Operation;
+
+		InterpreterValue current = Evaluate(assignment.Expression);
+		InterpreterValue value = Evaluate(assignment.Value);
+
+		value = operation.Execute(Context, [current, value]);
+		Values.Store(assignment.Symbol, value);
+
+		return value;
+	}
+
 	private InterpreterValue Evaluate(IAnnotatedFunctionCallExpressionSyntax expression)
 	{
 		InterpreterValue value = Evaluate(expression.Expression);
