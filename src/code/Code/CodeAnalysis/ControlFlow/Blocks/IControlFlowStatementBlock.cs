@@ -1,3 +1,5 @@
+using OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Graphs;
+
 namespace OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Blocks;
 
 public interface IControlFlowStatementBlock : IControlFlowBlock
@@ -15,15 +17,15 @@ public sealed class ControlFlowStatementBlock : MutableControlFlowBlock, IContro
 	#endregion
 
 	#region Properties
-	public int BlockNumber { get; }
+	public int BlockNumber { get; set; }
 	public override string Id => (_statements.FirstOrDefault()?.NodeKind.WithGroup ?? "block") + $"#{BlockNumber}";
 	public IReadOnlyList<IAnnotatedStatementSyntax> Statements => _statements;
 	#endregion
 
 	#region Constructors
-	public ControlFlowStatementBlock(int blockNumber)
+	public ControlFlowStatementBlock(IMutableControlFlowGraph graph)
 	{
-		BlockNumber = blockNumber;
+		graph.Add(this);
 	}
 	#endregion
 

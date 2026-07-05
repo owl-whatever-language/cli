@@ -1,3 +1,5 @@
+using OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Graphs;
+
 namespace OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Blocks;
 
 public interface IControlFlowExpressionBlock : IControlFlowBlock
@@ -16,10 +18,12 @@ public sealed class ControlFlowExpressionBlock : MutableControlFlowBlock, IContr
 	#endregion
 
 	#region Constructors
-	public ControlFlowExpressionBlock(int blockNumber, IAnnotatedExpressionSyntax expression)
+	public ControlFlowExpressionBlock(IMutableControlFlowGraph graph, IAnnotatedExpressionSyntax expression)
 	{
-		BlockNumber = blockNumber;
+		BlockNumber = graph.Blocks.Count + 1;
 		Expression = expression;
+
+		graph.Add(this);
 	}
 	#endregion
 }

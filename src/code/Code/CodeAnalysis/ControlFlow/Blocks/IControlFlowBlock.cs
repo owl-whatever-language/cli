@@ -19,6 +19,7 @@ public interface IMutableControlFlowBlock : IControlFlowBlock
 	#endregion
 }
 
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public abstract class MutableControlFlowBlock : IMutableControlFlowBlock
 {
 	#region Fields
@@ -50,5 +51,9 @@ public abstract class MutableControlFlowBlock : IMutableControlFlowBlock
 
 		_outgoing.Add(outgoing);
 	}
+	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"Block: {Id}";
 	#endregion
 }

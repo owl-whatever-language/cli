@@ -119,7 +119,13 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 			lines.AddRange(collection);
 		}
 
-		lines.TrimLines().PrefixLineMargin();
+		for (int i = lines.Count - 1; i >= 0; i--)
+		{
+			if (lines[i].Count is 0 || lines[i].All(f => f.IsWhitespace || f.Classification == ClassificationKind.SinglelineComment))
+				lines.RemoveAt(i);
+		}
+
+		lines.TrimLines().TrimSharedIndent().PrefixLineMargin();
 
 		PrintHtmlLines(writer, lines);
 	}
@@ -129,7 +135,7 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 		if (target.Parent is IAnnotatedShortFunctionBodySyntax)
 			target = target.Parent;
 
-		TextFragmentLineCollection lines = target.GetLines().TrimLines();
+		TextFragmentLineCollection lines = target.GetLines().TrimLines().TrimSharedIndent();
 		PrintHtmlLines(writer, lines);
 	}
 	private void PrintHtmlLines(IndentedTextWriter writer, TextFragmentLineCollection lines)
