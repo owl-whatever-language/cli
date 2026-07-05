@@ -68,13 +68,16 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 	public TextFragmentLineCollection(int capacity) : base(capacity) { }
 	#endregion
 
-	#region Methods
+	#region Index methods
 	public int IndexOfLine(int lineNumber) => FindIndex(l => l.Line is not null && l.Line >= lineNumber);
 	public int IndexOfLine(int lineNumber, int fallback)
 	{
 		int index = IndexOfLine(lineNumber);
 		return index < 0 ? fallback : index;
 	}
+	#endregion
+
+	#region Insert methods
 	public void InsertBeforeLine(int lineNumber, TextFragmentLine line)
 	{
 		int index = IndexOfLine(lineNumber, 0);
@@ -85,28 +88,19 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 		int index = IndexOfLine(lineNumber, 0);
 		InsertRange(index, lines);
 	}
-
 	public void InsertAfterLine(int lineNumber, TextFragmentLine line)
 	{
-		int index = IndexOfLine(lineNumber + 1, 0);
-		Insert(index, line);
+		int index = IndexOfLine(lineNumber, 0);
+		Insert(index + 1, line);
 	}
 	public void InsertRangeAfterLine(int lineNumber, IEnumerable<TextFragmentLine> lines)
 	{
-		int index = IndexOfLine(lineNumber + 1, 0);
-		InsertRange(index, lines);
+		int index = IndexOfLine(lineNumber, 0);
+		InsertRange(index + 1, lines);
 	}
-	public TextFragmentLine? TryGetLineAt(int lineNumber)
-	{
-		foreach (TextFragmentLine line in this)
-		{
-			if (line.Line == lineNumber)
-				return line;
-		}
+	#endregion
 
-		return null;
-	}
-
+	#region Prefix methods
 	public TextFragmentLineCollection Prefix(PrefixDelegate callback)
 	{
 		foreach (TextFragmentLine line in this)
@@ -117,7 +111,6 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 
 		return this;
 	}
-
 	public TextFragmentLineCollection PrefixLineMargin(string marginText = "|", string numberFormat = "n0")
 	{
 		int maxNumberWidth = HighestLine.ToString(numberFormat).Length;
@@ -142,7 +135,9 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 
 		return Prefix(GetPrefix);
 	}
+	#endregion
 
+	#region Trim methods
 	public TextFragmentLineCollection TrimFirstLines()
 	{
 		while (true)
@@ -186,7 +181,62 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 
 		return this;
 	}
+	public TextFragmentLineCollection TrimSharedIndent()
+	{
+		if (TryGetSharedIndent(out TextFragment sharedIndent) is false)
+			return this;
 
+		Debug.Assert(sharedIndent.Text.Any());
+
+		for (int i = 0; i < Count; i++)
+		{
+			TextFragmentLine line = this[i];
+			TextFragment current = line[0];
+
+			Debug.Assert(current.Text.Any());
+			Debug.Assert(current.Text[0] == sharedIndent.Text[0]);
+
+			line[0] = new(current.Text[sharedIndent.Text.Length..], ClassificationKind.Indentation, current.Syntax);
+		}
+
+		return this;
+	}
+	#endregion
+
+	#region Methods
+	public bool TryGetSharedIndent(out TextFragment sharedIndent)
+	{
+		IEnumerable<TextFragmentLine> enumerable = this;
+
+		if (Count is 0 || enumerable.Any(l => l.FirstOrDefault().Classification != ClassificationKind.Indentation))
+		{
+			sharedIndent = default;
+			return false;
+		}
+
+		TextFragment[] indents = enumerable.Select(l => l.First()).ToArray();
+		TextFragment shortest = indents.MinBy(f => f.Text.Length);
+
+		if (shortest.Text.Length is 0 || indents.Any(f => f.Text.FirstOrDefault() != shortest.Text[0]))
+		{
+			sharedIndent = default;
+			return false;
+		}
+
+		sharedIndent = shortest;
+		return true;
+	}
+
+	public TextFragmentLine? TryGetLineAt(int lineNumber)
+	{
+		foreach (TextFragmentLine line in this)
+		{
+			if (line.Line == lineNumber)
+				return line;
+		}
+
+		return null;
+	}
 	IEnumerator<ITextFragmentLine> IEnumerable<ITextFragmentLine>.GetEnumerator() => GetEnumerator();
 	#endregion
 }
