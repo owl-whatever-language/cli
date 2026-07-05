@@ -16,7 +16,7 @@ public sealed class ControlFlowStatementBlock : MutableControlFlowBlock, IContro
 
 	#region Properties
 	public int BlockNumber { get; }
-	public override string Id => (_statements.FirstOrDefault()?.NodeKind.FullName ?? "block") + $"#{BlockNumber}";
+	public override string Id => (_statements.FirstOrDefault()?.NodeKind.WithGroup ?? "block") + $"#{BlockNumber}";
 	public IReadOnlyList<IAnnotatedStatementSyntax> Statements => _statements;
 	#endregion
 

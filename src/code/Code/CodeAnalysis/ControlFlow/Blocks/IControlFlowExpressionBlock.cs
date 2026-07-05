@@ -11,7 +11,7 @@ public sealed class ControlFlowExpressionBlock : MutableControlFlowBlock, IContr
 {
 	#region Properties
 	public int BlockNumber { get; }
-	public override string Id => $"{Expression.NodeKind}#{BlockNumber}";
+	public override string Id => $"{Expression.NodeKind.WithGroup}#{BlockNumber}";
 	public IAnnotatedExpressionSyntax Expression { get; }
 	#endregion
 
