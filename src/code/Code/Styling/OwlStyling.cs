@@ -34,18 +34,19 @@ public static class OwlStyling
 
 			// Punctuation
 			.Add(ClassificationKind.Punctuation, "#808080")
+			.Add(ClassificationKind.Operator, "#e0e0e0")
 
 			// Literals
 			.Add(ClassificationKind.String, "#d7af87")
-			.Add(ClassificationKind.Number, "#b4cda7")
+			.Add(ClassificationKind.Number, "#b8dea4")
 
 			// Names
 			.Add(ClassificationKind.Identifier, "#b2b2b2")
 			.Add(ClassificationKind.Keyword, "#3d8de9")
 			.Add(ClassificationKind.Type, "#00af87")
 			.Add(ClassificationKind.Variable, "#fefefe")
-			.Add(ClassificationKind.Function, "#806998")
-			.Add(ClassificationKind.Parameter, "#ffffb3")
+			.Add(ClassificationKind.Function, "#8054af")
+			.Add(ClassificationKind.Parameter, "#fcffcc")
 		;
 
 		return styling;
