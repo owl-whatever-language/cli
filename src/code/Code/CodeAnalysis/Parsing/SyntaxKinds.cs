@@ -15,12 +15,31 @@ public static class SyntaxKindExtensions
 		// Type keywords
 		SyntaxKind.Void,
 	];
+
+	private static readonly IReadOnlyCollection<SyntaxKind> BinaryOperators =
+	[
+		SyntaxKind.Star, SyntaxKind.Divide, SyntaxKind.Modulo,
+		SyntaxKind.Plus, SyntaxKind.Minus,
+
+		SyntaxKind.StarEqual, SyntaxKind.DivideEqual, SyntaxKind.ModuloEqual,
+		SyntaxKind.PlusEqual, SyntaxKind.MinusEqual,
+
+		SyntaxKind.DoubleEqualSign, SyntaxKind.NotEqual,
+		SyntaxKind.LessThanOrEqual,  SyntaxKind.OpenAngleBracket,
+		SyntaxKind.GreaterThanOrEqual,  SyntaxKind.CloseAngleBracket,
+
+		SyntaxKind.EqualSign,
+
+		SyntaxKind.DoubleAmpersand,
+		SyntaxKind.DoublePipe,
+	];
 	#endregion
 
 	extension(SyntaxKind)
 	{
 		#region Properties
 		public static IReadOnlyCollection<SyntaxKind> AllKeywords => AllKeywords;
+		public static IReadOnlyCollection<SyntaxKind> BinaryOperators => BinaryOperators;
 		#endregion
 
 		#region Keywords
@@ -44,6 +63,11 @@ public static class SyntaxKindExtensions
 		public static SyntaxKind StringText => new("string_text");
 		public static SyntaxKind StringHexSequence => new("string_hex_sequence");
 		public static SyntaxKind StringEnd => new("string_end");
+		#endregion
+
+		#region Number literals
+		public static SyntaxKind IntegerBase => new("integer_base");
+		public static SyntaxKind Integer => new("integer");
 		#endregion
 
 		#region Punctuation

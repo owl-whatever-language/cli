@@ -33,7 +33,7 @@ only_terminated statement : token terminator
 empty statement
 block statement        : token start, list<statement> statements, token end
 expression statement   : expression expression, token terminator
-if statement           : token keyword, token start, expression condition, token end, expression true_clause
+if statement           : token keyword, token start, expression condition, token end, statement true_clause
 if_else statement      : token keyword, token start, expression condition, token end, statement true_clause, token else, statement false_clause
 while statement        : token keyword, token start, expression condition, token end, statement body
 return statement       : token keyword, token terminator
@@ -87,8 +87,8 @@ escaped string_fragment        : token sequence
 interpolated string_fragment   : token start, expression value, token end
 
 #### Numbers
-base_integer_literal expression : token base, token integer
-integer_literal expression      : token integer
+base_integer_literal expression : token base, token integer, ulong? value
+integer_literal expression      : token integer, long? value
 decimal_literal expression      : token integer, token dot, token decimal, decimal? value
 
 ### Functions

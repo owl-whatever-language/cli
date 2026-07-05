@@ -1,0 +1,19 @@
+// "eat snacks" examples (an OWL variant of "fizzbuzz")
+
+int i = 0;
+while (i <= 1000)
+{
+	text output = GetText(i);
+	print(output);
+
+	i += 1;
+}
+
+fun GetText(int number): text
+{
+	if (number % 3 == 0 && number % 5 == 0) return "eat snacks";
+	if (number % 3 == 0) return "eat";
+	if (number % 5 == 0) return "snacks";
+
+	return $"{number}";
+}

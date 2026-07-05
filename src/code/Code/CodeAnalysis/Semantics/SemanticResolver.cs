@@ -221,12 +221,46 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 	#region Expression methods
 	protected override SemanticEmptyExpressionSyntax Convert(IDeclaredEmptyExpressionSyntax declared) => new(SpecialTypes.Error);
-	protected override SemanticBinaryExpressionSyntax Convert(IDeclaredBinaryExpressionSyntax declared) => throw new NotImplementedException();
+	protected override SemanticBinaryExpressionSyntax Convert(IDeclaredBinaryExpressionSyntax declared)
+	{
+		var left = Convert(declared.Left);
+		var op = Convert(declared.Operator);
+		var right = Convert(declared.Right);
+
+		AddError("unknown_operator", op.Position, $"Unknown binary expression operator '{op.Lexeme}'.");
+
+		return new(left, op, right, SpecialTypes.Error);
+	}
 	protected override SemanticTernaryExpressionSyntax Convert(IDeclaredTernaryExpressionSyntax declared) => throw new NotImplementedException();
 	protected override SemanticGroupedExpressionSyntax Convert(IDeclaredGroupedExpressionSyntax declared) => throw new NotImplementedException();
 	protected override SemanticBooleanLiteralExpressionSyntax Convert(IDeclaredBooleanLiteralExpressionSyntax declared) => throw new NotImplementedException();
-	protected override SemanticIntegerLiteralExpressionSyntax Convert(IDeclaredIntegerLiteralExpressionSyntax declared) => throw new NotImplementedException();
-	protected override SemanticBaseIntegerLiteralExpressionSyntax Convert(IDeclaredBaseIntegerLiteralExpressionSyntax declared) => throw new NotImplementedException();
+	protected override SemanticIntegerLiteralExpressionSyntax Convert(IDeclaredIntegerLiteralExpressionSyntax declared)
+	{
+		IType? type = CoreScope.Int;
+		if (type is null)
+		{
+			AddError("core_type_not_found", declared.Position, "The core 'int' type was not defined, as such number literals are not allowed.");
+			type = SpecialTypes.Error;
+		}
+
+		var integer = Convert(declared.Integer);
+
+		return new(integer, (long?)integer.Value, type);
+	}
+	protected override SemanticBaseIntegerLiteralExpressionSyntax Convert(IDeclaredBaseIntegerLiteralExpressionSyntax declared)
+	{
+		IType? type = CoreScope.Int;
+		if (type is null)
+		{
+			AddError("core_type_not_found", declared.Position, "The core 'int' type was not defined, as such number literals are not allowed.");
+			type = SpecialTypes.Error;
+		}
+
+		var @base = Convert(declared.Base);
+		var integer = Convert(declared.Integer);
+
+		return new(@base, integer, (ulong?)integer.Value, type);
+	}
 	protected override SemanticDecimalLiteralExpressionSyntax Convert(IDeclaredDecimalLiteralExpressionSyntax declared) => throw new NotImplementedException();
 	protected override SemanticInterpolatedStringExpressionSyntax Convert(IDeclaredInterpolatedStringExpressionSyntax declared)
 	{

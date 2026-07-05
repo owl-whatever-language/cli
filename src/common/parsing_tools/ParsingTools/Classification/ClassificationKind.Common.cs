@@ -6,6 +6,9 @@ partial struct ClassificationKind
 	/// <summary>Represents a classification for punctuation.</summary>
 	public static ClassificationKind Punctuation { get; } = new("punctuation");
 
+	/// <summary>Represents a classification for punctuation operators.</summary>
+	public static ClassificationKind Operator { get; } = Punctuation + "operator";
+
 	/// <summary>Represents a classification for keywords.</summary>
 	public static ClassificationKind Keyword { get; } = new("keyword");
 

@@ -26,10 +26,24 @@ partial struct SyntaxKind
 	public static SyntaxKind CloseSquareBracket { get; } = new("close_square_bracket");
 	public static SyntaxKind OpenAngleBracket { get; } = new("open_angle_bracket");
 	public static SyntaxKind CloseAngleBracket { get; } = new("close_angle_bracket");
+
 	public static SyntaxKind Plus { get; } = new("plus");
-	public static SyntaxKind Minus { get; } = new("plus");
+	public static SyntaxKind Minus { get; } = new("minus");
 	public static SyntaxKind Divide { get; } = new("divide");
-	public static SyntaxKind Star { get; } = new("start");
+	public static SyntaxKind Star { get; } = new("star");
+	public static SyntaxKind Modulo { get; } = new("modulo");
+
+	public static SyntaxKind PlusEqual { get; } = new("plus_equal");
+	public static SyntaxKind MinusEqual { get; } = new("minus_equal");
+	public static SyntaxKind DivideEqual { get; } = new("divide_equal");
+	public static SyntaxKind StarEqual { get; } = new("star_equal");
+	public static SyntaxKind ModuloEqual { get; } = new("modulo_equal");
+
+	public static SyntaxKind NotEqual { get; } = new("not_equal");
+	public static SyntaxKind LessThanOrEqual { get; } = new("less_than_or_equal");
+	public static SyntaxKind GreaterThanOrEqual { get; } = new("greater_than_or_equal");
+	public static SyntaxKind DoubleAmpersand { get; } = new("double_ampersand");
+	public static SyntaxKind DoublePipe { get; } = new("double_pipe");
 	#endregion
 
 	#region Tokens

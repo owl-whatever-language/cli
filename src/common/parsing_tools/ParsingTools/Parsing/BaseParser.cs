@@ -148,6 +148,29 @@ public abstract class BaseParser
 				if (current.Kind == kind)
 				{
 					token = current;
+
+					Advance();
+					return true;
+				}
+			}
+		}
+
+		token = default;
+		return false;
+	}
+	protected bool MatchAny([NotNullWhen(true)] out ISyntaxToken? token, params IReadOnlyCollection<SyntaxKind> kinds)
+	{
+		ISyntaxToken? current = Current;
+
+		if (current is not null)
+		{
+			foreach (SyntaxKind kind in kinds)
+			{
+				if (current.Kind == kind)
+				{
+					token = current;
+
+					Advance();
 					return true;
 				}
 			}

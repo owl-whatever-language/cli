@@ -4,19 +4,16 @@ public interface ICoreSymbolScope : ISymbolScope
 {
 	#region Properties
 	INamedType? Text { get; }
+	INamedType? Int { get; }
 	#endregion
 }
 
 public sealed class CoreSymbolScope : SymbolScope, ICoreSymbolScope
 {
-	#region Fields
-	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	private INamedType? _text;
-	#endregion
-
 	#region Properties
-	public INamedType? Text => _text ??= GetCoreType("text");
 	public override ICoreSymbolScope Core => this;
+	public INamedType? Text => field ??= GetCoreType("text");
+	public INamedType? Int => field ??= GetCoreType("int");
 	#endregion
 
 	#region Constructors

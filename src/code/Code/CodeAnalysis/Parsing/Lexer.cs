@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text;
+
 namespace OwlDomain.Owl.Code.CodeAnalysis.Parsing;
 
 public sealed class LexingResult : ISourceStageResult, IStageResultDiagnostics, IStageResultPerformance
@@ -61,7 +64,21 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 	{
 		return
 			TryLexSimpleToken("=>", SyntaxKind.EqualArrow) ||
+
 			TryLexSimpleToken("==", SyntaxKind.DoubleEqualSign) ||
+			TryLexSimpleToken("!=", SyntaxKind.NotEqual) ||
+			TryLexSimpleToken("<=", SyntaxKind.LessThanOrEqual) ||
+			TryLexSimpleToken(">=", SyntaxKind.GreaterThanOrEqual) ||
+
+			TryLexSimpleToken("&&", SyntaxKind.DoubleAmpersand) ||
+			TryLexSimpleToken("||", SyntaxKind.DoublePipe) ||
+
+			TryLexSimpleToken("+=", SyntaxKind.PlusEqual) ||
+			TryLexSimpleToken("-=", SyntaxKind.MinusEqual) ||
+			TryLexSimpleToken("*=", SyntaxKind.StarEqual) ||
+			TryLexSimpleToken("/=", SyntaxKind.DivideEqual) ||
+			TryLexSimpleToken("%=", SyntaxKind.ModuloEqual) ||
+
 			TryLexSimpleToken("=", SyntaxKind.EqualSign) ||
 			TryLexSimpleToken("{", SyntaxKind.OpenBrace) ||
 			TryLexSimpleToken("}", SyntaxKind.CloseBrace) ||
@@ -75,6 +92,7 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 			TryLexSimpleToken("-", SyntaxKind.Minus) ||
 			TryLexSimpleToken("*", SyntaxKind.Star) ||
 			TryLexSimpleToken("/", SyntaxKind.Divide) ||
+			TryLexSimpleToken("%", SyntaxKind.Modulo) ||
 			TryLexSimpleToken(".", SyntaxKind.Period) ||
 			TryLexSimpleToken(",", SyntaxKind.Comma) ||
 			TryLexSimpleToken("?", SyntaxKind.QuestionMark) ||
@@ -82,6 +100,7 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 			TryLexSimpleToken(";", SyntaxKind.Semicolon) ||
 			TryLexIdentifierOrKeyword() ||
 			TryLexString() ||
+			TryLexNumber() ||
 			TryLexInterpolatedString()
 		;
 	}
@@ -114,6 +133,153 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 			kind = SyntaxKind.Identifier;
 
 		SyntaxToken token = new(kind, new(start, end), lexeme, lexeme, leading, trailing);
+		Tokens.Add(token);
+
+		return true;
+	}
+	#endregion
+
+	#region Number methods
+	private bool TryLexNumber()
+	{
+		TryLexNumberBase(out SyntaxToken? @base);
+		TryLexInteger((@base?.Value as NumberBase?) ?? NumberBase.Decimal, out SyntaxToken? integer, allowDecimal: true);
+
+		if (@base is null && integer is null)
+			return false;
+
+		if (@base is not null && integer is null)
+		{
+			// Error will be provided by the parser.
+			return true;
+		}
+
+		if (@base is not null && integer is not null)
+			return true;
+
+		Debug.Assert(integer is not null);
+
+		if (Text.Current == '.' && Rune.IsDigit(Text.Next.AsRune))
+		{
+			LexDecimalDot();
+			TryLexInteger(NumberBase.Decimal, out _, allowDecimal: false);
+		}
+
+		return true;
+	}
+	private void LexDecimalDot()
+	{
+		Debug.Assert(Text.Current == '.');
+
+		IndexedLinePosition start = Text.Position;
+		Text.Advance();
+
+		FinishInfixToken();
+		SyntaxToken token = new(SyntaxKind.Period, new(start, Text.Position), ".", value: null);
+		Tokens.Add(token);
+	}
+	private bool TryLexNumberBase([NotNullWhen(true)] out SyntaxToken? token)
+	{
+		IndexedLinePosition start = Text.Position;
+
+		if (Text.MatchSequence("0x"))
+		{
+			FinishPrefixToken(out TriviaList leadingTrivia);
+			token = new(SyntaxKind.IntegerBase, new(start, Text.Position), "0x", NumberBase.Hex, leadingTrivia, TriviaList.Empty);
+			Tokens.Add(token);
+
+			return true;
+		}
+
+		token = default;
+		return false;
+	}
+	private bool TryLexInteger(NumberBase @base, [NotNullWhen(true)] out SyntaxToken? token, bool allowDecimal)
+	{
+		if (Rune.IsDigit(Text.Current.AsRune) is false)
+		{
+			token = default;
+			return false;
+		}
+
+		ThrowIfLexemeBuilderNotCleared();
+		ThrowIfValueBuilderNotCleared();
+
+		IndexedLinePosition start = Text.Position;
+
+		while (Text.HasRemaining)
+		{
+			if (Text.Match('_'))
+			{
+				LexemeBuilder.Append('_');
+				continue;
+			}
+
+			TextElement current = Text.Current;
+			if (Rune.IsDigit(current.AsRune))
+			{
+				LexemeBuilder.Append(current.Value);
+				ValueBuilder.Append(current.Value);
+
+				Text.Advance();
+				continue;
+			}
+
+			break;
+		}
+
+		Debug.Assert(ValueBuilder.Length > 0);
+
+		string lexeme = GetLexeme();
+		string valueStr = GetValue();
+
+		NumberStyles style = @base switch
+		{
+			NumberBase.Hex => NumberStyles.AllowHexSpecifier,
+			NumberBase.Decimal => NumberStyles.Integer,
+
+			_ or NumberBase.Unknown => ThrowHelper.ThrowInvalidOperationException<NumberStyles>($"Unknown number base ({@base}).")
+		};
+
+		object? value;
+
+		if (style is NumberStyles.Integer)
+		{
+			if (long.TryParse(valueStr, style, provider: null, out long v) is false)
+			{
+				value = default;
+				AddError("number_too_big", new(start, Text.Position), $"The number literal is too big.");
+			}
+			else
+				value = v;
+		}
+		else
+		{
+			if (ulong.TryParse(valueStr, style, provider: null, out ulong v) is false)
+			{
+				value = default;
+				AddError("invalid_base_number", new(start, Text.Position), "The base integer value is either too big, or contains invalid numbers, I'll add better checks later.");
+			}
+			else
+				value = v;
+		}
+
+		IndexedLinePosition end = Text.Position;
+		TriviaList leadingTrivia, trailingTrivia;
+
+		if (allowDecimal && Text.Current == '.' && Rune.IsDigit(Text.Next.AsRune))
+		{
+			// Note(Nightowl): Not a problem if this is actually an infix because of the base, just a bit less efficient;
+			FinishPrefixToken(out leadingTrivia);
+			trailingTrivia = TriviaList.Empty;
+		}
+		else
+		{
+			// Note(Nightowl): Not a problem if this is actually a suffix because of the base, just a bit less efficient;
+			FinishFullToken(out leadingTrivia, out trailingTrivia);
+		}
+
+		token = new(SyntaxKind.Integer, new(start, end), lexeme, value, leadingTrivia, trailingTrivia);
 		Tokens.Add(token);
 
 		return true;

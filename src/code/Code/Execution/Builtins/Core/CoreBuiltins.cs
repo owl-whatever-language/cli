@@ -21,4 +21,22 @@ internal partial class CoreBuiltins
 		public override string ToString() => Value;
 		#endregion
 	}
+
+	[Name("int")]
+	public sealed class Int
+	{
+		#region Properties
+		[Ignore]
+		public object Value { get; }
+		#endregion
+
+		#region Constructors
+		public Int(object value) => Value = value;
+		#endregion
+
+		#region Methods
+		[Ignore]
+		public override string ToString() => Value.ToString() ?? "0";
+		#endregion
+	}
 }

@@ -245,11 +245,16 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		return
 			TryParseOnlyTerminatedStatement() ??
 			TryParseLocalFunctionDeclaration() ??
+			TryParseIfStatement() ??
+			TryParseWhileStatement() ??
 			TryParseBlockStatement() ??
 			TryParseVariableDeclaration() ??
 			TryParseReturnStatement() ??
 			TryParseExpressionStatement();
 	}
+	#endregion
+
+	#region Statement variant methods
 	private IConcreteStatementSyntax? TryParseOnlyTerminatedStatement()
 	{
 		if (Match(SyntaxKind.Semicolon, ClassificationKind.Punctuation, out IConcreteToken? terminator) is false)
@@ -270,7 +275,19 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	}
 	private IConcreteStatementSyntax? TryParseVariableDeclaration()
 	{
-		if (Current?.Kind == SyntaxKind.Identifier && Next?.Kind == SyntaxKind.OpenBracket)
+		bool isNextOperator;
+		if (Next is not null)
+		{
+			SyntaxKind kind = Next.Kind;
+			isNextOperator =
+				kind == SyntaxKind.OpenBracket || // call
+				SyntaxKind.BinaryOperators.Contains(kind)
+			;
+		}
+		else
+			isNextOperator = false;
+
+		if (Current?.Kind == SyntaxKind.Identifier && isNextOperator)
 			return TryParseExpressionStatement();
 
 		if (TryParseType(out IConcreteTypeSyntax? type) is false)
@@ -309,6 +326,34 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 
 		terminator = ExpectStatementTerminator();
 		return new ConcreteReturnStatementSyntax(keyword, terminator);
+	}
+	private IConcreteStatementSyntax? TryParseIfStatement()
+	{
+		if (Match(SyntaxKind.If, ClassificationKind.Keyword, out IConcreteToken? keyword) is false)
+			return null;
+
+		IConcreteToken start = Expect(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, "Expected the opening bracket '(' to prefix the if statement condition.");
+		IConcreteExpressionSyntax condition = ParseExpression();
+		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, start, "Expected a closing bracket ')' to end the condition.");
+		IConcreteStatementSyntax trueClause = ParseStatement();
+
+		if (Match(SyntaxKind.Else, ClassificationKind.Keyword, out IConcreteToken? @else) is false)
+			return new ConcreteIfStatementSyntax(keyword, start, condition, end, trueClause);
+
+		IConcreteStatementSyntax falseClause = ParseStatement();
+		return new ConcreteIfElseStatementSyntax(keyword, start, condition, end, trueClause, @else, falseClause);
+	}
+	private IConcreteStatementSyntax? TryParseWhileStatement()
+	{
+		if (Match(SyntaxKind.While, ClassificationKind.Keyword, out IConcreteToken? keyword) is false)
+			return null;
+
+		IConcreteToken start = Expect(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, "Expected the opening bracket '(' to prefix the while statement condition.");
+		IConcreteExpressionSyntax condition = ParseExpression();
+		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, start, "Expected a closing bracket ')' to end the condition.");
+		IConcreteStatementSyntax body = ParseStatement();
+
+		return new ConcreteWhileStatementSyntax(keyword, start, condition, end, body);
 	}
 	#endregion
 
@@ -606,13 +651,22 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	{
 		while (RealisticHasRemaining)
 		{
-			ExpressionPower power = ExpressionPower.PowerOf(Current.Kind);
+			while (true)
+			{
+				ExpressionPower power = ExpressionPower.PowerOf(Current.Kind);
 
-			if (precedence.Value >= power.Value)
-				break;
+				if (precedence.Value >= power.Value)
+					break;
 
-			if (Match(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, out IConcreteToken? openBracket))
-				expression = ParseFunctionCallExpression(expression, openBracket);
+				if (Match(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, out IConcreteToken? openBracket))
+					expression = ParseFunctionCallExpression(expression, openBracket);
+
+				if (MatchAny(out IConcreteToken? @operator, ClassificationKind.Operator, SyntaxKind.BinaryOperators))
+				{
+					IConcreteExpressionSyntax right = ParseExpression(power);
+					expression = new ConcreteBinaryExpressionSyntax(expression, @operator, right);
+				}
+			}
 
 			return expression;
 		}
@@ -622,6 +676,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	private IConcreteExpressionSyntax? TryParseLiteral()
 	{
 		return
+			TryParseNumberLiteral() ??
 			TryParseString() ??
 			TryParseInterpolatedString() ??
 			TryParseGetExpression();
@@ -711,6 +766,42 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		}
 
 		return null;
+	}
+	#endregion
+
+	#region Number expression methods
+	private IConcreteExpressionSyntax? TryParseNumberLiteral()
+	{
+		if (Match(SyntaxKind.IntegerBase, ClassificationKind.Number, out IConcreteToken? @base))
+		{
+			IConcreteToken basedInteger = Expect(SyntaxKind.Integer, ClassificationKind.Number, "Expected an integer literal after the base specifier.");
+			return new ConcreteBaseIntegerLiteralExpressionSyntax(@base, basedInteger, (ulong?)basedInteger.Value);
+		}
+
+		if (Match(SyntaxKind.Integer, ClassificationKind.Number, out IConcreteToken? integer) is false)
+			return null;
+
+		if (Current?.Kind == SyntaxKind.Period && Next?.Kind == SyntaxKind.Integer)
+		{
+			IConcreteToken period = Convert(Current, ClassificationKind.Number);
+			IConcreteToken @decimal = Convert(Next, ClassificationKind.Number);
+			Advance(2);
+
+			string valueText = $"{(integer.Value as long?) ?? 0}.{@decimal.Value as long? ?? 0}";
+			decimal? value;
+
+			if (decimal.TryParse(valueText, out decimal v) is false)
+			{
+				value = default;
+				AddError("invalid_decimal_literal", new(integer.Position.Start, @decimal.Position.End), "Couldn't convert the number literal to a decimal value, it is likely too precise.");
+			}
+			else
+				value = v;
+
+			return new ConcreteDecimalLiteralExpressionSyntax(integer, period, @decimal, value);
+		}
+
+		return new ConcreteIntegerLiteralExpressionSyntax(integer, (long?)integer.Value);
 	}
 	#endregion
 
@@ -806,6 +897,28 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	private bool Match(SyntaxKind kind, ClassificationKind classification, [NotNullWhen(true)] out IConcreteToken? token)
 	{
 		if (Match(kind, out ISyntaxToken? untyped))
+		{
+			token = Convert(untyped, classification);
+			return true;
+		}
+
+		token = default;
+		return false;
+	}
+	private bool MatchAny([NotNullWhen(true)] out IConcreteToken? token, ClassificationKind classification, params ReadOnlySpan<SyntaxKind> kinds)
+	{
+		if (MatchAny(out ISyntaxToken? untyped, kinds))
+		{
+			token = Convert(untyped, classification);
+			return true;
+		}
+
+		token = default;
+		return false;
+	}
+	private bool MatchAny([NotNullWhen(true)] out IConcreteToken? token, ClassificationKind classification, params IReadOnlyCollection<SyntaxKind> kinds)
+	{
+		if (MatchAny(out ISyntaxToken? untyped, kinds))
 		{
 			token = Convert(untyped, classification);
 			return true;
@@ -923,12 +1036,28 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			kind == SyntaxKind.Comma ||
 			kind == SyntaxKind.Period ||
 			kind == SyntaxKind.QuestionMark ||
+
 			kind == SyntaxKind.Plus ||
 			kind == SyntaxKind.Minus ||
 			kind == SyntaxKind.Divide ||
 			kind == SyntaxKind.Star ||
-			kind == SyntaxKind.EqualSign ||
+			kind == SyntaxKind.Modulo ||
+
+			kind == SyntaxKind.PlusEqual ||
+			kind == SyntaxKind.MinusEqual ||
+			kind == SyntaxKind.DivideEqual ||
+			kind == SyntaxKind.StarEqual ||
+			kind == SyntaxKind.ModuloEqual ||
+
 			kind == SyntaxKind.DoubleEqualSign ||
+			kind == SyntaxKind.NotEqual ||
+			kind == SyntaxKind.LessThanOrEqual ||
+			kind == SyntaxKind.GreaterThanOrEqual ||
+
+			kind == SyntaxKind.DoubleAmpersand ||
+			kind == SyntaxKind.DoublePipe ||
+
+			kind == SyntaxKind.EqualSign ||
 			kind == SyntaxKind.OpenBrace ||
 			kind == SyntaxKind.CloseBrace ||
 			kind == SyntaxKind.OpenBracket ||
