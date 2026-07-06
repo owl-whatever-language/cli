@@ -530,7 +530,7 @@ dotnet_diagnostic.IDE0002.severity = warning
 dotnet_diagnostic.IDE0004.severity = warning
 
 ### Add missing cases to switch statement (IDE0010)
-dotnet_diagnostic.IDE0010.severity = warning
+dotnet_diagnostic.IDE0010.severity = silent
 
 ### Use object initializers (IDE0017)
 dotnet_style_object_initializer = true
@@ -658,7 +658,7 @@ csharp_style_prefer_range_operator = true
 csharp_style_prefer_range_operator.severity = warning
 
 ### Add missing cases to switch expression (IDE0072)
-dotnet_diagnostic.IDE0072.severity = suggestion
+dotnet_diagnostic.IDE0072.severity = silent
 
 ### Remove unnecessary suppression operator (IDE0080)
 dotnet_diagnostic.IDE0080.severity = warning
@@ -992,7 +992,7 @@ csharp_style_pattern_matching_over_is_with_cast_check.severity = warning
 
 ### Use switch expression (IDE0066)
 csharp_style_prefer_switch_expression = true
-csharp_style_prefer_switch_expression.severity = warning
+csharp_style_prefer_switch_expression.severity = silent
 
 ### Use pattern matching (IDE0078 and IDE0260)
 csharp_style_prefer_pattern_matching = true
