@@ -1,4 +1,5 @@
 using OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Graphs;
+using OwlDomain.ParsingTools.Syntax.Printing;
 
 namespace OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Blocks;
 
@@ -9,6 +10,7 @@ public interface IControlFlowExpressionBlock : IControlFlowBlock
 	#endregion
 }
 
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public sealed class ControlFlowExpressionBlock : MutableControlFlowBlock, IControlFlowExpressionBlock
 {
 	#region Properties
@@ -25,5 +27,9 @@ public sealed class ControlFlowExpressionBlock : MutableControlFlowBlock, IContr
 
 		graph.Add(this);
 	}
+	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"Block: {Id} | {Expression.GetDebugSource()}";
 	#endregion
 }

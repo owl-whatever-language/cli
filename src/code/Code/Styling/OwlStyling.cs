@@ -38,7 +38,9 @@ public static class OwlStyling
 
 			// Literals
 			.Add(ClassificationKind.String, "#d7af87")
+			.Add(ClassificationKind.StringEscape, "#db9e60")
 			.Add(ClassificationKind.Number, "#b8dea4")
+			.Add(ClassificationKind.Boolean, "#a4cbde")
 
 			// Names
 			.Add(ClassificationKind.Identifier, "#b2b2b2")

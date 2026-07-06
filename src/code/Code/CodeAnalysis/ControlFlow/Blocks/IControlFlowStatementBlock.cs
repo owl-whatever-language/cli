@@ -1,4 +1,4 @@
-using OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Graphs;
+using OwlDomain.ParsingTools.Syntax.Printing;
 
 namespace OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Blocks;
 
@@ -9,6 +9,7 @@ public interface IControlFlowStatementBlock : IControlFlowBlock
 	#endregion
 }
 
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public sealed class ControlFlowStatementBlock : MutableControlFlowBlock, IControlFlowStatementBlock
 {
 	#region Fields
@@ -22,14 +23,12 @@ public sealed class ControlFlowStatementBlock : MutableControlFlowBlock, IContro
 	public IReadOnlyList<IAnnotatedStatementSyntax> Statements => _statements;
 	#endregion
 
-	#region Constructors
-	public ControlFlowStatementBlock(IMutableControlFlowGraph graph)
-	{
-		graph.Add(this);
-	}
-	#endregion
-
 	#region Methods
 	public void Add(IAnnotatedStatementSyntax statement) => _statements.Add(statement);
+	#endregion
+
+
+	#region Helpers
+	private string DebuggerDisplay() => $"Block: {Id} | {_statements.FirstOrDefault()?.GetDebugSource() ?? "<empty>"}";
 	#endregion
 }

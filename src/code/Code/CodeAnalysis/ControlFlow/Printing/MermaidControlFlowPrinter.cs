@@ -58,10 +58,35 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 						PrintBlock(writer, block);
 				}
 
-				writer.WriteLine();
-				writer.WriteLine("%% Branches");
-				foreach (IControlFlowBidirectionalBranch branch in graph.Branches)
-					writer.WriteLine($"{branch.From.Id} --> {branch.To.Id}");
+				UnconditionalControlFlowBranch[] unconditionalBranches = graph.Branches.OfType<UnconditionalControlFlowBranch>().ToArray();
+				if (unconditionalBranches.Any())
+				{
+					writer.WriteLine();
+					writer.WriteLine("%% Unconditional branches");
+					foreach (IControlFlowBidirectionalBranch branch in unconditionalBranches)
+						writer.WriteLine($"{branch.From.Id} --> {branch.To.Id}");
+				}
+
+				ConditionalControlFlowBranch[] conditionalBranches = graph.Branches.OfType<ConditionalControlFlowBranch>().ToArray();
+				if (unconditionalBranches.Any())
+				{
+					writer.WriteLine();
+					writer.WriteLine("%% Conditional branches");
+					foreach (ConditionalControlFlowBranch branch in conditionalBranches)
+					{
+						writer.Write($"{branch.From.Id} -->|\"");
+
+						// Note(Nightowl): This is what I would like to do, however I can't seem to find
+						// a way to customise the background, or remove the box around the link text;
+						TextFragmentLineCollection lines = [];
+						TextFragment fragment = new(branch.IsNegated ? "false" : "true");
+						lines.Add(new(null, fragment));
+
+						PrintHtmlLines(writer, lines);
+
+						writer.WriteLine($"\"|{branch.To.Id}");
+					}
+				}
 			}
 
 			return stringWriter.ToString();
@@ -94,7 +119,11 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 	}
 	private void PrintBlock(IndentedTextWriter writer, IControlFlowBlock block)
 	{
-		writer.Write($"{block.Id}[\"");
+		bool isBranching = block.Outgoing.OfType<ConditionalControlFlowBranch>().Any();
+		string start = isBranching ? "{" : "[";
+		string end = isBranching ? "}" : "]";
+
+		writer.Write($"{block.Id}{start}\"");
 
 		if (block is IControlFlowStatementBlock statement)
 			PrintStatementBlock(writer, statement);
@@ -103,7 +132,7 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 		else
 			ThrowHelper.ThrowInvalidOperationException($"Unknown control flow block type {block.GetType().Name}.");
 
-		writer.WriteLine("\"]");
+		writer.WriteLine($"\"{end}");
 	}
 	private void PrintStatementBlock(IndentedTextWriter writer, IControlFlowStatementBlock block)
 	{
@@ -125,7 +154,16 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 				lines.RemoveAt(i);
 		}
 
-		lines.TrimLines().TrimSharedIndent().PrefixLineMargin();
+		lines.TrimLines().TrimSharedIndent();
+
+		if (lines.Count is 0)
+		{
+			TextFragment fragment = new("<empty>", ClassificationKind.Hint);
+			TextFragmentLine line = new(null, fragment);
+			lines.Add(line);
+		}
+		else
+			lines.PrefixLineMargin();
 
 		PrintHtmlLines(writer, lines);
 	}

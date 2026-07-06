@@ -63,6 +63,9 @@ partial struct ClassificationKind
 
 	/// <summary>Represents a classification for escape sequences in strings.</summary>
 	public static ClassificationKind StringEscape { get; } = String + "escape";
+
+	/// <summary>Represents a classification for booleans.</summary>
+	public static ClassificationKind Boolean { get; } = Literal + "boolean";
 	#endregion
 
 	#region Identifiers
