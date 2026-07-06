@@ -9,27 +9,37 @@ public interface IControlFlowGraph
 	IAnnotatedSyntaxNode Node { get; }
 	IControlFlowStartBlock Start { get; }
 	IControlFlowEndBlock End { get; }
-	IReadOnlySet<IControlFlowBlock> Blocks { get; }
-	IReadOnlySet<IControlFlowBidirectionalBranch> Branches { get; }
+	IReadOnlyList<IControlFlowBlock> Blocks { get; }
+	IReadOnlyCollection<IControlFlowBidirectionalBranch> Branches { get; }
 	#endregion
 }
 
 public interface IMutableControlFlowGraph : IControlFlowGraph
 {
 	#region Properties
-	new ControlFlowStartBlock Start { get; }
+	new IMutableControlFlowStartBlock Start { get; }
 	new ControlFlowEndBlock End { get; }
+
+	new IReadOnlyList<IMutableControlFlowBlock> Blocks { get; }
+	new IReadOnlyCollection<IMutableControlFlowBidirectionalBranch> Branches { get; }
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	IControlFlowStartBlock IControlFlowGraph.Start => Start;
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	IControlFlowEndBlock IControlFlowGraph.End => End;
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	IReadOnlyList<IControlFlowBlock> IControlFlowGraph.Blocks => Blocks;
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	IReadOnlyCollection<IControlFlowBidirectionalBranch> IControlFlowGraph.Branches => Branches;
 	#endregion
 
 	#region Methods
-	void Add(IControlFlowBlock block);
-	void Add(IControlFlowBidirectionalBranch branch);
+	void Add(IMutableControlFlowBlock block);
+	void Add(IMutableControlFlowBidirectionalBranch branch);
+	void RecalculateBlockNumbers();
 	#endregion
 }
 
@@ -38,18 +48,18 @@ public abstract class ControlFlowGraph<TNode> : IMutableControlFlowGraph
 {
 	#region Fields
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	private readonly HashSet<IControlFlowBlock> _blocks = [];
+	private readonly List<IMutableControlFlowBlock> _blocks = [];
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	private readonly HashSet<IControlFlowBidirectionalBranch> _branches = [];
+	private readonly HashSet<IMutableControlFlowBidirectionalBranch> _branches = [];
 	#endregion
 
 	#region Properties
 	public TNode Node { get; }
-	public ControlFlowStartBlock Start { get; }
+	public IMutableControlFlowStartBlock Start { get; }
 	public ControlFlowEndBlock End { get; }
-	public IReadOnlySet<IControlFlowBlock> Blocks => _blocks;
-	public IReadOnlySet<IControlFlowBidirectionalBranch> Branches => _branches;
+	public IReadOnlyList<IMutableControlFlowBlock> Blocks => _blocks;
+	public IReadOnlyCollection<IMutableControlFlowBidirectionalBranch> Branches => _branches;
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	IAnnotatedSyntaxNode IControlFlowGraph.Node => Node;
@@ -59,13 +69,28 @@ public abstract class ControlFlowGraph<TNode> : IMutableControlFlowGraph
 	protected ControlFlowGraph(TNode node)
 	{
 		Node = node;
-		Start = new(this);
-		End = new();
+		Start = new ControlFlowStartBlock(this) { BlockNumber = 0 };
+		End = new ControlFlowEndBlock() { BlockNumber = 1 };
 	}
 	#endregion
 
 	#region Methods
-	public void Add(IControlFlowBlock block) => _blocks.Add(block);
-	public void Add(IControlFlowBidirectionalBranch branch) => _branches.Add(branch);
+	public void Add(IMutableControlFlowBlock block)
+	{
+		_blocks.Add(block);
+
+		block.BlockNumber = _blocks.Count;
+		End.BlockNumber = _blocks.Count + 1;
+	}
+	public void Add(IMutableControlFlowBidirectionalBranch branch) => _branches.Add(branch);
+	public void RecalculateBlockNumbers()
+	{
+		Start.BlockNumber = 0;
+
+		for (int i = 0; i < _blocks.Count; i++)
+			_blocks[i].BlockNumber = i + 1;
+
+		End.BlockNumber = _blocks.Count + 1;
+	}
 	#endregion
 }

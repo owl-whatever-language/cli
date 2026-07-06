@@ -4,3 +4,10 @@ public interface IControlFlowBidirectionalBranch : IControlFlowIncomingBranch, I
 {
 
 }
+
+public interface IMutableControlFlowBidirectionalBranch :
+	IControlFlowBidirectionalBranch,
+	IMutableControlFlowIncomingBranch,
+	IMutableControlFlowOutgoingBranch
+{
+}

@@ -8,3 +8,13 @@ public interface IControlFlowOutgoingBranch : IControlFlowBranch
 	IControlFlowBlock To { get; }
 	#endregion
 }
+
+public interface IMutableControlFlowOutgoingBranch : IControlFlowOutgoingBranch
+{
+	#region Properties
+	new IMutableControlFlowBlock To { get; set; }
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	IControlFlowBlock IControlFlowOutgoingBranch.To => To;
+	#endregion
+}

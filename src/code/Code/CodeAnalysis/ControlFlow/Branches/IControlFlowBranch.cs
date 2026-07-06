@@ -11,22 +11,22 @@ public interface IControlFlowBranch
 	#endregion
 }
 
-public sealed class ConditionalControlFlowBranch : IControlFlowBidirectionalBranch
+public sealed class ConditionalControlFlowBranch : IMutableControlFlowBidirectionalBranch
 {
 	#region Properties
 	public bool HasCondition => true;
 	public IAnnotatedExpressionSyntax Condition { get; }
 	public bool IsNegated { get; }
-	public IControlFlowBlock From { get; }
-	public IControlFlowBlock To { get; }
+	public IMutableControlFlowBlock From { get; set; }
+	public IMutableControlFlowBlock To { get; set; }
 	#endregion
 
 	#region Constructors
 	public ConditionalControlFlowBranch(
 		IAnnotatedExpressionSyntax condition,
 		bool isNegated,
-		IControlFlowBlock from,
-		IControlFlowBlock to)
+		IMutableControlFlowBlock from,
+		IMutableControlFlowBlock to)
 	{
 		Condition = condition;
 		IsNegated = isNegated;
@@ -36,19 +36,19 @@ public sealed class ConditionalControlFlowBranch : IControlFlowBidirectionalBran
 	#endregion
 }
 
-public sealed class UnconditionalControlFlowBranch : IControlFlowBidirectionalBranch
+public sealed class UnconditionalControlFlowBranch : IMutableControlFlowBidirectionalBranch
 {
 	#region Properties
 	public bool HasCondition => false;
 	public IAnnotatedExpressionSyntax? Condition => null;
 	public bool IsNegated => default;
 
-	public IControlFlowBlock From { get; }
-	public IControlFlowBlock To { get; }
+	public IMutableControlFlowBlock From { get; set; }
+	public IMutableControlFlowBlock To { get; set; }
 	#endregion
 
 	#region Constructors
-	public UnconditionalControlFlowBranch(IControlFlowBlock from, IControlFlowBlock to)
+	public UnconditionalControlFlowBranch(IMutableControlFlowBlock from, IMutableControlFlowBlock to)
 	{
 		From = from;
 		To = to;

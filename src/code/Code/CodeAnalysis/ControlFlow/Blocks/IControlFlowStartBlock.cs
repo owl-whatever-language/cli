@@ -13,30 +13,47 @@ public interface IControlFlowStartBlock : IControlFlowBlock
 	#endregion
 }
 
-public sealed class ControlFlowStartBlock : IControlFlowStartBlock, IMutableControlFlowBlock
+public interface IMutableControlFlowStartBlock : IControlFlowStartBlock, IMutableControlFlowBlock
+{
+	#region Properties
+	new IMutableControlFlowGraph Graph { get; }
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	IControlFlowGraph IControlFlowStartBlock.Graph => Graph;
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	IReadOnlyList<IControlFlowIncomingBranch> IControlFlowBlock.Incoming => [];
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	IReadOnlyList<IMutableControlFlowIncomingBranch> IMutableControlFlowBlock.Incoming => [];
+	#endregion
+}
+
+public sealed class ControlFlowStartBlock : IMutableControlFlowStartBlock
 {
 	#region Fields
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	private readonly List<IControlFlowOutgoingBranch> _outgoing = [];
+	private readonly List<IMutableControlFlowOutgoingBranch> _outgoing = [];
 	#endregion
 
 	#region Properties
-	public string Id => "start_node";
-	public IControlFlowGraph Graph { get; }
-	public IReadOnlyList<IControlFlowOutgoingBranch> Outgoing => _outgoing;
+	public string Id => $"start_node#{BlockNumber}";
+	public IMutableControlFlowGraph Graph { get; }
+	public IReadOnlyList<IMutableControlFlowOutgoingBranch> Outgoing => _outgoing;
+	public int BlockNumber { get; set; }
 	#endregion
 
 	#region Constructors
-	public ControlFlowStartBlock(IControlFlowGraph graph) => Graph = graph;
+	public ControlFlowStartBlock(IMutableControlFlowGraph graph) => Graph = graph;
 	#endregion
 
 	#region Methods
 	[DoesNotReturn]
-	void IMutableControlFlowBlock.AddIncoming(IControlFlowIncomingBranch incoming)
+	void IMutableControlFlowBlock.AddIncoming(IMutableControlFlowIncomingBranch incoming)
 	{
 		ThrowHelper.ThrowNotSupportedException($"The start control flow block cannot have any incoming branches.");
 	}
-	public void AddOutgoing(IControlFlowOutgoingBranch outgoing)
+	public void AddOutgoing(IMutableControlFlowOutgoingBranch outgoing)
 	{
 		if (outgoing is IControlFlowBidirectionalBranch branch && branch.From != this)
 			ThrowHelper.ThrowArgumentException(nameof(outgoing), $"Expected the outgoing branch's source block ({branch.From}) to be this block ({this}).");

@@ -9,8 +9,15 @@ public interface IControlFlowStatementBlock : IControlFlowBlock
 	#endregion
 }
 
+public interface IMutableControlFlowStatementBlock : IControlFlowStatementBlock
+{
+	#region Methods
+	void Add(IAnnotatedStatementSyntax statement);
+	#endregion
+}
+
 [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
-public sealed class ControlFlowStatementBlock : MutableControlFlowBlock, IControlFlowStatementBlock
+public sealed class ControlFlowStatementBlock : MutableControlFlowBlock, IMutableControlFlowStatementBlock
 {
 	#region Fields
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
@@ -18,7 +25,6 @@ public sealed class ControlFlowStatementBlock : MutableControlFlowBlock, IContro
 	#endregion
 
 	#region Properties
-	public int BlockNumber { get; set; }
 	public override string Id => (_statements.FirstOrDefault()?.NodeKind.WithGroup ?? "block") + $"#{BlockNumber}";
 	public IReadOnlyList<IAnnotatedStatementSyntax> Statements => _statements;
 	#endregion
@@ -26,7 +32,6 @@ public sealed class ControlFlowStatementBlock : MutableControlFlowBlock, IContro
 	#region Methods
 	public void Add(IAnnotatedStatementSyntax statement) => _statements.Add(statement);
 	#endregion
-
 
 	#region Helpers
 	private string DebuggerDisplay() => $"Block: {Id} | {_statements.FirstOrDefault()?.GetDebugSource() ?? "<empty>"}";
