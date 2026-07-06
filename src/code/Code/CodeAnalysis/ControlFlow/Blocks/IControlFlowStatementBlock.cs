@@ -13,6 +13,7 @@ public interface IMutableControlFlowStatementBlock : IControlFlowStatementBlock
 {
 	#region Methods
 	void Add(IAnnotatedStatementSyntax statement);
+	void AddRange(IEnumerable<IAnnotatedStatementSyntax> statements);
 	#endregion
 }
 
@@ -31,6 +32,7 @@ public sealed class ControlFlowStatementBlock : MutableControlFlowBlock, IMutabl
 
 	#region Methods
 	public void Add(IAnnotatedStatementSyntax statement) => _statements.Add(statement);
+	public void AddRange(IEnumerable<IAnnotatedStatementSyntax> statements) => _statements.AddRange(statements);
 	#endregion
 
 	#region Helpers

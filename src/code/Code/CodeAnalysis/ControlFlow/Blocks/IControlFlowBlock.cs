@@ -68,3 +68,60 @@ public abstract class MutableControlFlowBlock : IMutableControlFlowBlock
 	private string DebuggerDisplay() => $"Block: {Id}";
 	#endregion
 }
+
+
+public static class IControlFlowBlockExtensions
+{
+	#region Functions
+	private static void Flatten(List<IMutableControlFlowBlock> target, IMutableControlFlowBlock block)
+	{
+		target.Add(block);
+
+		if (block is IMutableControlFlowExpressionBlock expression)
+		{
+			foreach (IMutableControlFlowExpressionBlock current in expression.Blocks)
+				Flatten(target, current);
+		}
+		else if (block is IMutableControlFlowConstructBlock construct)
+		{
+			foreach (IMutableControlFlowBlock current in construct.Blocks)
+				Flatten(target, current);
+		}
+	}
+	#endregion
+
+	extension(IEnumerable<IMutableControlFlowBlock> blocks)
+	{
+		#region Methods
+		public IReadOnlyList<IMutableControlFlowBlock> Flatten()
+		{
+			List<IMutableControlFlowBlock> target = [];
+
+			foreach (IMutableControlFlowBlock current in blocks)
+				Flatten(target, current);
+
+			return target;
+		}
+		#endregion
+	}
+
+	extension(IMutableControlFlowBlock block)
+	{
+		#region Methods
+		public IReadOnlyList<IMutableControlFlowBlock> Flatten()
+		{
+			List<IMutableControlFlowBlock> target = [];
+			Flatten(target, block);
+
+			return target;
+		}
+		#endregion
+	}
+
+	extension(IMutableControlFlowBlock block)
+	{
+		#region Properties
+		public IMutableControlFlowBlock EndMarkerIfConstruct => (block as IMutableControlFlowConstructBlock)?.End ?? block;
+		#endregion
+	}
+}

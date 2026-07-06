@@ -1,4 +1,5 @@
 using System.IO;
+using System.Web;
 using OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Blocks;
 using OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Branches;
 using OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Graphs;
@@ -29,8 +30,7 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 		{
 			writer.WriteLine("---");
 			writer.WriteLine("title: Control flow graph");
-			writer.WriteLine("darkMode: true");
-			writer.WriteLine("fontFamily: monospace %% This should work but it doesn't?");
+			PrintConfig(writer);
 			writer.WriteLine("---");
 			writer.WriteLine("flowchart TB;");
 
@@ -38,58 +38,139 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 			{
 				writer.WriteLine("%% Special blocks");
 				PrintStartBlock(writer, graph.Start);
-				writer.WriteLine($"{graph.End.Id}[End]");
+				PrintEndBlock(writer, graph.End);
 
-				IControlFlowStatementBlock[] statementBlocks = graph.Blocks.OfType<IControlFlowStatementBlock>().ToArray();
-				if (statementBlocks.Any())
-				{
-					writer.WriteLine();
-					writer.WriteLine("%% Statement blocks");
-					foreach (IControlFlowStatementBlock block in statementBlocks)
-						PrintBlock(writer, block);
-				}
-
-				IControlFlowExpressionBlock[] expressionBlocks = graph.Blocks.OfType<IControlFlowExpressionBlock>().ToArray();
-				if (expressionBlocks.Any())
-				{
-					writer.WriteLine();
-					writer.WriteLine("%% Expression blocks");
-					foreach (IControlFlowExpressionBlock block in expressionBlocks)
-						PrintBlock(writer, block);
-				}
-
-				UnconditionalControlFlowBranch[] unconditionalBranches = graph.Branches.OfType<UnconditionalControlFlowBranch>().ToArray();
-				if (unconditionalBranches.Any())
-				{
-					writer.WriteLine();
-					writer.WriteLine("%% Unconditional branches");
-					foreach (IControlFlowBidirectionalBranch branch in unconditionalBranches)
-						writer.WriteLine($"{branch.From.Id} --> {branch.To.Id}");
-				}
-
-				ConditionalControlFlowBranch[] conditionalBranches = graph.Branches.OfType<ConditionalControlFlowBranch>().ToArray();
-				if (unconditionalBranches.Any())
-				{
-					writer.WriteLine();
-					writer.WriteLine("%% Conditional branches");
-					foreach (ConditionalControlFlowBranch branch in conditionalBranches)
-					{
-						writer.Write($"{branch.From.Id} -->|\"");
-
-						// Note(Nightowl): This is what I would like to do, however I can't seem to find
-						// a way to customise the background, or remove the box around the link text;
-						TextFragmentLineCollection lines = [];
-						TextFragment fragment = new(branch.IsNegated ? "false" : "true");
-						lines.Add(new(null, fragment));
-
-						PrintHtmlLines(writer, lines);
-
-						writer.WriteLine($"\"|{branch.To.Id}");
-					}
-				}
+				PrintUnconditionalBranches(writer, graph);
+				PrintConditionalBranches(writer, graph);
+				PrintExpressions(writer, graph);
+				PrintStatements(writer, graph);
 			}
 
 			return stringWriter.ToString();
+		}
+	}
+	private void PrintConfig(IndentedTextWriter writer)
+	{
+		writer.WriteLine("config:");
+		using (writer.Indented())
+		{
+			writer.WriteLine("themeVariables:");
+			using (writer.Indented())
+			{
+				writer.WriteLine("darkMode: true");
+				writer.WriteLine("fontFamily: 'Droid Sans Mono, monospace'");
+				writer.WriteLine($"edgeLabelBackground: '{Styling.Background?.ToHtml}'");
+			}
+		}
+	}
+	private void PrintUnconditionalBranches(IndentedTextWriter writer, IControlFlowGraph graph)
+	{
+		IControlFlowBidirectionalBranch[] branches = graph.Branches
+			.Where(b => b.HasCondition is false)
+			.Where(IncludeBranch)
+			.ToArray();
+
+		if (branches.Length is 0)
+			return;
+
+		writer.WriteLine();
+		writer.WriteLine("%% Unconditional branches");
+
+		foreach (IControlFlowBidirectionalBranch branch in branches)
+			writer.WriteLine($"{branch.From.Id} --> {branch.ActualTo.Id}");
+	}
+
+	private void PrintConditionalBranches(IndentedTextWriter writer, IControlFlowGraph graph)
+	{
+		IControlFlowBidirectionalBranch[] branches = graph.Branches
+			.Where(b => b.HasCondition)
+			.Where(IncludeBranch)
+			.ToArray();
+
+		if (branches.Length is 0)
+			return;
+
+		writer.WriteLine();
+		writer.WriteLine("%% Conditional branches");
+
+		foreach (IControlFlowBidirectionalBranch branch in branches)
+		{
+			writer.Write($"{branch.From.Id} -->|\"");
+
+			string value = branch.IsNegated ? "false" : "true";
+			TextFragment fragment = new(value, ClassificationKind.Boolean);
+			PrintHtml(writer, fragment);
+			writer.WriteLine($"\"|{branch.ActualTo.Id}");
+		}
+	}
+	private bool IncludeBranch(IControlFlowBidirectionalBranch branch)
+	{
+		if (branch.From is IControlFlowMarkerBlock or IControlFlowConstructBlock)
+			return false;
+
+		return true;
+	}
+
+	private void PrintExpressions(IndentedTextWriter writer, IControlFlowGraph graph)
+	{
+		IControlFlowExpressionBlock[] expressions = graph.Blocks.OfType<IControlFlowExpressionBlock>().ToArray();
+
+		if (expressions.Length is 0)
+			return;
+
+		writer.WriteLine();
+		writer.WriteLine("%% Expressions");
+
+		foreach (IControlFlowExpressionBlock expression in expressions)
+		{
+			bool isDecision = expression.Outgoing.Any(c => c.HasCondition);
+			string start = isDecision ? "(" : "(";
+			string end = isDecision ? ")" : ")";
+
+			writer.Write($"{expression.Id}{start}\"");
+
+			if (expression.ConstructName is not null)
+			{
+				TextFragment name = new(expression.ConstructName, ClassificationKind.Keyword);
+				TextFragmentLine nameLine = new(null, name);
+				PrintHtmlLines(writer, [nameLine], center: true);
+			}
+
+			TextFragmentLineCollection lines = expression.Expression.GetLines().TrimLines().TrimSharedIndent();
+			PrintHtmlLines(writer, lines);
+
+			writer.WriteLine($"\"{end}");
+		}
+	}
+	private void PrintStatements(IndentedTextWriter writer, IControlFlowGraph graph)
+	{
+		IControlFlowStatementBlock[] statements = graph.Blocks.OfType<IControlFlowStatementBlock>().ToArray();
+
+		if (statements.Length is 0)
+			return;
+
+		writer.WriteLine();
+		writer.WriteLine("%% Statements");
+
+		foreach (IControlFlowStatementBlock statement in statements)
+		{
+			writer.Write($"{statement.Id}[\"");
+
+			TextFragmentLineCollection lines = [];
+			foreach (IAnnotatedStatementSyntax current in statement.Statements)
+				lines.AddRange(current.GetLines());
+
+			for (int i = lines.Count - 1; i >= 0; i--)
+			{
+				if (lines[i].Count is 0 || lines[i].All(f => f.IsWhitespace || f.Classification == ClassificationKind.SinglelineComment))
+					lines.RemoveAt(i);
+			}
+
+			lines.TrimLines().TrimSharedIndent().PrefixLineMargin();
+
+			PrintHtmlLines(writer, lines);
+
+			writer.WriteLine("\"]");
 		}
 	}
 	#endregion
@@ -97,90 +178,38 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 	#region Helpers
 	private void PrintStartBlock(IndentedTextWriter writer, IControlFlowStartBlock block)
 	{
-		writer.Write($"{block.Graph.Start.Id}[\"");
-		writer.Write("Start");
+		writer.Write($"{block.Id}(\"");
+		TextFragment start = new("start", ClassificationKind.Keyword);
+		PrintHtmlLines(writer, [new(null, start)], center: true);
 
 		using (writer.NoIndent())
 		{
 			if (block.Graph is IDocumentControlFlowGraph document && document.Node.Tree is not null)
 			{
-				writer.WriteLine();
 				writer.Write($"{document.Node.Tree.Source.SimpleName}");
 			}
 			else if (block.Graph is IFunctionControlFlowGraph function)
 			{
-				writer.WriteLine();
 				TextFragmentLineCollection lines = function.Node.Signature.GetLines().TrimLines().PrefixLineMargin();
 				PrintHtmlLines(writer, lines);
 			}
 		}
 
-		writer.WriteLine("\"]");
+		writer.WriteLine("\")");
 	}
-	private void PrintBlock(IndentedTextWriter writer, IControlFlowBlock block)
+	private void PrintEndBlock(IndentedTextWriter writer, IControlFlowEndBlock block)
 	{
-		bool isBranching = block.Outgoing.OfType<ConditionalControlFlowBranch>().Any();
-		string start = isBranching ? "{" : "[";
-		string end = isBranching ? "}" : "]";
-
-		writer.Write($"{block.Id}{start}\"");
-
-		if (block is IControlFlowStatementBlock statement)
-			PrintStatementBlock(writer, statement);
-		else if (block is IControlFlowExpressionBlock expression)
-			PrintExpressionBlock(writer, expression);
-		else
-			ThrowHelper.ThrowInvalidOperationException($"Unknown control flow block type {block.GetType().Name}.");
-
-		writer.WriteLine($"\"{end}");
+		writer.Write($"{block.Id}(((\"");
+		TextFragment end = new("end", ClassificationKind.Keyword);
+		PrintHtmlLines(writer, [new(null, end)], center: true);
+		writer.WriteLine("\")))");
 	}
-	private void PrintStatementBlock(IndentedTextWriter writer, IControlFlowStatementBlock block)
-	{
-		TextFragmentLineCollection lines = [];
 
-		IReadOnlyList<IAnnotatedStatementSyntax> statements = block.Statements;
-		while (statements.Count is 1 && statements[0] is IAnnotatedBlockStatementSyntax blockStatement && blockStatement.Statements.Any())
-			statements = blockStatement.Statements;
-
-		foreach (IAnnotatedStatementSyntax statement in statements)
-		{
-			TextFragmentLineCollection collection = statement.GetLines();
-			lines.AddRange(collection);
-		}
-
-		for (int i = lines.Count - 1; i >= 0; i--)
-		{
-			if (lines[i].Count is 0 || lines[i].All(f => f.IsWhitespace || f.Classification == ClassificationKind.SinglelineComment))
-				lines.RemoveAt(i);
-		}
-
-		lines.TrimLines().TrimSharedIndent();
-
-		if (lines.Count is 0)
-		{
-			TextFragment fragment = new("<empty>", ClassificationKind.Hint);
-			TextFragmentLine line = new(null, fragment);
-			lines.Add(line);
-		}
-		else
-			lines.PrefixLineMargin();
-
-		PrintHtmlLines(writer, lines);
-	}
-	private void PrintExpressionBlock(IndentedTextWriter writer, IControlFlowExpressionBlock block)
-	{
-		ISyntaxNode target = block.Expression;
-		if (target.Parent is IAnnotatedShortFunctionBodySyntax)
-			target = target.Parent;
-
-		TextFragmentLineCollection lines = target.GetLines().TrimLines().TrimSharedIndent();
-		PrintHtmlLines(writer, lines);
-	}
-	private void PrintHtmlLines(IndentedTextWriter writer, TextFragmentLineCollection lines)
+	private void PrintHtmlLines(IndentedTextWriter writer, TextFragmentLineCollection lines, bool center = false)
 	{
 		using (writer.NoIndent())
 		{
-			PrintHtmlStart(writer);
+			PrintHtmlStart(writer, center);
 
 			for (int i = 0; i < lines.Count; i++)
 			{
@@ -195,10 +224,10 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 			PrintHtmlEnd(writer);
 		}
 	}
-
-	private void PrintHtmlStart(IndentedTextWriter writer)
+	private void PrintHtmlStart(IndentedTextWriter writer, bool center)
 	{
-		writer.Write("<div style=\"white-space:pre;text-align:left;tab-size:3;font-family:monospace\">");
+		string align = center ? "center" : "left";
+		writer.Write($"<div style=\"white-space:pre;text-align:{align};tab-size:3\">");
 	}
 	private void PrintHtmlEnd(IndentedTextWriter writer)
 	{
@@ -208,16 +237,22 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 	{
 		StyleInfo style = Styling.Get(fragment.Classification);
 
+		// Note(Nightowl): Because mermaid doesn't like semicolons;
+		string[] parts = fragment.Text.Split(';');
+		for (int i = 0; i < parts.Length; i++)
+			parts[i] = HttpUtility.HtmlEncode(parts[i]);
+		string encoded = string.Join("&#x3b;", parts);
+
 		if (style == default)
 		{
-			writer.WriteHtmlEscaped(fragment.Text);
+			writer.Write(encoded);
 			return;
 		}
 
 		writer.Write("<span ");
 		writer.Write(style.ToHtmlStyle);
 		writer.Write(">");
-		writer.WriteHtmlEscaped(fragment.Text);
+		writer.Write(encoded);
 		writer.Write("</span>");
 	}
 	#endregion

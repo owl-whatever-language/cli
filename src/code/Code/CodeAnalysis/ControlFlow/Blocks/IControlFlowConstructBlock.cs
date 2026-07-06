@@ -5,6 +5,7 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Blocks;
 public interface IControlFlowConstructBlock : IControlFlowBlock
 {
 	#region Properties
+	string Name { get; }
 	IAnnotatedSyntaxNode Node { get; }
 	IReadOnlyList<IControlFlowBlock> Blocks { get; }
 	IControlFlowMarkerBlock End { get; }
@@ -26,6 +27,7 @@ public interface IMutableControlFlowConstructBlock : IControlFlowConstructBlock,
 
 	#region Methods
 	void Add(IMutableControlFlowBlock block);
+	void AddRange(IEnumerable<IMutableControlFlowBlock> blocks);
 	#endregion
 }
 
@@ -38,6 +40,7 @@ public sealed class ControlFlowConstructBlock : MutableControlFlowBlock, IMutabl
 	#endregion
 
 	#region Properties
+	public string Name { get; }
 	public override string Id => $"{Node.NodeKind.WithGroup}#{BlockNumber}";
 	public IAnnotatedSyntaxNode Node { get; }
 	public IReadOnlyList<IMutableControlFlowBlock> Blocks => _blocks;
@@ -45,8 +48,9 @@ public sealed class ControlFlowConstructBlock : MutableControlFlowBlock, IMutabl
 	#endregion
 
 	#region Constructors
-	public ControlFlowConstructBlock(IAnnotatedSyntaxNode node)
+	public ControlFlowConstructBlock(string name, IAnnotatedSyntaxNode node)
 	{
+		Name = name;
 		Node = node;
 		End = new ControlFlowMarkerBlock(this, "end");
 	}
@@ -54,6 +58,7 @@ public sealed class ControlFlowConstructBlock : MutableControlFlowBlock, IMutabl
 
 	#region Methods
 	public void Add(IMutableControlFlowBlock block) => _blocks.Add(block);
+	public void AddRange(IEnumerable<IMutableControlFlowBlock> blocks) => _blocks.AddRange(blocks);
 	#endregion
 
 	#region Helpers

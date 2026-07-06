@@ -40,7 +40,7 @@ public static class OwlStyling
 			.Add(ClassificationKind.String, "#d7af87")
 			.Add(ClassificationKind.StringEscape, "#db9e60")
 			.Add(ClassificationKind.Number, "#b8dea4")
-			.Add(ClassificationKind.Boolean, "#a4cbde")
+			.Add(ClassificationKind.Boolean, "#5e5ee1")
 
 			// Names
 			.Add(ClassificationKind.Identifier, "#b2b2b2")

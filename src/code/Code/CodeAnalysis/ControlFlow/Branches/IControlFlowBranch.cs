@@ -1,4 +1,5 @@
 using OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Blocks;
+using OwlDomain.ParsingTools.Syntax.Printing;
 
 namespace OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Branches;
 
@@ -11,6 +12,7 @@ public interface IControlFlowBranch
 	#endregion
 }
 
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public sealed class ConditionalControlFlowBranch : IMutableControlFlowBidirectionalBranch
 {
 	#region Properties
@@ -34,8 +36,19 @@ public sealed class ConditionalControlFlowBranch : IMutableControlFlowBidirectio
 		To = to;
 	}
 	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay()
+	{
+		if (IsNegated)
+			return $"Branch: {From.Id} -> {To.Id} | NOT {Condition.GetDebugSource()}";
+
+		return $"Branch: {From.Id} -> {To.Id} | {Condition.GetDebugSource()}";
+	}
+	#endregion
 }
 
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public sealed class UnconditionalControlFlowBranch : IMutableControlFlowBidirectionalBranch
 {
 	#region Properties
@@ -53,5 +66,9 @@ public sealed class UnconditionalControlFlowBranch : IMutableControlFlowBidirect
 		From = from;
 		To = to;
 	}
+	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"Branch: {From.Id} -> {To.Id}";
 	#endregion
 }

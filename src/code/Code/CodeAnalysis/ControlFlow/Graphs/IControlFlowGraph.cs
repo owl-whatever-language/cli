@@ -38,6 +38,7 @@ public interface IMutableControlFlowGraph : IControlFlowGraph
 
 	#region Methods
 	void Add(IMutableControlFlowBlock block);
+	void AddRange(IEnumerable<IMutableControlFlowBlock> blocks);
 	void Add(IMutableControlFlowBidirectionalBranch branch);
 	void RecalculateBlockNumbers();
 	#endregion
@@ -81,6 +82,11 @@ public abstract class ControlFlowGraph<TNode> : IMutableControlFlowGraph
 
 		block.BlockNumber = _blocks.Count;
 		End.BlockNumber = _blocks.Count + 1;
+	}
+	public void AddRange(IEnumerable<IMutableControlFlowBlock> blocks)
+	{
+		_blocks.AddRange(blocks);
+		RecalculateBlockNumbers();
 	}
 	public void Add(IMutableControlFlowBidirectionalBranch branch) => _branches.Add(branch);
 	public void RecalculateBlockNumbers()
