@@ -15,6 +15,19 @@ public interface ISymbol : IDebugTreePrintable
 
 public static class SymbolExtensions
 {
+	extension(ISyntaxPart? part)
+	{
+		#region Properties
+		public ISymbol? Symbol => (part as IDeclaredToken)?.Symbol;
+		#endregion
+	}
+	extension(TextFragment fragment)
+	{
+		#region Properties
+		public ISymbol? Symbol => fragment.Syntax.Symbol;
+		#endregion
+	}
+
 	extension(ISymbol symbol)
 	{
 		#region Properties

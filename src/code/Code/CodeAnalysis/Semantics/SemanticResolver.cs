@@ -249,7 +249,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			}
 		}
 
-		var name = Convert(declared.Name, classification);
+		var name = Convert(declared.Name, classification, symbol);
 		IType resultType = GetResultType(symbol, declared.Name.Position);
 
 		return new(name, symbol ?? SpecialSymbols.NotFound, resultType);

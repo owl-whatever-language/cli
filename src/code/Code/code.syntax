@@ -5,7 +5,7 @@ shadow : concrete declared semantic annotated
 
 # Define what's on the tokens
 token concrete
-token declared
+token declared : ISymbol? symbol
 token semantic
 token annotated
 

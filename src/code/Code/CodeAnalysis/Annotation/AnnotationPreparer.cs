@@ -150,11 +150,12 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter
 	}
 	protected override AnnotatedNamedFunctionArgumentSyntax ConvertCore(ISemanticNamedFunctionArgumentSyntax semantic)
 	{
-		var name = Convert(semantic.Name);
+		var parameter = _currentCallable?.Parameters.FirstOrDefault(p => p.Name == (semantic.Name.Value as string));
+
+		var name = Convert(semantic.Name, (parameter as ICallableFunctionParameter)?.FunctionParameter);
 		var separator = Convert(semantic.Separator);
 		var value = Convert(semantic.Value);
 
-		var parameter = _currentCallable?.Parameters.FirstOrDefault(p => p.Name == (semantic.Name.Value as string));
 		if (parameter?.Index == _currentCallableParameterIndex)
 			_currentCallableParameterIndex++;
 

@@ -50,6 +50,20 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 		public void Dispose() => resolver.ExitScope();
 		#endregion
 	}
+	private readonly ref struct ValueScope<T>(ref T field, T oldValue) : IDisposable
+	{
+		#region Fields
+		private readonly ref T _field = ref field;
+		#endregion
+
+		#region Methods
+		public void Dispose() => _field = oldValue;
+		#endregion
+	}
+	#endregion
+
+	#region Fields
+	private IDeclaredFunction? _currentFunction;
 	#endregion
 
 	#region Properties
@@ -109,7 +123,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 		Get(concrete, out IDeclaredLocalVariable variable);
 
 		var type = Convert(concrete.Type);
-		var name = Convert(concrete.Name);
+		var name = Convert(concrete.Name, variable);
 		var assignment = Convert(concrete.Assignment);
 		var value = Convert(concrete.Value);
 		var terminator = Convert(concrete.Terminator);
@@ -126,6 +140,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 		DeclaredFunctionDeclarationStatementSyntax declared;
 
 		Get(concrete, out IDeclaredFunction function);
+		using (WithValue(ref _currentFunction, function))
 		using (EnterScope(concrete, out ISymbolScope scope))
 		{
 			var signature = Convert(concrete.Signature);
@@ -147,12 +162,29 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 
 		return declared;
 	}
+	protected override DeclaredFunctionDeclarationSignatureSyntax ConvertCore(IConcreteFunctionDeclarationSignatureSyntax concrete)
+	{
+		IDeclaredToken? keyword = Convert(concrete.Keyword);
+		IDeclaredToken name = ConvertCore(concrete.Name, _currentFunction);
+		IDeclaredToken start = ConvertCore(concrete.Start);
+		ISyntaxList<IDeclaredFunctionParameterSyntax, IDeclaredToken> parameters = ConvertCore(concrete.Parameters);
+		IDeclaredToken end = ConvertCore(concrete.End);
+		IDeclaredFunctionReturnSyntax @return = ConvertCore(concrete.Return);
+
+		return new(
+			keyword,
+			name,
+			start,
+			parameters,
+			end,
+			@return);
+	}
 	protected override DeclaredRegularFunctionParameterSyntax ConvertCore(IConcreteRegularFunctionParameterSyntax concrete)
 	{
 		Get(concrete, out IDeclaredFunctionParameter parameter);
 
 		var type = Convert(concrete.Type);
-		var name = Convert(concrete.Name);
+		var name = Convert(concrete.Name, parameter);
 
 		parameter.Type = type.TypeInfo;
 
@@ -166,8 +198,8 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	#region Type methods
 	protected override DeclaredRegularTypeSyntax ConvertCore(IConcreteRegularTypeSyntax concrete)
 	{
-		var name = Convert(concrete.Name);
 		INamedType? type = GetSingle<INamedType>(concrete.Name, "type", "types");
+		var name = Convert(concrete.Name, type);
 
 		return new(
 			name,
@@ -180,6 +212,12 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	#endregion
 
 	#region Scope helpers
+	private ValueScope<T> WithValue<T>(ref T field, T value)
+	{
+		T old = field;
+		field = value;
+		return new(ref field, old);
+	}
 	private Scope EnterScope(IConcreteSyntaxNode declaration, out ISymbolScope scope)
 	{
 		scope = CurrentScope.GetChild(declaration);

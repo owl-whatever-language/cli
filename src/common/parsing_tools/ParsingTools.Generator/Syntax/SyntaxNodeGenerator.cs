@@ -334,8 +334,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 						writer.WriteLine(": base(kind, position, lexeme, value, leadingTrivia, trailingTrivia, classification)");
 
 					using (writer.Braced())
-					{
-					}
+						writer.WriteConstructorAssignments(token.ClassMembers);
 					#endregion
 					writer.WriteLine();
 					#region Fabricated constructors
@@ -740,7 +739,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 						writer.WriteLine(")");
 						using (writer.Braced())
 						{
-							writer.Write("return Convert(");
+							writer.Write("return ConvertCore(");
 							writer.WriteSeparated([
 								"token","token.Classification",
 								..target.Token.ClassMembers.Select(m => m.Name.Camel)
@@ -758,7 +757,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 							writer.WriteLine($"protected virtual {target.Token.Class.Name} ConvertCore({from.Token.Interface.Name} token)");
 							using (writer.Braced())
 							{
-								writer.Write("return Convert(");
+								writer.Write("return ConvertCore(");
 								writer.WriteSeparated([
 									"token","token.Classification",
 									..target.Token.ClassMembers
