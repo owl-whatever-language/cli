@@ -21,6 +21,7 @@ internal readonly struct Name : IEquatable<Name>
 	public string Camel => Keywords.Contains(Original) ? $"@{Original}" : ToCamel(Parts);
 	public string Pascal => ToPascal(Parts);
 	public string Natural => ToNatural(Parts);
+	public string NaturalLower => ToNaturalLower(Parts);
 	public Name Plural => ToPlural(Parts);
 	#endregion
 
@@ -101,6 +102,11 @@ internal readonly struct Name : IEquatable<Name>
 
 		IEnumerable<string> camel = fragments.Skip(1).Select(ToCamelFragment);
 		return string.Join(" ", [pascal, .. camel]);
+	}
+	public static string ToNaturalLower(IReadOnlyList<string> fragments)
+	{
+		IEnumerable<string> camel = fragments.Select(ToCamelFragment);
+		return string.Join(" ", camel);
 	}
 
 	public static string ToCamel(IReadOnlyList<string> fragments)

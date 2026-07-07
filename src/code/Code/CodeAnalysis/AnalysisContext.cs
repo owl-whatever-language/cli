@@ -42,11 +42,11 @@ public sealed class AnalysisContext : IAnalysisContext
 	#region Properties
 	public ISymbolScope BaseScope { get; }
 	public IEnumerable<ISyntaxTreeBundle> Bundles => _trees.Values;
-	public IEnumerable<IConcreteSyntaxTree> Trees => Bundles.Where(b => b.LeastDetailed is not null).Select(b => b.LeastDetailed)!;
-	public IReadOnlyCollection<IConcreteSyntaxTree> Concrete => GetConcreteTrees().ToArray();
-	public IReadOnlyCollection<IDeclaredSyntaxTree> Declared => GetDeclaredTrees().ToArray();
-	public IReadOnlyCollection<ISemanticSyntaxTree> Semantic => GetSemanticTrees().ToArray();
-	public IReadOnlyCollection<IAnnotatedSyntaxTree> Annotated => GetAnnotatedTrees().ToArray();
+	public IEnumerable<IConcreteSyntaxTree> Trees => Bundles.GetAvailableTrees();
+	public IReadOnlyCollection<IConcreteSyntaxTree> Concrete => Bundles.GetConcreteTrees().ToArray();
+	public IReadOnlyCollection<IDeclaredSyntaxTree> Declared => Bundles.GetDeclaredTrees().ToArray();
+	public IReadOnlyCollection<ISemanticSyntaxTree> Semantic => Bundles.GetSemanticTrees().ToArray();
+	public IReadOnlyCollection<IAnnotatedSyntaxTree> Annotated => Bundles.GetAnnotatedTrees().ToArray();
 	#endregion
 
 	#region Constructors
@@ -211,49 +211,6 @@ public sealed class AnalysisContext : IAnalysisContext
 			}
 
 			return new(performance, results);
-		}
-	}
-	#endregion
-
-	#region Helpers
-	private IEnumerable<IConcreteSyntaxTree> GetConcreteTrees()
-	{
-		foreach (ISyntaxTreeBundle bundle in _trees.Values)
-		{
-			if (bundle.Concrete is null)
-				ThrowHelper.ThrowInvalidOperationException("Expected the concrete tree to be set.");
-
-			yield return bundle.Concrete;
-		}
-	}
-	private IEnumerable<IDeclaredSyntaxTree> GetDeclaredTrees()
-	{
-		foreach (ISyntaxTreeBundle bundle in _trees.Values)
-		{
-			if (bundle.Declared is null)
-				ThrowHelper.ThrowInvalidOperationException("Expected the declared tree to be set.");
-
-			yield return bundle.Declared;
-		}
-	}
-	private IEnumerable<ISemanticSyntaxTree> GetSemanticTrees()
-	{
-		foreach (ISyntaxTreeBundle bundle in _trees.Values)
-		{
-			if (bundle.Semantic is null)
-				ThrowHelper.ThrowInvalidOperationException("Expected the semantic tree to be set.");
-
-			yield return bundle.Semantic;
-		}
-	}
-	private IEnumerable<IAnnotatedSyntaxTree> GetAnnotatedTrees()
-	{
-		foreach (ISyntaxTreeBundle bundle in _trees.Values)
-		{
-			if (bundle.Annotated is null)
-				ThrowHelper.ThrowInvalidOperationException("Expected the annotated tree to be set.");
-
-			yield return bundle.Annotated;
 		}
 	}
 	#endregion

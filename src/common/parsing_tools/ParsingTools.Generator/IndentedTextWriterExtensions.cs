@@ -14,9 +14,14 @@ internal static class IndentedTextWriterExtensions
 			writer.WriteLine(terminate ? "};" : "}");
 		}
 	}
-	public readonly struct IndentScope(IndentedTextWriter writer) : IDisposable
+	public readonly struct IndentScope(IndentedTextWriter writer, bool lineAfter) : IDisposable
 	{
-		public void Dispose() => writer.Indent--;
+		public void Dispose()
+		{
+			writer.Indent--;
+			if (lineAfter)
+				writer.WriteLine();
+		}
 	}
 	public readonly struct PreambleScope(IndentedTextWriter writer) : IDisposable
 	{
@@ -56,10 +61,10 @@ internal static class IndentedTextWriterExtensions
 	extension(IndentedTextWriter writer)
 	{
 		#region Scope methods
-		public IndentScope Indented()
+		public IndentScope Indented(bool lineAfter = false)
 		{
 			writer.Indent++;
-			return new(writer);
+			return new(writer, lineAfter);
 		}
 		public BraceScope Braced(bool terminate = false)
 		{

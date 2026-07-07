@@ -107,6 +107,9 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 	}
 	static void GenerateSyntaxBundle(SourceProductionContext context, IReadOnlyList<StructuredTreeInfo> order)
 	{
+		const string className = "SyntaxTreeBundle";
+		const string interfaceName = "I" + className;
+
 		IndentedTextWriter writer = GetWriter(out StringWriter result);
 
 		StructuredTreeInfo leastDetailed = order.First();
@@ -116,7 +119,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		{
 			using (writer.TypePreamble()) // interface
 			{
-				writer.WriteLine($"public partial interface ISyntaxTreeBundle");
+				writer.WriteLine($"public partial interface {interfaceName}");
 				using (writer.Braced())
 				{
 					using (writer.Region("Properties"))
@@ -136,7 +139,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 			using (writer.TypePreamble()) // class
 			{
-				writer.WriteLine($"public sealed partial class SyntaxTreeBundle : ISyntaxTreeBundle");
+				writer.WriteLine($"public sealed partial class {className} : {interfaceName}");
 				using (writer.Braced())
 				{
 					using (writer.Region("Fields"))
@@ -193,14 +196,50 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 					writer.WriteLine();
 					using (writer.Region("Constructors"))
 					{
-						writer.WriteLine($"public SyntaxTreeBundle(ISourceFile source) => Source = source;");
+						writer.WriteLine($"public {className}(ISourceFile source) => Source = source;");
+					}
+				}
+			}
+
+			using (writer.TypePreamble()) // extensions
+			{
+				writer.WriteLine($"public static partial class {interfaceName}Extensions");
+				using (writer.Braced())
+				{
+					writer.WriteLine($"extension(IEnumerable<{interfaceName}> bundles)");
+					using (writer.Braced())
+					{
+						using (writer.Region("Methods"))
+						{
+							#region Get trees
+							writer.WriteLine($"public IEnumerable<{leastDetailed.Interface.Name}> GetAvailableTrees() => bundles.Where(b => b.LeastDetailed is not null).Select(b => b.LeastDetailed)!;");
+							writer.WriteLine($"public IEnumerable<{leastDetailed.Interface.Name}> GetLeastDetailedTrees() => Get{leastDetailed.Kind.Pascal}Trees(bundles);");
+							foreach (StructuredTreeInfo tree in order)
+							{
+								writer.WriteLine($"public IEnumerable<{tree.Interface.Name}> Get{tree.Kind.Pascal}Trees()");
+								using (writer.Braced())
+								{
+									writer.WriteLine($"foreach ({interfaceName} bundle in bundles)");
+									using (writer.Braced())
+									{
+										writer.WriteLine($"if (bundle.{tree.Kind.Pascal} is null)");
+										using (writer.Indented(lineAfter: true))
+											writer.WriteLine($"throw new InvalidOperationException(\"Expected all of the {tree.Kind.NaturalLower} trees to be set.\");");
+
+										writer.WriteLine($"yield return bundle.{tree.Kind.Pascal};");
+									}
+								}
+							}
+							writer.WriteLine($"public IEnumerable<{mostDetailed.Interface.Name}> GetMostDetailedTrees() => Get{mostDetailed.Kind.Pascal}Trees(bundles);");
+							#endregion
+						}
 					}
 				}
 			}
 		}
 
 		string source = result.ToString();
-		context.AddSource("SyntaxTreeBundle.g.cs", source);
+		context.AddSource($"{className}.g.cs", source);
 	}
 	static void GenerateShadowValidation(SourceProductionContext context, IReadOnlyList<StructuredTreeInfo> order)
 	{
