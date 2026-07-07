@@ -83,5 +83,8 @@ partial struct ClassificationKind
 
 	/// <summary>Represents a classification for parameters.</summary>
 	public static ClassificationKind Parameter { get; } = Variable + "parameter";
+
+	/// <summary>Represents a classification for file names.</summary>
+	public static ClassificationKind File { get; } = Identifier + "file";
 	#endregion
 }

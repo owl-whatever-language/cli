@@ -227,8 +227,9 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 		writer.WriteLine("%% Source code reference");
 		writer.Write("source_code_reference[\"");
 
-		TextFragmentLine titleLine = new(null, [new("Source code reference")]);
-		PrintHtmlLines(writer, [titleLine], center: true);
+		TextFragmentLine titleLine = new(null, [new("Source code reference", ClassificationKind.Keyword)]);
+		TextFragmentLine fileLine = new(null, [new(graph.Node.GetTree().Source.SimpleName, ClassificationKind.File)]);
+		PrintHtmlLines(writer, [titleLine, fileLine], center: true);
 		writer.WriteLine();
 
 		TextFragmentLineCollection lines = graph.Node.GetLines();
@@ -312,20 +313,21 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 	private void PrintStartBlock(IndentedTextWriter writer, IControlFlowStartBlock block)
 	{
 		writer.Write($"{block.Id}(\"");
-		TextFragment start = new("start", ClassificationKind.Keyword);
-		PrintHtmlLines(writer, [new(null, start)], center: true);
+		TextFragmentLine start = new(null, [new("start", ClassificationKind.Keyword)]);
+		TextFragmentLineCollection startLines = [start];
 
-		using (writer.NoIndent())
+		if (block.Graph is IDocumentControlFlowGraph document && document.Node.Tree is not null)
 		{
-			if (block.Graph is IDocumentControlFlowGraph document && document.Node.Tree is not null)
-			{
-				writer.Write($"{document.Node.Tree.Source.SimpleName}");
-			}
-			else if (block.Graph is IFunctionControlFlowGraph function)
-			{
-				TextFragmentLineCollection lines = function.Node.Signature.GetLines().TrimLines().PrefixLineMargin();
-				PrintHtmlLines(writer, lines);
-			}
+			TextFragmentLine fileLine = new(null, [new(document.Node.Tree.Source.SimpleName, ClassificationKind.File)]);
+			startLines.Add(fileLine);
+		}
+
+		PrintHtmlLines(writer, startLines, center: true);
+
+		if (block.Graph is IFunctionControlFlowGraph function)
+		{
+			TextFragmentLineCollection lines = function.Node.Signature.GetLines().TrimLines().PrefixLineMargin();
+			PrintHtmlLines(writer, lines);
 		}
 
 		writer.WriteLine("\")");
