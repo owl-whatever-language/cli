@@ -18,6 +18,8 @@ public sealed class DiagnosticBag : IDiagnosticBag, ICollection<IDiagnostic>
 	#endregion
 
 	#region Properties
+	public static IDiagnosticBag Empty { get; } = new DiagnosticBag();
+
 	/// <inheritdoc/>
 	public int Count => _diagnostics.Count;
 
@@ -87,6 +89,20 @@ public static class IDiagnosticBagExtensions
 		public bool HasErrors => bag.Any(d => d.Kind >= DiagnosticKind.Error);
 		public int ErrorCount => bag.Count(d => d.Kind >= DiagnosticKind.Error);
 		public int WarningCount => bag.Count(d => d.Kind >= DiagnosticKind.Warning && d.Kind < DiagnosticKind.Error);
+		#endregion
+	}
+	extension(IEnumerable<IDiagnosticBag> bags)
+	{
+		#region Methods
+		public DiagnosticBag Combine()
+		{
+			DiagnosticBag bag = [];
+
+			foreach (IDiagnosticBag current in bags)
+				bag.AddRange(current);
+
+			return bag;
+		}
 		#endregion
 	}
 }

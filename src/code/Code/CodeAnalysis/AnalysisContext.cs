@@ -1,18 +1,21 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis;
 
-public sealed class AnalysisUpdateResult : IStageResultPerformance, IStageResultParent
+public sealed class AnalysisUpdateResult : IStageResultDiagnostics, IStageResultPerformance, IStageResultParent
 {
 	#region Properties
 	public string Stage => "analysis_update";
+	public IDiagnosticBag Diagnostics { get; }
 	public IPerformanceResult Performance { get; }
 	public IReadOnlyCollection<IStageResult> Children { get; }
 	#endregion
 
 	#region Constructors
 	public AnalysisUpdateResult(
+		IDiagnosticBag diagnostics,
 		IPerformanceResult performance,
 		params IReadOnlyCollection<IStageResult> children)
 	{
+		Diagnostics = diagnostics;
 		Performance = performance;
 		Children = children;
 	}
@@ -32,6 +35,7 @@ public sealed class AnalysisContext : IAnalysisContext
 {
 	#region Fields
 	private readonly Dictionary<ISourceFile, SyntaxTreeBundle> _trees = [];
+	private readonly Dictionary<ISourceFile, IDiagnosticBag> _parsingDiagnostics = [];
 	private readonly List<IAnalysisPass> _passes = [];
 	#endregion
 
@@ -81,7 +85,10 @@ public sealed class AnalysisContext : IAnalysisContext
 		using PerformanceScope _ = PerformanceResult.Scope(out IPerformanceResult performance);
 
 		foreach (ISourceFile file in removed)
+		{
 			_trees.Remove(file);
+			_parsingDiagnostics.Remove(file);
+		}
 
 		foreach (ISourceFile file in added)
 		{
@@ -94,6 +101,8 @@ public sealed class AnalysisContext : IAnalysisContext
 		ParallelParsingResult parsing = Parser.Parse(toReparse);
 		foreach (LexingAndParsingResult result in parsing.GetByFile().Values)
 		{
+			_parsingDiagnostics.Remove(result.Source);
+
 			SyntaxTreeBundle bundle = _trees[result.Source];
 			bundle.Concrete = result.Parsing.Tree;
 		}
@@ -144,7 +153,13 @@ public sealed class AnalysisContext : IAnalysisContext
 			results.Add(passResult);
 		}
 
-		return new(performance, results);
+		DiagnosticBag diagnostics = _parsingDiagnostics.Values.Combine();
+
+		// Note(Nightowl): Ad diagnostics for the next update, to make sure we don't duplicate them for this update;
+		foreach (LexingAndParsingResult result in parsing.GetByFile().Values)
+			_parsingDiagnostics.Add(result.Source, result.GetAllDiagnostics());
+
+		return new(diagnostics, performance, results);
 	}
 	private AnalysisPassResultGroup RunPasses()
 	{

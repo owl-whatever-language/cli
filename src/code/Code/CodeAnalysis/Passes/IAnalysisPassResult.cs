@@ -23,7 +23,7 @@ public class AnalysisPassResult : IAnalysisPassResult
 		Performance = performance;
 		Diagnostics = diagnostics;
 	}
-	public AnalysisPassResult(IAnalysisPass pass, IPerformanceResult performance) : this(pass, performance, new DiagnosticBag()) { }
+	public AnalysisPassResult(IAnalysisPass pass, IPerformanceResult performance) : this(pass, performance, DiagnosticBag.Empty) { }
 	#endregion
 }
 
