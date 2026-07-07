@@ -9,6 +9,7 @@ public interface ISymbolScope : IDebugTreePrintable
 	#endregion
 
 	#region Methods
+	bool TryGetLocal(string name, [NotNullWhen(true)] out ISymbolGroup? symbols);
 	bool TryGet(string name, [NotNullWhen(true)] out ISymbolGroup? symbols);
 	ISymbolGroup GetAll(string name);
 	void GetAll(string name, SymbolGroup destination);
@@ -69,7 +70,7 @@ public class SymbolScope : ISymbolScope
 			group.Add(symbol);
 		}
 	}
-	public bool TryGet(string name, [NotNullWhen(true)] out ISymbolGroup? symbols)
+	public bool TryGetLocal(string name, [NotNullWhen(true)] out ISymbolGroup? symbols)
 	{
 		using (_nameLock.ReadLock())
 		{
@@ -79,6 +80,13 @@ public class SymbolScope : ISymbolScope
 				return true;
 			}
 		}
+		symbols = default;
+		return false;
+	}
+	public bool TryGet(string name, [NotNullWhen(true)] out ISymbolGroup? symbols)
+	{
+		if (TryGetLocal(name, out symbols))
+			return true;
 
 		if (Parent?.TryGet(name, out symbols) is true)
 			return true;

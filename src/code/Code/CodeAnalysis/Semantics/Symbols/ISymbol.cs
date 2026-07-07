@@ -13,6 +13,45 @@ public interface ISymbol : IDebugTreePrintable
 	#endregion
 }
 
+public static class SymbolExtensions
+{
+	extension(ISymbol symbol)
+	{
+		#region Properties
+		public bool IsKnown => symbol != SpecialSymbols.NotFound;
+		public bool IsNotKnown => symbol == SpecialSymbols.NotFound;
+		public ClassificationKind? Classification
+		{
+			get
+			{
+				return symbol switch
+				{
+					IFunction => ClassificationKind.Function,
+					IFunctionParameter => ClassificationKind.Parameter,
+					ILocalVariable => ClassificationKind.Variable,
+
+					null => null,
+					_ => ThrowHelper.ThrowInvalidOperationException<ClassificationKind?>($"Unhandled symbol type ({symbol.GetType().Name}).")
+				};
+			}
+		}
+		#endregion
+	}
+	extension(IReadOnlyCollection<ISymbol> symbols)
+	{
+		#region Methods
+		public ClassificationKind? GetSharedClassification() => symbols.Select(get_Classification).Distinct().SingleOrDefault();
+		#endregion
+	}
+
+	extension<T>(IReadOnlyCollection<T> symbols) where T : notnull, ISymbol
+	{
+		#region Methods
+		public ClassificationKind? GetSharedClassification() => symbols.Select(s => s.Classification).Distinct().SingleOrDefault();
+		#endregion
+	}
+}
+
 public static class SymbolHelpers
 {
 	#region Functions

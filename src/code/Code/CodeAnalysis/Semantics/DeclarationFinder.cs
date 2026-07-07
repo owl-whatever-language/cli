@@ -39,6 +39,8 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 	private SymbolScope ResultScope { get; }
 	private Stack<SymbolScope> Scopes { get; } = [];
 	private SymbolScope CurrentScope { get; set; }
+
+	private ThreadLocal<ISourceFile?> Source { get; } = new();
 	#endregion
 
 	#region Constructors
@@ -70,17 +72,22 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 	#endregion
 
 	#region Methods
+	public override void Visit(IConcreteSyntaxTree tree)
+	{
+		Source.Value = tree.Source;
+		base.Visit(tree);
+	}
 	protected override bool Visit(IConcreteVariableDeclarationStatementSyntax node)
 	{
 		DeclaredLocalVariable variable = new(node);
-		Add(variable);
+		AddSingle(variable, node.Name.Position);
 
 		return true;
 	}
 	protected override bool Visit(IConcreteFunctionDeclarationStatementSyntax node)
 	{
 		DeclaredFunction function = new(node);
-		using (NewScope("function", function))
+		using (NewScopeSingle("function", function, node.Signature.Name.Position))
 		{
 			foreach (IDeclaredFunctionParameter parameter in function.Parameters)
 				Add(parameter);
@@ -93,7 +100,26 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 	#endregion
 
 	#region Scope methods
+	private void AddSingle(IDeclaredSymbol symbol, IndexedPositionRange position)
+	{
+		if (symbol.Name is not null && CurrentScope.TryGetLocal(symbol.Name, out ISymbolGroup? symbols))
+		{
+			if (symbol is IFunction && symbols.OfType<IFunction>().Any())
+				AddError("duplicate_symbol", position, $"A symbol named '{symbol.Name}' already exists in this scope. Function overloading is not yet supported.");
+			else
+				AddError("duplicate_symbol", position, $"A symbol named '{symbol.Name}' already exists in this scope.");
+		}
+
+		Add(symbol);
+	}
 	private void Add(IDeclaredSymbol symbol) => CurrentScope.Add(symbol);
+	private Scope NewScopeSingle(string kind, IDeclaredSymbol symbol, IndexedPositionRange position)
+	{
+		AddSingle(symbol, position);
+
+		string name = $"{kind}({symbol.Name})";
+		return NewScope(name, symbol.Declaration);
+	}
 	private Scope NewScope(string kind, IDeclaredSymbol symbol)
 	{
 		Add(symbol);
@@ -117,6 +143,18 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 			CurrentScope = scope;
 		else
 			ThrowHelper.ThrowInvalidOperationException($"Exiting the '{ResultScope.Name}' scope is not allowed.");
+	}
+	#endregion
+
+	#region Diagnostic helpers
+	private void AddError(string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
+	{
+		AddDiagnostic(DiagnosticKind.Error, id, position, message, stackTrace);
+	}
+	private void AddDiagnostic(DiagnosticKind kind, string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
+	{
+		Debug.Assert(Source.Value is not null);
+		Diagnostics.Add(this, kind, id, Source.Value, position, message, stackTrace);
 	}
 	#endregion
 }

@@ -17,6 +17,11 @@ public static class ITypeExtensions
 {
 	extension(IType type)
 	{
+		#region Properties
+		public bool IsError => type == SpecialTypes.Error;
+		public bool IsNotError => type != SpecialTypes.Error;
+		#endregion
+
 		#region Methods
 		public void ThrowIfInvalidShadow(IType @new, [CallerArgumentExpression(nameof(@new))] string? parameter = null)
 		{

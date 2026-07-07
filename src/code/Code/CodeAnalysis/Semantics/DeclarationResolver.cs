@@ -212,33 +212,44 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	private ISymbol? GetSingle(ISyntaxToken token) => GetSingle<ISymbol>(token, "symbol", "symbols");
 	private T? GetSingle<T>(ISyntaxToken token, string kind, string kindPlural)
 	{
-		return GetSingle<T>(token.Value as string, kind, kindPlural, token.Position);
+		return GetSingle<T>(token.Value as string, kind, kindPlural, token.Position, out _);
 	}
-	private T? GetSingle<T>(string? name, string kind, string kindPlural, IndexedPositionRange position)
+	private T? GetSingle<T>(ISyntaxToken token, string kind, string kindPlural, out T[] ambiguity)
+	{
+		return GetSingle<T>(token.Value as string, kind, kindPlural, token.Position, out ambiguity);
+	}
+	private T? GetSingle<T>(string? name, string kind, string kindPlural, IndexedPositionRange position, out T[] ambiguity)
 	{
 		if (name is null) // Note(Nightowl): Invalid names will have already been reported during parsing;
+		{
+			ambiguity = [];
 			return default;
+		}
 
 		if (CurrentScope.TryGet(name, out ISymbolGroup? symbols) is false)
 			symbols = GetAll(name, position);
 
 		if (symbols.Count is 0)
+		{
+			ambiguity = [];
 			return default;
+		}
 
-		T[] typed = symbols.OfType<T>().ToArray();
-		if (typed.Length is 0)
+		ambiguity = symbols.OfType<T>().ToArray();
+
+		if (ambiguity.Length is 0)
 		{
 			AddError($"{kind}_not_found", position, $"No accessible {kind} named '{name}' could be found.");
 			return default;
 		}
 
-		if (typed.Length > 1)
+		if (ambiguity.Length > 1)
 		{
 			AddError($"{kind}_ambiguity", position, $"Multiple {kindPlural} named '{name}' were found, but they couldn't be disambiguated.");
 			return default;
 		}
 
-		return typed[0];
+		return ambiguity[0];
 	}
 	private void Get<T>(IConcreteSyntaxNode declaration, out T symbol) where T : notnull, IDeclaredSymbol
 	{

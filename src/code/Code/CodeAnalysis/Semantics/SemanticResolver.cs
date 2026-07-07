@@ -62,6 +62,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	#endregion
 
 	#region Fields
+	private readonly HashSet<string> _knownDuplicateUses = [];
 	private ICallableType? _currentCallable;
 	private IDeclaredFunction? _currentFunction;
 	#endregion
@@ -128,7 +129,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		IType valueType = semantic.Value.ResultType;
 		IType variableType = semantic.Variable.Type;
 
-		if (valueType.CanAssignTo(variableType) is false)
+		if (valueType.CanAssignTo(variableType) is false && valueType.IsNotError && variableType.IsNotError)
 			AddError("incompatible_type", declared.Assignment.Position, $"A value of the type '{valueType}' cannot be assigned to a variable of the type '{variableType}'.");
 
 		return semantic;
@@ -182,7 +183,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		IType valueType = semantic.Value.ResultType;
 		IType targetType = _currentFunction.Return.Type;
 
-		if (valueType.CanAssignTo(targetType) is false)
+		if (valueType.CanAssignTo(targetType) is false && valueType.IsNotError)
 			AddError("incompatible_type", declared.Value.Position, $"A return value of the type '{valueType}' cannot be assigned to the function's return type '{targetType}'.");
 
 		return semantic;
@@ -192,7 +193,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	{
 		var semantic = base.ConvertCore(declared);
 
-		if (semantic.Condition.ResultType != CoreScope.Bool)
+		if (semantic.Condition.ResultType != CoreScope.Bool && semantic.Condition.ResultType.IsNotError)
 			AddError("invalid_condition_type", semantic.Condition.Position, "Expected the condition to be a boolean expression.");
 
 		return semantic;
@@ -201,7 +202,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	{
 		var semantic = base.ConvertCore(declared);
 
-		if (semantic.Condition.ResultType != CoreScope.Bool)
+		if (semantic.Condition.ResultType != CoreScope.Bool && semantic.Condition.ResultType.IsNotError)
 			AddError("invalid_condition_type", semantic.Condition.Position, "Expected the condition to be a boolean expression.");
 
 		return semantic;
@@ -210,7 +211,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	{
 		var semantic = base.ConvertCore(declared);
 
-		if (semantic.Condition.ResultType != CoreScope.Bool)
+		if (semantic.Condition.ResultType != CoreScope.Bool && semantic.Condition.ResultType.IsNotError)
 			AddError("invalid_condition_type", semantic.Condition.Position, "Expected the condition to be a boolean expression.");
 
 		return semantic;
@@ -229,16 +230,24 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	}
 	private SemanticGetExpressionSyntax ConvertGeneral(IDeclaredGetExpressionSyntax declared)
 	{
-		ISymbol? symbol = GetSingle(declared.Name);
-		ClassificationKind? classification = symbol switch
-		{
-			IFunction => ClassificationKind.Function,
-			IFunctionParameter => ClassificationKind.Parameter,
-			ILocalVariable => ClassificationKind.Variable,
+		ISymbol? symbol = GetSingle(declared.Name, out ISymbol[] ambiguity);
+		ClassificationKind? classification = symbol?.Classification;
 
-			null => null,
-			_ => ThrowHelper.ThrowInvalidOperationException<ClassificationKind?>($"Unhandled symbol type ({symbol.GetType().Name}).")
-		};
+		if (symbol is null && ambiguity.Any())
+		{
+			Debug.Assert(ambiguity.Length >= 2);
+			ClassificationKind? shared = ambiguity.GetSharedClassification();
+			classification ??= shared;
+
+			if (classification is not null)
+			{
+				// Note(Nightowl): 
+				// If they are both of the same type, and the same name, and the same scope, then it's probably just an accident,
+				// so in order to try and decrease the amount of errors, we just use the first one.
+				// The same logic check will be used to suppress the error.
+				symbol = ambiguity[0];
+			}
+		}
 
 		var name = Convert(declared.Name, classification);
 		IType resultType = GetResultType(symbol, declared.Name.Position);
@@ -256,11 +265,11 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		var right = Convert(declared.Right);
 
 		OperatorKind kind = op.Kind.GetOperator();
-		IFunction? operation =
+		IFunction? operation = (left.ResultType.IsError || right.ResultType.IsError) ? null :
 			left.ResultType.FindOperation(left.ResultType, right.ResultType, kind) ??
 			right.ResultType.FindOperation(left.ResultType, right.ResultType, kind)
 		;
-		if (operation is null)
+		if (operation is null && left.ResultType.IsNotError && right.ResultType.IsNotError)
 			AddError("unknown_operator", op.Position, $"Unknown binary expression operator '{left.ResultType} {op.Lexeme} {right.ResultType}'.");
 
 		return new(left, op, right, operation, operation?.Return.Type ?? SpecialTypes.Error);
@@ -285,7 +294,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 				symbol = parameter;
 				resultType = parameter.Type;
 			}
-			else
+			else if (get.Symbol.IsKnown)
 				AddError("invalid_assignment", op.Position, $"Cannot assign a value to the symbol '{get.Symbol.Name}'.");
 		}
 		else if (IsLiteral(expression))
@@ -304,7 +313,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		{
 			if (get.Symbol is ILocalVariable or IFunctionParameter)
 				symbol = get.Symbol;
-			else
+			else if (get.Symbol.IsKnown)
 				AddError("invalid_assignment", op.Position, $"Cannot assign a value to the symbol '{get.Symbol.Name}'.");
 		}
 		else if (IsLiteral(expression))
@@ -414,7 +423,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		var expression = Convert(declared.Expression);
 		ICallableType? callable = expression.ResultType as ICallableType;
 
-		if (callable is null)
+		if (callable is null && expression.ResultType.IsNotError)
 			AddError("type_not_callable", declared.Start.Position, "The result type of the expression is not callable.");
 
 		using (WithValue(ref _currentCallable, callable))
@@ -490,35 +499,48 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		return group;
 	}
 	private ISymbol? GetSingle(ISyntaxToken token) => GetSingle<ISymbol>(token, "symbol", "symbols");
-	private T? GetSingle<T>(ISyntaxToken token, string kind, string kindPlural)
+	private ISymbol? GetSingle(ISyntaxToken token, out ISymbol[] ambiguity) => GetSingle(token, "symbol", "symbols", out ambiguity);
+	private T? GetSingle<T>(ISyntaxToken token, string kind, string kindPlural) where T : notnull, ISymbol
 	{
-		return GetSingle<T>(token.Value as string, kind, kindPlural, token.Position);
+		return GetSingle<T>(token.Value as string, kind, kindPlural, token.Position, out _);
 	}
-	private T? GetSingle<T>(string? name, string kind, string kindPlural, IndexedPositionRange position)
+	private T? GetSingle<T>(ISyntaxToken token, string kind, string kindPlural, out T[] ambiguity) where T : notnull, ISymbol
+	{
+		return GetSingle(token.Value as string, kind, kindPlural, token.Position, out ambiguity);
+	}
+	private T? GetSingle<T>(string? name, string kind, string kindPlural, IndexedPositionRange position, out T[] ambiguity)
+		where T : notnull, ISymbol
 	{
 		if (name is null) // Note(Nightowl): Invalid names will have already been reported during parsing;
+		{
+			ambiguity = [];
 			return default;
+		}
 
 		if (CurrentScope.TryGet(name, out ISymbolGroup? symbols) is false)
 			symbols = GetAll(name, position);
 
 		if (symbols.Count is 0)
+		{
+			ambiguity = [];
 			return default;
+		}
 
-		T[] typed = symbols.OfType<T>().ToArray();
-		if (typed.Length is 0)
+		ambiguity = symbols.OfType<T>().ToArray();
+		if (ambiguity.Length is 0)
 		{
 			AddError($"{kind}_not_found", position, $"No accessible {kind} named '{name}' could be found.");
 			return default;
 		}
 
-		if (typed.Length > 1)
+		if (ambiguity.Length > 1)
 		{
-			AddError($"{kind}_ambiguity", position, $"Multiple {kindPlural} named '{name}' were found, but they couldn't be disambiguated.");
+			if (_knownDuplicateUses.Add(name) && ambiguity.GetSharedClassification() is not null)
+				AddError($"{kind}_ambiguity", position, $"Multiple {kindPlural} named '{name}' were found, but they couldn't be disambiguated.");
 			return default;
 		}
 
-		return typed[0];
+		return ambiguity[0];
 	}
 	private void Update(IDeclaredSymbol symbol, ISemanticSyntaxNode declaration)
 	{

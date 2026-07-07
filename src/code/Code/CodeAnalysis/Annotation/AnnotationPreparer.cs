@@ -143,22 +143,18 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter
 	}
 	protected override AnnotatedRegularFunctionArgumentSyntax ConvertCore(ISemanticRegularFunctionArgumentSyntax semantic)
 	{
-		Debug.Assert(_currentCallable is not null);
-
 		var value = Convert(semantic.Value);
-		var parameter = _currentCallable.Parameters.ElementAtOrDefault(_currentCallableParameterIndex++);
+		var parameter = _currentCallable?.Parameters.ElementAtOrDefault(_currentCallableParameterIndex++);
 
 		return new(value, parameter);
 	}
 	protected override AnnotatedNamedFunctionArgumentSyntax ConvertCore(ISemanticNamedFunctionArgumentSyntax semantic)
 	{
-		Debug.Assert(_currentCallable is not null);
-
 		var name = Convert(semantic.Name);
 		var separator = Convert(semantic.Separator);
 		var value = Convert(semantic.Value);
 
-		var parameter = _currentCallable.Parameters.FirstOrDefault(p => p.Name == (semantic.Name.Value as string));
+		var parameter = _currentCallable?.Parameters.FirstOrDefault(p => p.Name == (semantic.Name.Value as string));
 		if (parameter?.Index == _currentCallableParameterIndex)
 			_currentCallableParameterIndex++;
 

@@ -22,9 +22,10 @@ public static class OwlDiagnosticExtensions
 				return null;
 
 			ISyntaxNode relevantNode =
-					part.GetParent<IConcreteStatementSyntax>() ??
-					part.GetParent<IConcreteExpressionSyntax>() ??
-					(ISyntaxNode)part;
+				part.GetParent<IConcreteFunctionDeclarationStatementSyntax>() ??
+				part.GetParent<IConcreteStatementSyntax>() ??
+				part.GetParent<IConcreteExpressionSyntax>() ??
+				(ISyntaxNode)part;
 
 			return relevantNode;
 		}
