@@ -121,7 +121,7 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 
 		return this;
 	}
-	public TextFragmentLineCollection PrefixLineMargin(string marginText = "|", string numberFormat = "n0")
+	public TextFragmentLineCollection PrefixLineMargin(string marginText = "\u2502", string numberFormat = "n0")
 	{
 		int maxNumberWidth = HighestLine.ToString(numberFormat).Length;
 

@@ -233,7 +233,6 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 		writer.WriteLine();
 
 		TextFragmentLineCollection lines = graph.Node.GetLines();
-		lines.TrimCommented().TrimLines().TrimSharedIndent().PrefixLineMargin();
 
 		HashSet<int> relevantLines = [];
 		if (graph.Node is IConcreteFunctionDeclarationStatementSyntax function)
@@ -270,6 +269,14 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 			if (line is not null)
 				lines.Remove(line);
 		}
+
+		lines
+			.TrimCommented()
+			.TrimLines();
+
+		lines
+			.TrimSharedIndent()
+			.PrefixLineMargin();
 
 		PrintHtmlLines(writer, lines);
 
@@ -377,6 +384,9 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 		for (int i = 0; i < parts.Length; i++)
 			parts[i] = HttpUtility.HtmlEncode(parts[i]);
 		string encoded = string.Join("&#x3b;", parts);
+
+		if (encoded is "\t")
+			encoded = "   "; // Note(Nightowl): Yet another thing that doesn't actually respect tab size, even though it's explicitly set;
 
 		if (style == default)
 		{
