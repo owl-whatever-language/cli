@@ -19,6 +19,7 @@ public readonly struct TextFragment
 				Classification == ClassificationKind.LineBreak;
 		}
 	}
+	public bool IsComment => Classification.IsMatch(ClassificationKind.Comment);
 	#endregion
 
 	#region Constructors

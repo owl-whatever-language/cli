@@ -115,3 +115,25 @@ public readonly partial struct ClassificationKind :
 	public static bool operator !=(ClassificationKind left, ClassificationKind right) => left.Equals(right) is false;
 	#endregion
 }
+
+public static class ClassificationKindExtensions
+{
+	extension(ClassificationKind classification)
+	{
+		#region Methods
+		public bool IsMatch(ClassificationKind target) => classification.Iterate().Any(c => c == target);
+		#endregion
+	}
+	extension(ClassificationKind? classification)
+	{
+		#region Methods
+		public bool IsMatch(ClassificationKind target)
+		{
+			if (classification is null)
+				return false;
+
+			return classification.Value.IsMatch(target);
+		}
+		#endregion
+	}
+}

@@ -27,6 +27,16 @@ public sealed class TextFragmentLine : TextFragmentCollection, ITextFragmentLine
 			return null;
 		}
 	}
+	public bool IsOnlyCommented
+	{
+		get
+		{
+			if (this.Any(f => f.IsComment))
+				return this.All(f => f.IsComment || f.IsWhitespace);
+
+			return false;
+		}
+	}
 	#endregion
 
 	#region Constructors
@@ -125,7 +135,7 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 
 			return
 			[
-				space,
+				//space,
 				number,
 				space,
 				margin,
@@ -201,9 +211,31 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 
 		return this;
 	}
+	public TextFragmentLineCollection TrimCommented()
+	{
+		for (int i = Count - 1; i >= 0; i--)
+		{
+			if (this[i].IsOnlyCommented)
+				RemoveAt(i);
+		}
+
+		return this;
+	}
 	#endregion
 
 	#region Methods
+	public IReadOnlyList<int> GetLineNumbers()
+	{
+		List<int> numbers = [];
+
+		foreach (TextFragmentLine line in this)
+		{
+			if (line.Line.HasValue)
+				numbers.Add(line.Line.Value);
+		}
+
+		return numbers;
+	}
 	public bool TryGetSharedIndent(out TextFragment sharedIndent)
 	{
 		IEnumerable<TextFragmentLine> enumerable = this;

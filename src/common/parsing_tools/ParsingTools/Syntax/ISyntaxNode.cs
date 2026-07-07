@@ -205,6 +205,26 @@ public static class ISyntaxNodeExtensions
 			foreach (ISyntaxNode child in current.GetChildren())
 				Flatten(target, child);
 		}
+		public IReadOnlyList<T> Flatten<T>(Predicate<T> predicate) where T : notnull, ISyntaxNode
+		{
+			List<T> target = [];
+			Flatten(target, node, predicate);
+
+			// Note(Nightowl):
+			// I think sorting is required because adding them in the correct order is far
+			// too annoying on account of bad syntax in nested trivia vs node locality;
+			target.Sort((a, b) => a.Position.Start.CompareTo(b.Position.Start));
+
+			return target;
+		}
+		private static void Flatten<T>(List<T> target, ISyntaxNode current, Predicate<T> predicate)
+		{
+			if (current is T typed && predicate.Invoke(typed))
+				target.Add(typed);
+
+			foreach (ISyntaxNode child in current.GetChildren())
+				Flatten(target, child, predicate);
+		}
 		#endregion
 
 		#region Kind and level validation methods

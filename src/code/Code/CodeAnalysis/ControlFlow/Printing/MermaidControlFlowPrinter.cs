@@ -12,6 +12,7 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 {
 	#region Properties
 	private static bool Optimise => true;
+	private static bool IncludeSourceReference => true;
 	public static MermaidControlFlowPrinter Instance => field ??= new(OwlStyling.Default);
 	public IClassificationStyling Styling { get; }
 	#endregion
@@ -46,6 +47,9 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 				PrintExpressions(writer, graph);
 				PrintStatements(writer, graph);
 				PrintConstructs(writer, graph);
+
+				if (IncludeSourceReference)
+					PrintSourceReference(writer, graph);
 			}
 
 			return stringWriter.ToString();
@@ -139,9 +143,12 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 
 			if (expression.ConstructName is not null && (expression.Expression.WillBranch is false))
 			{
+				int line = expression.Expression.Parent?.Position.Start.Line ?? expression.Expression.Position.Start.Line;
 				TextFragment name = new(expression.ConstructName, ClassificationKind.Keyword);
-				TextFragmentLine nameLine = new(null, name);
-				PrintHtmlLines(writer, [nameLine], center: true);
+				TextFragmentLine nameLine = new(line, name);
+				TextFragmentLineCollection nameLines = [nameLine];
+
+				PrintHtmlLines(writer, nameLines.PrefixLineMargin(), center: true);
 			}
 
 			TextFragmentLineCollection lines = expression.Expression.GetLines().TrimLines().TrimSharedIndent();
@@ -168,13 +175,7 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 			foreach (IAnnotatedStatementSyntax current in statement.Statements)
 				lines.AddRange(current.GetLines());
 
-			for (int i = lines.Count - 1; i >= 0; i--)
-			{
-				if (lines[i].Count is 0 || lines[i].All(f => f.IsWhitespace || f.Classification == ClassificationKind.SinglelineComment))
-					lines.RemoveAt(i);
-			}
-
-			lines.TrimLines().TrimSharedIndent().PrefixLineMargin();
+			lines.TrimCommented().TrimLines().TrimSharedIndent().PrefixLineMargin();
 
 			PrintHtmlLines(writer, lines);
 
@@ -200,8 +201,9 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 			writer.Write($"{construct.Id}(\"");
 
 			TextFragment name = new(construct.Name, ClassificationKind.Keyword);
-			TextFragmentLine nameLine = new(null, name);
-			PrintHtmlLines(writer, [nameLine], center: true);
+			TextFragmentLine nameLine = new(construct.Node.Position.Start.Line, name);
+			TextFragmentLineCollection nameLines = [nameLine];
+			PrintHtmlLines(writer, nameLines.PrefixLineMargin(), center: true);
 
 			TextFragmentLineCollection lines = construct.Expression.GetLines().TrimLines().TrimSharedIndent();
 			PrintHtmlLines(writer, lines);
@@ -218,6 +220,59 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 			return true;
 
 		return false;
+	}
+	private void PrintSourceReference(IndentedTextWriter writer, IControlFlowGraph graph)
+	{
+		writer.WriteLine();
+		writer.WriteLine("%% Source code reference");
+		writer.Write("source_code_reference[\"");
+
+		TextFragmentLine titleLine = new(null, [new("Source code reference")]);
+		PrintHtmlLines(writer, [titleLine], center: true);
+		writer.WriteLine();
+
+		TextFragmentLineCollection lines = graph.Node.GetLines();
+		lines.TrimCommented().TrimLines().TrimSharedIndent().PrefixLineMargin();
+
+		HashSet<int> relevantLines = [];
+		if (graph.Node is IConcreteFunctionDeclarationStatementSyntax function)
+		{
+			IndexedPositionRange range = function.Signature.Position;
+
+			for (int line = range.Start.Line; line <= range.End.Line; line++)
+				relevantLines.Add(line);
+		}
+
+		HashSet<int> irrelevantLines = [];
+		foreach (IConcreteStatementSyntax statement in graph.Node.Flatten<IConcreteStatementSyntax>())
+		{
+			int start = statement.FullPosition.Start.Line;
+			int end = statement.FullPosition.End.Line;
+			IEnumerable<int> range = Enumerable.Range(start, end - start + 1);
+
+			if (range.Any(relevantLines.Contains))
+				continue;
+
+			if (statement.IsExecutable && range.Any(irrelevantLines.Contains))
+				continue;
+
+			HashSet<int> target = statement.IsExecutable ? relevantLines : irrelevantLines;
+			foreach (int line in range)
+				target.Add(line);
+		}
+
+		foreach (int lineNumber in irrelevantLines)
+		{
+			Debug.Assert(relevantLines.Contains(lineNumber) is false);
+
+			TextFragmentLine? line = lines.TryGetLineAt(lineNumber);
+			if (line is not null)
+				lines.Remove(line);
+		}
+
+		PrintHtmlLines(writer, lines);
+
+		writer.WriteLine("\"]");
 	}
 	#endregion
 
