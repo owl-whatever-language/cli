@@ -7,6 +7,7 @@ public interface IControlFlowConstructBlock : IControlFlowBlock
 	#region Properties
 	string Name { get; }
 	IAnnotatedSyntaxNode Node { get; }
+	IAnnotatedExpressionSyntax? Expression { get; }
 	IReadOnlyList<IControlFlowBlock> Blocks { get; }
 	IControlFlowMarkerBlock End { get; }
 	#endregion
@@ -40,18 +41,20 @@ public sealed class ControlFlowConstructBlock : MutableControlFlowBlock, IMutabl
 	#endregion
 
 	#region Properties
-	public string Name { get; }
 	public override string Id => $"{Node.NodeKind.WithGroup}#{BlockNumber}";
+	public string Name { get; }
 	public IAnnotatedSyntaxNode Node { get; }
+	public IAnnotatedExpressionSyntax? Expression { get; }
 	public IReadOnlyList<IMutableControlFlowBlock> Blocks => _blocks;
 	public IMutableControlFlowMarkerBlock End { get; }
 	#endregion
 
 	#region Constructors
-	public ControlFlowConstructBlock(string name, IAnnotatedSyntaxNode node)
+	public ControlFlowConstructBlock(string name, IAnnotatedSyntaxNode node, IAnnotatedExpressionSyntax? expression = null)
 	{
 		Name = name;
 		Node = node;
+		Expression = expression;
 		End = new ControlFlowMarkerBlock(this, "end");
 	}
 	#endregion

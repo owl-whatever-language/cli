@@ -82,7 +82,7 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 
 			void IfBranching(IAnnotatedStatementSyntax statement, IAnnotatedExpressionSyntax expression)
 			{
-				if (WillBranch(expression))
+				if (expression.WillBranch)
 				{
 					EndBlock();
 
@@ -194,7 +194,7 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 		}
 		private IMutableControlFlowBlock Create(IAnnotatedIfStatementSyntax statement)
 		{
-			ControlFlowConstructBlock construct = new("if", statement);
+			ControlFlowConstructBlock construct = new("if", statement, statement.Condition);
 			IReadOnlyList<IMutableControlFlowBlock> body = Create(statement.TrueClause);
 			construct.AddRange(body);
 
@@ -207,7 +207,7 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 		}
 		private IMutableControlFlowBlock Create(IAnnotatedIfElseStatementSyntax statement)
 		{
-			ControlFlowConstructBlock construct = new("if", statement);
+			ControlFlowConstructBlock construct = new("if", statement, statement.Condition);
 			IReadOnlyList<IMutableControlFlowBlock> trueBody = Create(statement.TrueClause);
 			IReadOnlyList<IMutableControlFlowBlock> falseBody = Create(statement.FalseClause);
 
@@ -231,7 +231,7 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 		}
 		private IMutableControlFlowBlock Create(IAnnotatedWhileStatementSyntax statement)
 		{
-			ControlFlowConstructBlock construct = new("while", statement);
+			ControlFlowConstructBlock construct = new("while", statement, statement.Condition);
 			List<IMutableControlFlowBlock> body = Create(statement.Body);
 
 			if (body.Count is 0)
@@ -258,46 +258,90 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 			IMutableControlFlowBlock success,
 			IMutableControlFlowBlock failure)
 		{
-			ControlFlowExpressionBlock block = new(condition, constructName);
+			if (condition.WillBranch)
+				return Create(condition, success, failure);
 
-			Connect(block, success, condition);
-			ConnectNegated(block, failure, condition);
+			ControlFlowExpressionBlock block = new(condition, constructName);
+			ConnectBranching(block, success, failure);
 
 			return block;
 		}
 		private IMutableControlFlowExpressionBlock Create(IAnnotatedExpressionSyntax expression, IMutableControlFlowBlock end)
 		{
-			ControlFlowExpressionBlock block = new(expression);
+			if (expression.WillBranch)
+			{
+				return Create(expression, end, end);
+			}
 
+			ControlFlowExpressionBlock block = new(expression);
 			Connect(block, end);
 
 			return block;
 		}
-		#endregion
-
-		#region Will branch methods
-		private static bool WillBranch(IAnnotatedExpressionSyntax expression)
+		private IMutableControlFlowExpressionBlock Create(
+			IAnnotatedExpressionSyntax expression,
+			IMutableControlFlowBlock success,
+			IMutableControlFlowBlock failure)
 		{
-			return expression switch
+			if (expression.WillBranch is false)
 			{
-				IAnnotatedGetExpressionSyntax => false,
-				IAnnotatedBinaryExpressionSyntax binary => WillBranch(binary),
+				// Note(Nightowl): The caller is responsible for connecting the block if it won't branch;
+				return new ControlFlowExpressionBlock(expression);
+			}
 
-				_ => expression.Flatten<IAnnotatedExpressionSyntax>().Skip(1).Any(WillBranch),
-			};
-		}
-		private static bool WillBranch(IAnnotatedBinaryExpressionSyntax expression)
-		{
-			SyntaxKind op = expression.Operator.Kind;
+			if (expression is IAnnotatedBinaryExpressionSyntax binary)
+			{
+				if (binary.Operator.Kind == SyntaxKind.DoubleAmpersand)
+				{
+					IMutableControlFlowExpressionBlock right = Create(binary.Right, success, failure);
+					IMutableControlFlowExpressionBlock left = Create(binary.Left, right, failure);
 
-			if (op == SyntaxKind.DoublePipe || op == SyntaxKind.DoubleAmpersand)
-				return true;
+					ConnectBranching(left, right, failure);
+					ConnectBranching(right, success, failure);
 
-			return WillBranch(expression.Left) || WillBranch(expression.Right);
+					left.Add(right);
+					return left;
+				}
+				else if (binary.Operator.Kind == SyntaxKind.DoublePipe)
+				{
+					IMutableControlFlowExpressionBlock right = Create(binary.Right, success, failure);
+					IMutableControlFlowExpressionBlock left = Create(binary.Left, success, right);
+
+					left.Add(right);
+					return left;
+				}
+				else
+				{
+					IMutableControlFlowExpressionBlock left = Create(binary.Left, success);
+					IMutableControlFlowExpressionBlock right = Create(binary.Right, success);
+
+					ControlFlowExpressionBlock block = new(expression);
+					block.AddRange(left, right);
+
+					return block;
+				}
+			}
+
+			ThrowHelper.ThrowInvalidOperationException($"Unhandled branching expression type ({expression.GetType().Name}).");
+			return default;
 		}
 		#endregion
 
 		#region Connect methods
+		private void ConnectBranching(
+			IMutableControlFlowExpressionBlock from,
+			IMutableControlFlowBlock success,
+			IMutableControlFlowBlock failure)
+		{
+			if (success == failure)
+			{
+				Connect(from, success);
+				return;
+			}
+
+			Connect(from, success, from.Expression);
+			ConnectNegated(from, failure, from.Expression);
+		}
 		private void Connect(IMutableControlFlowBlock from, IMutableControlFlowBlock to)
 		{
 			UnconditionalControlFlowBranch branch = new(from, to);

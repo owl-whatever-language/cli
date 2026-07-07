@@ -143,14 +143,14 @@ public static class ISyntaxNodeExtensions
 		#endregion
 
 		#region Search methods
-		public ISyntaxNode? Search(Predicate<ISyntaxNode> predicate) => Search<ISyntaxNode>(node, predicate);
-		public T? Search<T>(Predicate<T> predicate) where T : notnull, ISyntaxNode
+		public ISyntaxNode? Search(Predicate<ISyntaxNode> predicate, bool includeSelf = true) => Search<ISyntaxNode>(node, predicate, includeSelf);
+		public T? Search<T>(Predicate<T> predicate, bool includeSelf = true) where T : notnull, ISyntaxNode
 		{
-			return Search(predicate, node);
+			return Search(predicate, node, includeSelf);
 		}
-		private static T? Search<T>(Predicate<T> predicate, ISyntaxNode current) where T : notnull, ISyntaxNode
+		private static T? Search<T>(Predicate<T> predicate, ISyntaxNode current, bool includeCurrent) where T : notnull, ISyntaxNode
 		{
-			if (current is T typed)
+			if (includeCurrent && current is T typed)
 			{
 				if (predicate.Invoke(typed))
 					return typed;
@@ -158,7 +158,7 @@ public static class ISyntaxNodeExtensions
 
 			foreach (ISyntaxNode child in current.GetChildren())
 			{
-				T? result = Search(predicate, child);
+				T? result = Search(predicate, child, includeCurrent: true);
 				if (result is not null)
 					return result;
 			}

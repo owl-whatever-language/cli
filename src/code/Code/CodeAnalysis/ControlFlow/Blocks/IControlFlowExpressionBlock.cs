@@ -22,6 +22,7 @@ public interface IMutableControlFlowExpressionBlock : IControlFlowExpressionBloc
 
 	#region Methods
 	void Add(IMutableControlFlowExpressionBlock expression);
+	void AddRange(params IEnumerable<IMutableControlFlowExpressionBlock> expressions);
 	#endregion
 }
 
@@ -50,6 +51,7 @@ public sealed class ControlFlowExpressionBlock : MutableControlFlowBlock, IMutab
 
 	#region Methods
 	public void Add(IMutableControlFlowExpressionBlock expression) => _blocks.Add(expression);
+	public void AddRange(params IEnumerable<IMutableControlFlowExpressionBlock> expressions) => _blocks.AddRange(expressions);
 	#endregion
 
 	#region Helpers

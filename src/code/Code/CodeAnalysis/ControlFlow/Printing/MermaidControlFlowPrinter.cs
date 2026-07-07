@@ -11,6 +11,7 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Printing;
 public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 {
 	#region Properties
+	private static bool Optimise => true;
 	public static MermaidControlFlowPrinter Instance => field ??= new(OwlStyling.Default);
 	public IClassificationStyling Styling { get; }
 	#endregion
@@ -44,6 +45,7 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 				PrintConditionalBranches(writer, graph);
 				PrintExpressions(writer, graph);
 				PrintStatements(writer, graph);
+				PrintConstructs(writer, graph);
 			}
 
 			return stringWriter.ToString();
@@ -77,7 +79,7 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 		writer.WriteLine("%% Unconditional branches");
 
 		foreach (IControlFlowBidirectionalBranch branch in branches)
-			writer.WriteLine($"{branch.From.Id} --> {branch.ActualTo.Id}");
+			writer.WriteLine($"{branch.From.Id} --> {GetTarget(branch).Id}");
 	}
 
 	private void PrintConditionalBranches(IndentedTextWriter writer, IControlFlowGraph graph)
@@ -100,13 +102,19 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 			string value = branch.IsNegated ? "false" : "true";
 			TextFragment fragment = new(value, ClassificationKind.Boolean);
 			PrintHtml(writer, fragment);
-			writer.WriteLine($"\"|{branch.ActualTo.Id}");
+			writer.WriteLine($"\"|{GetTarget(branch).Id}");
 		}
 	}
 	private bool IncludeBranch(IControlFlowBidirectionalBranch branch)
 	{
-		if (branch.From is IControlFlowMarkerBlock or IControlFlowConstructBlock)
+		if (Optimise is false)
+			return true;
+
+		if (branch.From is IControlFlowMarkerBlock)
 			return false;
+
+		if (branch.From is IControlFlowConstructBlock construct)
+			return IncludeConstruct(construct);
 
 		return true;
 	}
@@ -129,7 +137,7 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 
 			writer.Write($"{expression.Id}{start}\"");
 
-			if (expression.ConstructName is not null)
+			if (expression.ConstructName is not null && (expression.Expression.WillBranch is false))
 			{
 				TextFragment name = new(expression.ConstructName, ClassificationKind.Keyword);
 				TextFragmentLine nameLine = new(null, name);
@@ -173,9 +181,79 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 			writer.WriteLine("\"]");
 		}
 	}
+	private void PrintConstructs(IndentedTextWriter writer, IControlFlowGraph graph)
+	{
+		IControlFlowConstructBlock[] constructs = graph.Blocks
+			.OfType<IControlFlowConstructBlock>()
+			.Where(IncludeConstruct)
+			.ToArray();
+
+		if (constructs.Length is 0)
+			return;
+
+		writer.WriteLine();
+		writer.WriteLine("%% Constructs");
+
+		foreach (IControlFlowConstructBlock construct in constructs)
+		{
+			Debug.Assert(construct.Expression is not null);
+			writer.Write($"{construct.Id}(\"");
+
+			TextFragment name = new(construct.Name, ClassificationKind.Keyword);
+			TextFragmentLine nameLine = new(null, name);
+			PrintHtmlLines(writer, [nameLine], center: true);
+
+			TextFragmentLineCollection lines = construct.Expression.GetLines().TrimLines().TrimSharedIndent();
+			PrintHtmlLines(writer, lines);
+
+			writer.WriteLine("\")");
+		}
+	}
+	private bool IncludeConstruct(IControlFlowConstructBlock construct)
+	{
+		if (construct.Expression is null)
+			return false;
+
+		if (construct.Expression.WillBranch)
+			return true;
+
+		return false;
+	}
 	#endregion
 
 	#region Helpers
+	private IControlFlowBlock GetTarget(IControlFlowOutgoingBranch branch)
+	{
+		if (Optimise is false)
+			return branch.To;
+
+		IControlFlowBlock to = branch.To;
+		while (true)
+		{
+			if (to is IControlFlowMarkerBlock marker)
+			{
+				//Debug.Assert(marker.Outgoing.Count is 1);
+				if (marker.Outgoing.Count is 1)
+				{
+					to = marker.Outgoing[0].To;
+					continue;
+				}
+			}
+			else if (to is IControlFlowConstructBlock construct && (IncludeConstruct(construct) is false))
+			{
+				if (construct.Outgoing.Count is 1)
+				{
+					to = construct.Outgoing[0].To;
+					continue;
+				}
+			}
+
+			break;
+		}
+
+		return to;
+	}
+
 	private void PrintStartBlock(IndentedTextWriter writer, IControlFlowStartBlock block)
 	{
 		writer.Write($"{block.Id}(\"");
