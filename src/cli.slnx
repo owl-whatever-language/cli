@@ -10,7 +10,9 @@
 		<Project Path="common/parsing_tools/ParsingTools/ParsingTools.csproj" />
 	</Folder>
 	<Folder Name="/examples/">
+		<File Path="examples/eat_snacks.owl" />
 		<File Path="examples/hoot_hoot.owl" />
+		<File Path="examples/hoot_user.owl" />
 	</Folder>
 	<!--
 	<Folder Name="/local/">
