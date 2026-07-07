@@ -1,6 +1,6 @@
 namespace OwlDomain.ParsingTools.Syntax;
 
-public interface ISyntaxNode : IDebugTreePrintable
+public interface ISyntaxNode : IDebugNodeFactory
 {
 	#region Properties
 	SyntaxNodeKind NodeKind { get; }
@@ -19,7 +19,7 @@ public interface ISyntaxNode : IDebugTreePrintable
 }
 
 [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
-public abstract class BaseSyntaxNode : ISyntaxNode
+public abstract class BaseSyntaxNode : ISyntaxNode, IDebugObjectFactory
 {
 	#region Properties
 	public abstract SyntaxNodeKind NodeKind { get; }
@@ -65,10 +65,55 @@ public abstract class BaseSyntaxNode : ISyntaxNode
 		}
 	}
 	protected abstract IEnumerable<ISyntaxNode?> GetChildrenCore();
-	TextFragmentCollection IDebugTreePrintable.GetFragments() => this.GetDebugFragments();
 	#endregion
 
 	#region Helpers
+	public virtual IDebugTreeObject GetDebugObject()
+	{
+		DebugTreeObject obj = new();
+
+		obj.Add("Kind", NodeKind.WithGroup, ClassificationKind.Identifier);
+		obj.Add(nameof(FullPosition), FullPosition);
+
+		if (IsFabricated)
+			obj.Add(nameof(IsFabricated), true);
+		else if (Position.IsMultiline is false)
+		{
+			TextFragmentCollection fragments = this.GetDebugFragments();
+			obj.Add("Source", fragments);
+		}
+
+		IReadOnlyList<ISyntaxNode> children = GetChildren().ToList();
+		DebugTreeList list = new();
+
+		foreach (ISyntaxNode child in children)
+			list.Add(child);
+
+		for (int i = children.Count - 1; i >= 0; i--)
+		{
+			if (children[i] is ISyntaxPart)
+				list.RemoveAt(i);
+		}
+
+		if (list.Elements.Count >= 2)
+			obj.Add("Children", list);
+		else if (list.Elements.Count is 1)
+		{
+			object? value = list.Elements[0].Value;
+			if (value is IDebugTreeList subList)
+			{
+				if (subList.Elements.Count is 0)
+					value = null;
+				else if (subList.Elements.Count is 1)
+					value = subList.Elements[0].Value;
+			}
+
+			if (value is not null)
+				obj.Add("Child", value);
+		}
+
+		return obj;
+	}
 	private string DebuggerDisplay() => $"{GetType().Name}: {this.GetDebugSource()}";
 	#endregion
 }

@@ -35,9 +35,9 @@ public class TextFragmentCollection : List<TextFragment>, ITextFragmentCollectio
 
 		return true;
 	}
-	public void AddRange(IDebugTreePrintable printable)
+	public void AddRange(IDebugNodeFactory<IDebugTreeText> factory)
 	{
-		TextFragmentCollection collection = printable.GetFragments();
+		TextFragmentCollection collection = factory.GetDebugNode().Fragments;
 		AddRange(collection);
 	}
 	public void TrimEnd()

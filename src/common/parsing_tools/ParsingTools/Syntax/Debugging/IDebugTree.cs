@@ -1,5 +1,14 @@
 namespace OwlDomain.ParsingTools.Syntax.Debugging;
 
+public interface IDebugTreeNode { }
+
+public interface IDebugTreeText : IDebugTreeNode
+{
+	#region Properties
+	TextFragmentCollection Fragments { get; }
+	#endregion
+}
+
 public interface IDebugTreeProperty
 {
 	#region Properties
@@ -8,7 +17,7 @@ public interface IDebugTreeProperty
 	#endregion
 }
 
-public interface IDebugTreeObject
+public interface IDebugTreeObject : IDebugTreeNode
 {
 	#region Properties
 	IReadOnlyList<IDebugTreeProperty> Properties { get; }
@@ -23,7 +32,7 @@ public interface IDebugTreeListElement
 	#endregion
 }
 
-public interface IDebugTreeList
+public interface IDebugTreeList : IDebugTreeNode
 {
 	#region Properties
 	IReadOnlyList<IDebugTreeListElement> Elements { get; }
@@ -34,6 +43,17 @@ public interface IDebugTree : IDebugTreeObject
 {
 	#region Properties
 	ISyntaxTree Tree { get; }
+	#endregion
+}
+
+public sealed class DebugTreeText : IDebugTreeText
+{
+	#region Properties
+	public TextFragmentCollection Fragments { get; }
+	#endregion
+
+	#region Constructors
+	public DebugTreeText(params TextFragmentCollection fragments) => Fragments = fragments;
 	#endregion
 }
 
@@ -92,15 +112,33 @@ public class DebugTreeObject : IDebugTreeObject
 	#endregion
 
 	#region Methods
+	public void Add(string label, string text, ClassificationKind? classification = null)
+	{
+		TextFragment fragment = new(text, classification);
+		Add(label, fragment);
+	}
+	public void Add(string label, TextFragment fragment) => Add(label, [fragment]);
+	public void Add(string label, params TextFragmentCollection fragments)
+	{
+		DebugTreeText text = new(fragments);
+		Add(label, text);
+	}
+	public void Add(string label, IDebugNodeFactory factory)
+	{
+		IDebugTreeNode node = factory.GetDebugNode();
+		Add(label, node);
+	}
 	public void Add(string label, object? value)
 	{
+		if (value is IDebugNodeFactory factory)
+			value = factory.GetDebugNode();
+
 		DebugTreeProperty property = new(label, value);
 		_properties.Add(property);
 	}
 	public void RemoveAt(int index) => _properties.RemoveAt(index);
 	public void Move(IDebugTreeProperty property, int index) => _properties[index] = property;
 	#endregion
-
 
 	#region Helpers
 	private string DebuggerDisplay() => $"Object {{ Count = ({Properties.Count:n0}) }}";
@@ -120,8 +158,16 @@ public sealed class DebugTreeList : IDebugTreeList
 	#endregion
 
 	#region Methods
+	public void Add(IDebugNodeFactory factory)
+	{
+		IDebugTreeNode node = factory.GetDebugNode();
+		Add(node);
+	}
 	public void Add(object? value)
 	{
+		if (value is IDebugNodeFactory factory)
+			value = factory.GetDebugNode();
+
 		int index = _elements.Count;
 		DebugTreeListElement element = new(index, value);
 		_elements.Add(element);
@@ -143,25 +189,4 @@ public sealed class DebugTree : DebugTreeObject, IDebugTree
 	#region Constructors
 	public DebugTree(ISyntaxTree tree) => Tree = tree;
 	#endregion
-
-	#region Functions
-	public static IDebugTree Create(ISyntaxTree tree) => new DebugTreeFactory().Create(tree);
-	public static IDebugTreeObject Create(ISyntaxNode node) => new DebugTreeFactory().Create(node);
-	#endregion
-}
-
-public static class DebugTreeExtensions
-{
-	extension(ISyntaxTree tree)
-	{
-		#region Methods
-		public IDebugTree ToDebug() => DebugTree.Create(tree);
-		#endregion
-	}
-	extension(ISyntaxNode node)
-	{
-		#region Methods
-		public IDebugTreeObject ToDebug() => DebugTree.Create(node);
-		#endregion
-	}
 }

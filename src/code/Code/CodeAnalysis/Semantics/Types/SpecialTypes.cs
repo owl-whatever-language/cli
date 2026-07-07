@@ -18,7 +18,7 @@ public abstract class SpecialType : INamedType
 	public override bool Equals([NotNullWhen(true)] object? obj) => ReferenceEquals(this, obj);
 	public override int GetHashCode() => base.GetHashCode(); // Note(Nightowl): We want reference equality so this is ok;
 	public override string ToString() => Name;
-	TextFragmentCollection IDebugTreePrintable.GetFragments() => [new(Name, Classification)];
+	public TextFragmentCollection GetDebugText() => [new(Name, Classification)];
 	public bool FindOperation(IType left, IType right, OperatorKind @operator, [NotNullWhen(true)] out IFunction? function)
 	{
 		function = default;

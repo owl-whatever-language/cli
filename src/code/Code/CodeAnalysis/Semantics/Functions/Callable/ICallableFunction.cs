@@ -63,7 +63,7 @@ public sealed class CallableFunction : ICallableFunction
 		return code.ToHashCode();
 	}
 
-	TextFragmentCollection IDebugTreePrintable.GetFragments()
+	public TextFragmentCollection GetDebugText()
 	{
 		TextFragmentCollection fragments = [];
 

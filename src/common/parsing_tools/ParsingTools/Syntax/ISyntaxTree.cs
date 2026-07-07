@@ -1,6 +1,6 @@
 namespace OwlDomain.ParsingTools.Syntax;
 
-public interface ISyntaxTree
+public interface ISyntaxTree : IDebugTreeFactory
 {
 	#region Properties
 	string Kind { get; }
@@ -31,6 +31,19 @@ public abstract class BaseSyntaxTree<TDocument> : ISyntaxTree
 		Document = document;
 
 		document.Tree = this;
+	}
+	#endregion
+
+	#region Methods
+	public virtual IDebugTree GetDebugTree()
+	{
+		DebugTree tree = new(this);
+
+		tree.Add(nameof(Kind), Kind);
+		tree.Add(nameof(Source), Source.SimpleName, ClassificationKind.File);
+		tree.Add(nameof(Document), Document);
+
+		return tree;
 	}
 	#endregion
 

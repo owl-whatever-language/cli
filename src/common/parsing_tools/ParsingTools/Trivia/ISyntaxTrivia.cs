@@ -1,6 +1,6 @@
 namespace OwlDomain.ParsingTools.Trivia;
 
-public interface ISyntaxTrivia : ISyntaxPart
+public interface ISyntaxTrivia : ISyntaxPart, IDebugObjectFactory
 {
 }
 
@@ -72,7 +72,22 @@ public sealed class SyntaxTrivia : ISyntaxTrivia
 
 	#region Methods
 	public IEnumerable<ISyntaxNode> GetChildren() => [];
-	TextFragmentCollection IDebugTreePrintable.GetFragments() => this.GetDebugFragments();
+	public IDebugTreeObject GetDebugObject()
+	{
+		DebugTreeObject obj = new();
+
+		obj.Add(nameof(Kind), Kind);
+
+		if (IsFabricated)
+			obj.Add(nameof(IsFabricated), true);
+		else if (Lexeme is not null)
+			obj.Add(nameof(Lexeme), Lexeme, Classification);
+
+		if (Classification is not null)
+			obj.Add(nameof(Classification), Classification);
+
+		return obj;
+	}
 	#endregion
 
 	#region Helpers
@@ -143,7 +158,15 @@ public sealed class BadSyntaxTrivia : IBadSyntaxTrivia
 
 	#region Methods
 	public IEnumerable<ISyntaxNode> GetChildren() => [BadSyntax];
-	TextFragmentCollection IDebugTreePrintable.GetFragments() => this.GetDebugFragments();
+	public IDebugTreeObject GetDebugObject()
+	{
+		DebugTreeObject obj = new();
+
+		obj.Add(nameof(Kind), Kind);
+		obj.Add(nameof(BadSyntax), BadSyntax);
+
+		return obj;
+	}
 	#endregion
 
 	#region Helpers

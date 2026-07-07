@@ -41,7 +41,7 @@ public sealed class DeclaredLocalVariable : IDeclaredLocalVariable
 	#endregion
 
 	#region Methods
-	TextFragmentCollection IDebugTreePrintable.GetFragments()
+	public TextFragmentCollection GetDebugText()
 	{
 		TextFragmentCollection fragments = [];
 

@@ -1,11 +1,11 @@
 namespace OwlDomain.ParsingTools.Syntax;
 
-public interface ISyntaxList<out TValue> : ISyntaxNode, IReadOnlyList<TValue>
+public interface ISyntaxList<out TValue> : ISyntaxNode, IReadOnlyList<TValue>, IDebugListFactory
 	where TValue : class, ISyntaxNode
 {
 }
 
-public interface ISyntaxList<out TValue, out TSeparator> : ISyntaxNode
+public interface ISyntaxList<out TValue, out TSeparator> : ISyntaxNode, IDebugListFactory
 	where TValue : class, ISyntaxNode
 	where TSeparator : class, ISyntaxNode
 {
@@ -78,11 +78,19 @@ public class SyntaxList<TValue> : ISyntaxList<TValue>
 
 	/// <inheritdoc/>
 	public IEnumerable<ISyntaxNode> GetChildren() => _values;
-	TextFragmentCollection IDebugTreePrintable.GetFragments() => this.GetDebugFragments();
 
 	/// <inheritdoc/>
 	public IEnumerator<TValue> GetEnumerator() => _values.GetEnumerator();
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+	public IDebugTreeList GetDebugList()
+	{
+		DebugTreeList list = new();
+
+		foreach (ISyntaxNode node in _values)
+			list.Add(node);
+
+		return list;
+	}
 	#endregion
 
 	#region Helpers
@@ -158,7 +166,15 @@ public class SyntaxList<TValue, TSeparator> : ISyntaxList<TValue, TSeparator>
 
 	/// <inheritdoc/>
 	public IEnumerable<ISyntaxNode> GetChildren() => Nodes;
-	TextFragmentCollection IDebugTreePrintable.GetFragments() => this.GetDebugFragments();
+	public IDebugTreeList GetDebugList()
+	{
+		DebugTreeList list = new();
+
+		foreach (ISyntaxNode node in Nodes)
+			list.Add(node);
+
+		return list;
+	}
 	#endregion
 
 	#region Helpers

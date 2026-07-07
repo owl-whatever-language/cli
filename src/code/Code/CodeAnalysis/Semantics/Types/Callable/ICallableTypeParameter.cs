@@ -1,6 +1,6 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callable;
 
-public interface ICallableTypeParameter : IDebugTreePrintable
+public interface ICallableTypeParameter : IDebugTextFactory
 {
 	#region Properties
 	int Index { get; }

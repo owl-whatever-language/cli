@@ -48,7 +48,7 @@ public sealed class DeclaredFunction : IDeclaredFunction
 	#endregion
 
 	#region Methods
-	TextFragmentCollection IDebugTreePrintable.GetFragments()
+	public TextFragmentCollection GetDebugText()
 	{
 		TextFragmentCollection fragments = [];
 

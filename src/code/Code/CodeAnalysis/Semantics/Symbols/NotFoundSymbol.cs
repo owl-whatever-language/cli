@@ -12,6 +12,6 @@ public sealed class NotFoundSymbol : ISymbol
 	#endregion
 
 	#region Methods
-	TextFragmentCollection IDebugTreePrintable.GetFragments() => [new("not_found", ClassificationKind.Error)];
+	public TextFragmentCollection GetDebugText() => [new("not_found", ClassificationKind.Error)];
 	#endregion
 }

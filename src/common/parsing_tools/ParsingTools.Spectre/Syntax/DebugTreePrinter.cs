@@ -19,6 +19,29 @@ public class DefaultDebugTreePrinter
 	public DefaultDebugTreePrinter(IClassificationStyling styles) => Styles = styles;
 	#endregion
 
+	#region Functions
+	public static Tree Convert(IDebugTree tree, IClassificationStyling styles)
+	{
+		DefaultDebugTreePrinter printer = new(styles);
+		return printer.Convert(tree);
+	}
+	public static Tree Convert(IDebugTreeObject obj, IClassificationStyling styles)
+	{
+		DefaultDebugTreePrinter printer = new(styles);
+		return printer.Convert(obj);
+	}
+	public static void Print(IDebugTree tree, IClassificationStyling styles)
+	{
+		Tree t = Convert(tree, styles);
+		AnsiConsole.Write(t);
+	}
+	public static void Print(IDebugTreeObject obj, IClassificationStyling styles)
+	{
+		Tree tree = Convert(obj, styles);
+		AnsiConsole.Write(tree);
+	}
+	#endregion
+
 	#region Methods
 	public virtual Tree Convert(IDebugTree tree) => Convert("Tree", tree);
 	public virtual Tree Convert(IDebugTreeObject obj) => Convert("Node", obj);
@@ -80,15 +103,15 @@ public class DefaultDebugTreePrinter
 		branch = default;
 		return false;
 	}
-	protected virtual Segments ConvertPrintable(IDebugTreePrintable printable)
+	protected virtual Segments ConvertDebugText(IDebugTreeText text)
 	{
-		TextFragmentCollection fragments = printable.GetFragments();
+		TextFragmentCollection fragments = text.Fragments;
 		return fragments.Style(Styles);
 	}
 	protected virtual Segments ConvertSimple(object? value)
 	{
-		if (value is IDebugTreePrintable printable)
-			return ConvertPrintable(printable);
+		if (value is IDebugTreeText debugText)
+			return ConvertDebugText(debugText);
 
 		string? text = value?.ToString();
 

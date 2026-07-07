@@ -1,6 +1,6 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 
-public interface IType : IEquatable<IType>, IDebugTreePrintable
+public interface IType : IEquatable<IType>, IDebugTextFactory
 {
 	#region Methods
 	/// <summary>Checks whether the current type can be assigned to the given <paramref name="target"/> type.</summary>

@@ -7,7 +7,7 @@ public readonly partial struct ClassificationKind :
 #if NET7_0_OR_GREATER
 	IEqualityOperators<ClassificationKind, ClassificationKind, bool>,
 #endif
-	IEquatable<ClassificationKind>, IDebugTreePrintable
+	IEquatable<ClassificationKind>, IDebugTextFactory
 {
 	#region Fields
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
@@ -78,7 +78,7 @@ public readonly partial struct ClassificationKind :
 		return kinds;
 	}
 
-	TextFragmentCollection IDebugTreePrintable.GetFragments()
+	public TextFragmentCollection GetDebugText()
 	{
 		TextFragmentCollection fragments = [];
 

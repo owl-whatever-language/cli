@@ -39,7 +39,7 @@ internal sealed class BuiltinFunction : IFunction
 		return Return.Type == SpecialTypes.Void ? InterpreterValue.Void : new(Return.Type, result);
 	}
 
-	TextFragmentCollection IDebugTreePrintable.GetFragments()
+	public TextFragmentCollection GetDebugText()
 	{
 		TextFragmentCollection fragments = [];
 
@@ -87,7 +87,7 @@ internal sealed class BuiltinFunctionParameter : IFunctionParameter
 	#endregion
 
 	#region Methods
-	TextFragmentCollection IDebugTreePrintable.GetFragments()
+	public TextFragmentCollection GetDebugText()
 	{
 		TextFragmentCollection fragments = [];
 

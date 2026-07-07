@@ -1,6 +1,6 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols.Scopes;
 
-public interface ISymbolScope : IDebugTreePrintable
+public interface ISymbolScope : IDebugTextFactory
 {
 	#region Properties
 	string Name { get; }
@@ -154,7 +154,7 @@ public class SymbolScope : ISymbolScope
 			return _children[declaration];
 	}
 
-	TextFragmentCollection IDebugTreePrintable.GetFragments() => [new(Name)];
+	public TextFragmentCollection GetDebugText() => [new(Name)];
 	#endregion
 }
 

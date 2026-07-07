@@ -3,7 +3,7 @@ namespace OwlDomain.ParsingTools.Sources;
 /// <summary>
 /// 	Represents information about a source file.
 /// </summary>
-public interface ISourceFile : IDebugTreePrintable
+public interface ISourceFile : IDebugTextFactory
 {
 	#region Properties
 	/// <summary>The simple name for the source file.</summary>

@@ -114,7 +114,22 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 			child.Parent = this;
 	}
 	public IEnumerable<ISyntaxNode> GetChildren() => [LeadingTrivia, TrailingTrivia];
-	TextFragmentCollection IDebugTreePrintable.GetFragments() => this.GetDebugFragments();
+	public IDebugTreeNode GetDebugNode()
+	{
+		DebugTreeObject obj = new();
+
+		obj.Add(nameof(Kind), Kind);
+
+		if (IsFabricated)
+			obj.Add(nameof(IsFabricated), true);
+		else if (Lexeme is not null)
+			obj.Add(nameof(Lexeme), Lexeme, Classification);
+
+		if (Classification is not null)
+			obj.Add(nameof(Classification), Classification);
+
+		return obj;
+	}
 	#endregion
 
 	#region Helpers

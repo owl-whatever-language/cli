@@ -1,6 +1,6 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols;
 
-public interface ISymbol : IDebugTreePrintable
+public interface ISymbol : IDebugTextFactory
 {
 	#region Properties
 	/// <summary>The name of the symbol.</summary>
