@@ -11,21 +11,13 @@ public static class OwlDiagnosticExtensions
 		}
 		public ISyntaxNode? TryGetRelevantNode(IEnumerable<ISyntaxTree> trees)
 		{
-			PositionRange? position;
-			ISyntaxTree? tree;
+			PositionRange position = diagnostic.Location.Position;
+			ISyntaxTree? tree = trees.FirstOrDefault(p => p.Source == diagnostic.Location.Source);
 
-			if (diagnostic.Location is DiagnosticSourceLocation location)
-			{
-				position = location.Position;
-				tree = trees.FirstOrDefault(p => p.Source == location.Source);
-			}
-			else
+			if (position == default || tree is null)
 				return null;
 
-			if (position is null || tree is null)
-				return null;
-
-			ISyntaxPart? part = tree.Document.Search<ISyntaxPart>(p => p.Position.WithoutIndex.Contains(position.Value.Start));
+			ISyntaxPart? part = tree.Document.Search<ISyntaxPart>(p => p.Position.WithoutIndex.Contains(position.Start));
 			if (part is null)
 				return null;
 

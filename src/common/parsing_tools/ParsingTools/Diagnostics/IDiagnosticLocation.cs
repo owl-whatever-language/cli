@@ -5,6 +5,11 @@ namespace OwlDomain.ParsingTools.Diagnostics;
 /// </summary>
 public interface IDiagnosticLocation
 {
+	#region Properties
+	ISourceFile? Source { get; }
+	PositionRange Position { get; }
+	IndexedPositionRange IndexedPosition { get; }
+	#endregion
 }
 
 /// <summary>
@@ -15,7 +20,7 @@ public sealed class DiagnosticSourceLocation : IDiagnosticLocation
 {
 	#region Fields
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	private readonly PositionRange? _basicPosition;
+	private readonly PositionRange _basicPosition;
 	#endregion
 
 	#region Properties
@@ -23,10 +28,10 @@ public sealed class DiagnosticSourceLocation : IDiagnosticLocation
 	public ISourceFile Source { get; }
 
 	/// <summary>The indexed position in the source file that the diagnostic is related to.</summary>
-	public IndexedPositionRange? IndexedPosition { get; }
+	public IndexedPositionRange IndexedPosition { get; }
 
 	/// <summary>The position in the source file that the diagnostic is related to.</summary>
-	public PositionRange? Position => IndexedPosition?.WithoutIndex ?? _basicPosition;
+	public PositionRange Position => (IndexedPosition != default) ? IndexedPosition.WithoutIndex : _basicPosition;
 	#endregion
 
 	#region Constructors
