@@ -97,61 +97,14 @@ public sealed class AnalysisContext : IAnalysisContext
 		}
 
 		HashSet<ISourceFile> toReparse = [.. added, .. changed];
+		ParallelParsingResult parsing = Parse(stageCompleteCallback, toReparse);
+		SemanticResultGroup semantics = RunSemanticGroup(stageCompleteCallback, out ISymbolScope userScope);
+		ParallelAnnotationPreparingResult annotations = PrepareAnnotations(stageCompleteCallback, userScope);
 
-		ParallelParsingResult parsing = Parser.Parse(toReparse);
-		foreach (LexingAndParsingResult result in parsing.GetByFile().Values)
-		{
-			_parsingDiagnostics.Remove(result.Source);
+		List<IStageResult> results = [parsing, semantics, annotations];
 
-			SyntaxTreeBundle bundle = _trees[result.Source];
-			bundle.Concrete = result.Parsing.Tree;
-		}
-		stageCompleteCallback?.Invoke(this, parsing);
-
-		SemanticResultGroup semanticGroup;
-		ISymbolScope userScope;
-		using (PerformanceResult.Scope(out IPerformanceResult semanticPerformance))
-		{
-			DeclarationDiscoveryResult declarationDiscovery = DeclarationFinder.Discover(BaseScope, Concrete);
-			userScope = declarationDiscovery.ResultScope;
-			stageCompleteCallback?.Invoke(this, declarationDiscovery);
-
-			ParallelDeclarationResolutionResult symbolResolution = SymbolResolver.Resolve(userScope, Concrete);
-			foreach (IDeclaredSyntaxTree tree in symbolResolution.Trees)
-			{
-				SyntaxTreeBundle bundle = _trees[tree.Source];
-				bundle.Declared = tree;
-			}
-			stageCompleteCallback?.Invoke(this, symbolResolution);
-
-			ParallelSemanticResolutionResult semanticResolution = SemanticResolver.Resolve(userScope, Declared);
-			foreach (ISemanticSyntaxTree tree in semanticResolution.Trees)
-			{
-				SyntaxTreeBundle bundle = _trees[tree.Source];
-				bundle.Semantic = tree;
-			}
-			stageCompleteCallback?.Invoke(this, semanticResolution);
-
-			semanticGroup = new(semanticPerformance, declarationDiscovery, symbolResolution, semanticResolution);
-		}
-
-		stageCompleteCallback?.Invoke(this, semanticGroup);
-
-		ParallelAnnotationPreparingResult annotationPreparing = AnnotationPreparer.Prepare(userScope, Semantic);
-		foreach (IAnnotatedSyntaxTree tree in annotationPreparing.Trees)
-		{
-			SyntaxTreeBundle bundle = _trees[tree.Source];
-			bundle.Annotated = tree;
-		}
-		stageCompleteCallback?.Invoke(this, annotationPreparing);
-
-		List<IStageResult> results = [parsing, semanticGroup, annotationPreparing];
-
-		if (_passes.Any())
-		{
-			AnalysisPassResultGroup passResult = RunPasses();
-			results.Add(passResult);
-		}
+		if (TryRunPasses(out AnalysisPassResultGroup? passResults))
+			results.Add(passResults);
 
 		DiagnosticBag diagnostics = _parsingDiagnostics.Values.Combine();
 
@@ -160,6 +113,90 @@ public sealed class AnalysisContext : IAnalysisContext
 			_parsingDiagnostics.Add(result.Source, result.GetAllDiagnostics());
 
 		return new(diagnostics, performance, results);
+	}
+	private ParallelParsingResult Parse(AnalysisStageCompleteDelegate? callback, IReadOnlyCollection<ISourceFile> files)
+	{
+		ParallelParsingResult result = Parser.Parse(files);
+		foreach (LexingAndParsingResult current in result.GetByFile().Values)
+		{
+			_parsingDiagnostics.Remove(current.Source);
+
+			SyntaxTreeBundle bundle = _trees[current.Source];
+			bundle.Concrete = current.Parsing.Tree;
+		}
+
+		callback?.Invoke(this, result);
+		return result;
+	}
+	private DeclarationDiscoveryResult DiscoverDeclarations(AnalysisStageCompleteDelegate? callback, out ISymbolScope userScope)
+	{
+		DeclarationDiscoveryResult result = DeclarationFinder.Discover(BaseScope, Concrete);
+		userScope = result.ResultScope;
+
+		callback?.Invoke(this, result);
+		return result;
+	}
+	private ParallelDeclarationResolutionResult ResolveSymbols(AnalysisStageCompleteDelegate? callback, ISymbolScope userScope)
+	{
+		ParallelDeclarationResolutionResult result = SymbolResolver.Resolve(userScope, Concrete);
+		foreach (IDeclaredSyntaxTree tree in result.Trees)
+		{
+			SyntaxTreeBundle bundle = _trees[tree.Source];
+			bundle.Declared = tree;
+		}
+
+		callback?.Invoke(this, result);
+		return result;
+	}
+	private ParallelSemanticResolutionResult ResolveSemantics(AnalysisStageCompleteDelegate? callback, ISymbolScope userScope)
+	{
+		ParallelSemanticResolutionResult result = SemanticResolver.Resolve(userScope, Declared);
+		foreach (ISemanticSyntaxTree tree in result.Trees)
+		{
+			SyntaxTreeBundle bundle = _trees[tree.Source];
+			bundle.Semantic = tree;
+		}
+
+		callback?.Invoke(this, result);
+		return result;
+	}
+	private SemanticResultGroup RunSemanticGroup(AnalysisStageCompleteDelegate? callback, out ISymbolScope userScope)
+	{
+		SemanticResultGroup result;
+		using (PerformanceResult.Scope(out IPerformanceResult semanticPerformance))
+		{
+			DeclarationDiscoveryResult declarations = DiscoverDeclarations(callback, out userScope);
+			ParallelDeclarationResolutionResult symbols = ResolveSymbols(callback, userScope);
+			ParallelSemanticResolutionResult semantics = ResolveSemantics(callback, userScope);
+
+			result = new(semanticPerformance, declarations, symbols, semantics);
+		}
+
+		callback?.Invoke(this, result);
+		return result;
+	}
+	private ParallelAnnotationPreparingResult PrepareAnnotations(AnalysisStageCompleteDelegate? callback, ISymbolScope userScope)
+	{
+		ParallelAnnotationPreparingResult result = AnnotationPreparer.Prepare(userScope, Semantic);
+		foreach (IAnnotatedSyntaxTree tree in result.Trees)
+		{
+			SyntaxTreeBundle bundle = _trees[tree.Source];
+			bundle.Annotated = tree;
+		}
+
+		callback?.Invoke(this, result);
+		return result;
+	}
+	private bool TryRunPasses([NotNullWhen(true)] out AnalysisPassResultGroup? result)
+	{
+		if (_passes.Any())
+		{
+			result = RunPasses();
+			return true;
+		}
+
+		result = default;
+		return false;
 	}
 	private AnalysisPassResultGroup RunPasses()
 	{
