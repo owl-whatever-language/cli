@@ -101,7 +101,10 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 	public IStructuredTypeInfo GetTargetName(string key)
 	{
 		if (key is "token")
-			return new StructuredSyntaxTypeInfo(Token.Interface.Name, Token.Class.Name);
+			return new StructuredSyntaxTypeInfo(Token.Interface.Name, Token.Class.Name, false);
+
+		if (key is "token?")
+			return new StructuredSyntaxTypeInfo(Token.Interface.Name + "?", Token.Class.Name + "?", true);
 
 		if (key.EndsWith("?") && Name.Keywords.Contains(key.Substring(0, key.Length - 1)))
 			return new StructuredTypeInfo(key);
@@ -109,14 +112,14 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 		if (Name.Keywords.Contains(key))
 			return new StructuredTypeInfo(key);
 
-		Name keyName = new(key);
+		Name keyName = new(key.TrimEnd("?").ToString());
 		StructuredGroupInfo? group = Groups.FirstOrDefault(g => g.MatchesName(keyName));
 		if (group is not null)
-			return new StructuredSyntaxTypeInfo(group.Interface.Name, group.Interface.Name);
+			return new StructuredSyntaxTypeInfo(group.Interface.Name, group.Interface.Name, key.EndsWith("?"));
 
 		StructuredNodeInfo? node = Nodes.FirstOrDefault(n => n.MatchesName(keyName));
 		if (node is not null)
-			return new StructuredSyntaxTypeInfo(node.Interface.Name, node.Class.Name);
+			return new StructuredSyntaxTypeInfo(node.Interface.Name, node.Class.Name, key.EndsWith("?"));
 
 		if (key.Contains('_'))
 		{
@@ -308,14 +311,14 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 		if (description is ListTypeDescription list)
 		{
 			string valueType = tree.GetTargetName(list.ValueType).TypeName;
-			return new StructuredListSyntaxTypeInfo(valueType);
+			return new StructuredListSyntaxTypeInfo(valueType, list.IsNullable);
 		}
 
 		if (description is SeparatedListTypeDescription separated)
 		{
 			string valueType = tree.GetTargetName(separated.ValueType).TypeName;
 			string separatorType = tree.GetTargetName(separated.SeparatorType).TypeName;
-			return new StructuredSeparatedListSyntaxTypeInfo(valueType, separatorType);
+			return new StructuredSeparatedListSyntaxTypeInfo(valueType, separatorType, separated.IsNullable);
 		}
 
 		if (description is TypeDescription type)

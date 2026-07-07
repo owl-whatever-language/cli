@@ -104,7 +104,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	#endregion
 
 	#region Refine declaration methods
-	protected override DeclaredVariableDeclarationStatementSyntax Convert(IConcreteVariableDeclarationStatementSyntax concrete)
+	protected override DeclaredVariableDeclarationStatementSyntax ConvertCore(IConcreteVariableDeclarationStatementSyntax concrete)
 	{
 		Get(concrete, out IDeclaredLocalVariable variable);
 
@@ -121,7 +121,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 
 		return declared;
 	}
-	protected override DeclaredFunctionDeclarationStatementSyntax Convert(IConcreteFunctionDeclarationStatementSyntax concrete)
+	protected override DeclaredFunctionDeclarationStatementSyntax ConvertCore(IConcreteFunctionDeclarationStatementSyntax concrete)
 	{
 		DeclaredFunctionDeclarationStatementSyntax declared;
 
@@ -147,7 +147,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 
 		return declared;
 	}
-	protected override DeclaredRegularFunctionParameterSyntax Convert(IConcreteRegularFunctionParameterSyntax concrete)
+	protected override DeclaredRegularFunctionParameterSyntax ConvertCore(IConcreteRegularFunctionParameterSyntax concrete)
 	{
 		Get(concrete, out IDeclaredFunctionParameter parameter);
 
@@ -164,7 +164,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	#endregion
 
 	#region Type methods
-	protected override DeclaredRegularTypeSyntax Convert(IConcreteRegularTypeSyntax concrete)
+	protected override DeclaredRegularTypeSyntax ConvertCore(IConcreteRegularTypeSyntax concrete)
 	{
 		var name = Convert(concrete.Name);
 		INamedType? type = GetSingle<INamedType>(concrete.Name, "type", "types");
@@ -174,9 +174,9 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 			(ISymbol?)type ?? SpecialSymbols.NotFound,
 			(IType?)type ?? SpecialTypes.Error);
 	}
-	protected override DeclaredEmptyTypeSyntax Convert(IConcreteEmptyTypeSyntax concrete) => new(SpecialTypes.Error);
-	protected override DeclaredNestedTypeSyntax Convert(IConcreteNestedTypeSyntax concrete) => throw new NotImplementedException();
-	protected override DeclaredGenericTypeSyntax Convert(IConcreteGenericTypeSyntax concrete) => throw new NotImplementedException();
+	protected override DeclaredEmptyTypeSyntax ConvertCore(IConcreteEmptyTypeSyntax concrete) => new(SpecialTypes.Error);
+	protected override DeclaredNestedTypeSyntax ConvertCore(IConcreteNestedTypeSyntax concrete) => throw new NotImplementedException();
+	protected override DeclaredGenericTypeSyntax ConvertCore(IConcreteGenericTypeSyntax concrete) => throw new NotImplementedException();
 	#endregion
 
 	#region Scope helpers

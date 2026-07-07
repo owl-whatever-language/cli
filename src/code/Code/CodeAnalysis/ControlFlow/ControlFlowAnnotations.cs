@@ -54,7 +54,6 @@ public static class ControlFlowAnnotationExtensions
 			{
 				IAnnotatedDocumentSyntax document => document.TryGetControlFlowGraph(out graph),
 				IAnnotatedFunctionDeclarationStatementSyntax function => function.TryGetControlFlowGraph(out graph),
-				IAnnotatedLocalFunctionDeclarationStatementSyntax function => function.Declaration.TryGetControlFlowGraph(out graph),
 
 				_ => TryGetGeneralControlFlowGraph(node, out graph)
 			};
@@ -147,16 +146,6 @@ public static class ControlFlowAnnotationExtensions
 
 			graph = default;
 			return false;
-		}
-		#endregion
-	}
-
-	extension(IAnnotatedLocalFunctionDeclarationStatementSyntax function)
-	{
-		#region Methods
-		public bool TryGetControlFlowGraph([NotNullWhen(true)] out IFunctionControlFlowGraph? graph)
-		{
-			return function.Declaration.TryGetControlFlowGraph(out graph);
 		}
 		#endregion
 	}

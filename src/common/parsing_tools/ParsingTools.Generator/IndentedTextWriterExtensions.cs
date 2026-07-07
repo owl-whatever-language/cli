@@ -96,6 +96,16 @@ internal static class IndentedTextWriterExtensions
 
 			return new(writer, lineAfter);
 		}
+		public void NotNullIfNotNullReturn(string parameter)
+		{
+			writer.WriteLine($"[return: NotNullIfNotNull(nameof({parameter}))]");
+		}
+		public void ReturnNullIfNull(string variable)
+		{
+			writer.WriteLine($"if ({variable} is null)");
+			using (writer.Indented(lineAfter: true))
+				writer.WriteLine("return null;");
+		}
 		#endregion
 
 		#region Structured methods

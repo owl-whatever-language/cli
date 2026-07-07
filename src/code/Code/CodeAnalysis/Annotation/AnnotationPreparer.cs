@@ -112,20 +112,20 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter
 	#endregion
 
 	#region Declaration refinement methods
-	protected override AnnotatedVariableDeclarationStatementSyntax Convert(ISemanticVariableDeclarationStatementSyntax semantic)
+	protected override AnnotatedVariableDeclarationStatementSyntax ConvertCore(ISemanticVariableDeclarationStatementSyntax semantic)
 	{
-		AnnotatedVariableDeclarationStatementSyntax annotated = base.Convert(semantic);
+		AnnotatedVariableDeclarationStatementSyntax annotated = base.ConvertCore(semantic);
 		Update(semantic.Variable, annotated);
 
 		return annotated;
 	}
-	protected override AnnotatedFunctionDeclarationStatementSyntax Convert(ISemanticFunctionDeclarationStatementSyntax semantic)
+	protected override AnnotatedFunctionDeclarationStatementSyntax ConvertCore(ISemanticFunctionDeclarationStatementSyntax semantic)
 	{
 		AnnotatedFunctionDeclarationStatementSyntax annotated;
 		using (WithValue(ref _currentFunction, semantic.Function))
 		using (EnterScope(semantic))
 		{
-			annotated = base.Convert(semantic);
+			annotated = base.ConvertCore(semantic);
 			Update(annotated.Function, annotated);
 		}
 
@@ -135,13 +135,13 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter
 	#endregion
 
 	#region Function call methods
-	protected override AnnotatedFunctionCallExpressionSyntax Convert(ISemanticFunctionCallExpressionSyntax semantic)
+	protected override AnnotatedFunctionCallExpressionSyntax ConvertCore(ISemanticFunctionCallExpressionSyntax semantic)
 	{
 		using (WithValue(ref _currentCallableParameterIndex, 0))
 		using (WithValue(ref _currentCallable, semantic.Callable))
-			return base.Convert(semantic);
+			return base.ConvertCore(semantic);
 	}
-	protected override AnnotatedRegularFunctionArgumentSyntax Convert(ISemanticRegularFunctionArgumentSyntax semantic)
+	protected override AnnotatedRegularFunctionArgumentSyntax ConvertCore(ISemanticRegularFunctionArgumentSyntax semantic)
 	{
 		Debug.Assert(_currentCallable is not null);
 
@@ -150,7 +150,7 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter
 
 		return new(value, parameter);
 	}
-	protected override AnnotatedNamedFunctionArgumentSyntax Convert(ISemanticNamedFunctionArgumentSyntax semantic)
+	protected override AnnotatedNamedFunctionArgumentSyntax ConvertCore(ISemanticNamedFunctionArgumentSyntax semantic)
 	{
 		Debug.Assert(_currentCallable is not null);
 

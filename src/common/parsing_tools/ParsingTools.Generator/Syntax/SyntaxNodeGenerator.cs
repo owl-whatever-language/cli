@@ -567,8 +567,10 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 				using (writer.Region("Methods"))
 				{
-					IEnumerable<string> syntaxMembers = info.ClassMembers.Where(m => m.Type is IStructuredSyntaxTypeInfo).Select(m => m.Name.Pascal);
-					writer.WriteLine($"public override IEnumerable<ISyntaxNode> GetChildren() => [{string.Join(", ", syntaxMembers)}];");
+					IEnumerable<StructuredMemberInfo> syntaxMembers = info.ClassMembers.Where(m => m.Type is IStructuredSyntaxTypeInfo);
+					IEnumerable<string> names = syntaxMembers.Select(m => m.Name.Pascal);
+
+					writer.WriteLine($"protected override IEnumerable<ISyntaxNode?> GetChildrenCore() => [{string.Join(", ", names)}];");
 				}
 			}
 		}
@@ -589,25 +591,35 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		#region Generate node conversion
 		static void Generate(IndentedTextWriter writer, StructuredNodeInfo from, StructuredNodeInfo to, bool canAutoImplement)
 		{
+
 			string variable = from.Kind.Camel;
 			IReadOnlyList<StructuredMemberInfo> toMembers = to.ClassMembers.ToArray();
 			IReadOnlyList<StructuredMemberInfo> fromMembers = from.ClassMembers.ToArray();
 
 			if (toMembers.Count is 0 && fromMembers.Count is 0)
 			{
-				writer.WriteLine($"protected virtual {to.Class.Name} Convert({from.Interface.Name} {variable}) => new();");
+				writer.NotNullIfNotNullReturn(variable);
+				writer.WriteLine($"protected {to.Class.Name}? Convert({from.Interface.Name}? {variable}) => {variable} is null ? null : new();");
+				writer.WriteLine($"protected virtual {to.Class.Name} ConvertCore({from.Interface.Name} {variable}) => new();");
 				return;
 			}
 
 			if (canAutoImplement && toMembers.Count == fromMembers.Count)
 			{
-				writer.WriteLine($"protected virtual {to.Class.Name} Convert({from.Interface.Name} {variable})");
+				writer.NotNullIfNotNullReturn(variable);
+				writer.WriteLine($"protected {to.Class.Name}? Convert({from.Interface.Name}? {variable}) => {variable} is null ? null : ConvertCore({variable});");
+				writer.WriteLine($"protected virtual {to.Class.Name} ConvertCore({from.Interface.Name} {variable})");
 				using (writer.Braced())
 				{
 					foreach (StructuredMemberInfo member in to.ClassMembers)
 					{
-						if (member.Type is IStructuredSyntaxTypeInfo)
-							writer.WriteLine($"{member.Type.TypeName} {member.Name.Camel} = Convert({variable}.{member.Name.Pascal});");
+						if (member.Type is IStructuredSyntaxTypeInfo type)
+						{
+							if (type.IsNullable)
+								writer.WriteLine($"{member.Type.TypeName} {member.Name.Camel} = Convert({variable}.{member.Name.Pascal});");
+							else
+								writer.WriteLine($"{member.Type.TypeName} {member.Name.Camel} = ConvertCore({variable}.{member.Name.Pascal});");
+						}
 						else
 							writer.WriteLine($"{member.Type.TypeName} {member.Name.Camel} = {variable}.{member.Name.Pascal};");
 					}
@@ -621,7 +633,9 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				return;
 			}
 
-			writer.WriteLine($"protected abstract {to.Class.Name} Convert({from.Interface.Name} {variable});");
+			writer.NotNullIfNotNullReturn(variable);
+			writer.WriteLine($"protected {to.Class.Name}? Convert({from.Interface.Name}? {variable}) => {variable} is null ? null : ConvertCore({variable});");
+			writer.WriteLine($"protected abstract {to.Class.Name} ConvertCore({from.Interface.Name} {variable});");
 		}
 		#endregion
 
@@ -632,11 +646,14 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				writer.WriteLine($"public abstract partial class {target.ConverterType}");
 				using (writer.Braced())
 				{
-					using (writer.Region("Methods"))
+					using (writer.Region("Methods", lineAfter: true))
 					{
-						writer.WriteLine($"public virtual {target.Class.Name} Convert({from.Interface.Name} tree)");
+						writer.NotNullIfNotNullReturn("tree");
+						writer.WriteLine($"public virtual {target.Class.Name}? Convert({from.Interface.Name}? tree)");
 						using (writer.Braced())
 						{
+							writer.ReturnNullIfNull("tree");
+
 							writer.WriteLine($"{target.Document.Class.Name} {target.Document.Name.Camel} = Convert(tree.{from.Document.Name.Pascal});");
 							writer.WriteLine($"return new(tree.Source, {target.Document.Name.Camel});");
 						}
@@ -646,15 +663,38 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 							StructuredNodeInfo? origin = node.Shadows;
 							Debug.Assert(origin is not null);
 
+							writer.WriteLine();
 							Generate(writer, origin!, node, canAutoImplementToken);
 						}
 					}
-					writer.WriteLine();
+
 					using (writer.Region("Token methods"))
 					{
 						#region Full
-						writer.Write($"protected virtual {target.Token.Class.Name} Convert(");
-						writer.WriteSeparated([
+						writer.NotNullIfNotNullReturn("token");
+						writer.Write($"protected {target.Token.Class.Name}? Convert(");
+						writer.WriteSeparated(
+						[
+							$"{from.Token.Interface.Name}? token",
+							"ClassificationKind? classification",
+							.. target.Token.ClassMembers.Select(m => $"{m.Type.TypeName} {m.Name.Camel}")
+						]);
+						writer.WriteLine(")");
+						using (writer.Braced())
+						{
+							writer.ReturnNullIfNull("token");
+							writer.Write("return ConvertCore(");
+							writer.WriteSeparated([
+								"token",
+								"classification",
+								.. target.Token.ClassMembers.Select(m => m.Name.Camel)
+							]);
+							writer.WriteLine(");");
+						}
+
+						writer.Write($"protected virtual {target.Token.Class.Name} ConvertCore(");
+						writer.WriteSeparated(
+						[
 							$"{from.Token.Interface.Name} token",
 							"ClassificationKind? classification",
 							.. target.Token.ClassMembers.Select(m => $"{m.Type.TypeName} {m.Name.Camel}")
@@ -675,7 +715,24 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 						writer.WriteLine();
 
 						#region Inherit classification
-						writer.Write($"protected virtual {target.Token.Class.Name} Convert(");
+						writer.NotNullIfNotNullReturn("token");
+						writer.Write($"protected virtual {target.Token.Class.Name}? Convert(");
+						writer.WriteSeparated([
+							$"{from.Token.Interface.Name}? token",
+							..target.Token.ClassMembers.Select(m => $"{m.Type.TypeName} {m.Name.Camel}")
+						]);
+						writer.WriteLine(")");
+						using (writer.Braced())
+						{
+							writer.ReturnNullIfNull("token");
+							writer.Write("return ConvertCore(");
+							writer.WriteSeparated([
+								"token",
+								..target.Token.ClassMembers.Select(m => m.Name.Camel)
+							]);
+							writer.WriteLine(");");
+						}
+						writer.Write($"protected virtual {target.Token.Class.Name} ConvertCore(");
 						writer.WriteSeparated([
 							$"{from.Token.Interface.Name} token",
 							..target.Token.ClassMembers.Select(m => $"{m.Type.TypeName} {m.Name.Camel}")
@@ -696,7 +753,9 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 						if (canAutoImplementToken && target.Token.ClassMembers.Any())
 						{
 							writer.WriteLine();
-							writer.WriteLine($"protected virtual {target.Token.Class.Name} Convert({from.Token.Interface.Name} token)");
+							writer.NotNullIfNotNullReturn("token");
+							writer.WriteLine($"protected {target.Token.Class.Name}? Convert({from.Token.Interface.Name}? token) => token is null ? null : ConvertCore(token);");
+							writer.WriteLine($"protected virtual {target.Token.Class.Name} ConvertCore({from.Token.Interface.Name} token)");
 							using (writer.Braced())
 							{
 								writer.Write("return Convert(");
@@ -725,7 +784,9 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 							using (writer.Region($"{targetGroup.Name.Natural} methods"))
 							{
-								writer.WriteLine($"protected virtual {targetGroup.Interface.Name} Convert({group.Interface.Name} {groupKind})");
+								writer.NotNullIfNotNullReturn(groupKind);
+								writer.WriteLine($"protected {targetGroup.Interface.Name}? Convert({group.Interface.Name}? {groupKind}) => {groupKind} is null ? null : ConvertCore({groupKind});");
+								writer.WriteLine($"protected virtual {targetGroup.Interface.Name} ConvertCore({group.Interface.Name} {groupKind})");
 								using (writer.Braced())
 								{
 									writer.WriteLine($"return {groupKind} switch");
@@ -734,7 +795,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 										foreach (StructuredNodeInfo node in targetGroup.Nodes.OrderBy(n => n.ClassMembers.Count()))
 										{
 											Debug.Assert(node.Shadows is not null);
-											writer.WriteLine($"{node.Shadows!.Interface.Name} {lastName} => Convert({lastName}),");
+											writer.WriteLine($"{node.Shadows!.Interface.Name} {lastName} => ConvertCore({lastName}),");
 										}
 
 										writer.WriteLine();
@@ -746,6 +807,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 									StructuredNodeInfo? origin = node.Shadows;
 									Debug.Assert(origin is not null);
 
+									writer.WriteLine();
 									Generate(writer, origin!, node, canAutoImplementToken);
 								}
 							}
@@ -771,7 +833,9 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 								string fromValueType = fromList.ValueType;
 								string targetValueType = targetList.ValueType;
 
-								writer.WriteLine($"protected virtual {toType} Convert({fromType} list)");
+								writer.NotNullIfNotNullReturn("list");
+								writer.WriteLine($"protected {toType}? Convert({fromType}? list) => list is null ? null : ConvertCore(list);");
+								writer.WriteLine($"protected virtual {toType} ConvertCore({fromType} list)");
 								using (writer.Braced())
 								{
 									writer.WriteLine($"{targetValueType}[] values = new {targetValueType}[list.Count];");
@@ -801,7 +865,9 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 								string fromSepType = fromList.SeparatorType;
 								string targetSepType = targetList.SeparatorType;
 
-								writer.WriteLine($"protected virtual {toType} Convert({fromType} list)");
+								writer.NotNullIfNotNullReturn("list");
+								writer.WriteLine($"protected {toType}? Convert({fromType}? list) => list is null ? null : ConvertCore(list);");
+								writer.WriteLine($"protected virtual {toType} ConvertCore({fromType} list)");
 								using (writer.Braced())
 								{
 									writer.WriteLine($"ISyntaxNode[] nodes = new ISyntaxNode[list.Nodes.Count];");

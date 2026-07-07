@@ -34,9 +34,6 @@ public static class OwlDiagnosticExtensions
 					part.GetParent<IConcreteExpressionSyntax>() ??
 					(ISyntaxNode)part;
 
-			if (relevantNode is IConcreteFunctionDeclarationStatementSyntax && relevantNode.Parent is IConcreteLocalFunctionDeclarationStatementSyntax localFunction)
-				return localFunction;
-
 			return relevantNode;
 		}
 		#endregion

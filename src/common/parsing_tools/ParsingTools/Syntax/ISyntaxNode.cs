@@ -55,7 +55,15 @@ public abstract class BaseSyntaxNode : ISyntaxNode
 		foreach (ISyntaxNode child in GetChildren())
 			child.Parent = this;
 	}
-	public abstract IEnumerable<ISyntaxNode> GetChildren();
+	public IEnumerable<ISyntaxNode> GetChildren()
+	{
+		foreach (ISyntaxNode? child in GetChildrenCore())
+		{
+			if (child is not null)
+				yield return child;
+		}
+	}
+	protected abstract IEnumerable<ISyntaxNode?> GetChildrenCore();
 	TextFragmentCollection IDebugTreePrintable.GetFragments() => this.GetDebugFragments();
 	#endregion
 

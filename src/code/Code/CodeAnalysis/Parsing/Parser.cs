@@ -366,30 +366,34 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Function, "Expected the function name.");
 		IConcreteToken start = Expect(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, "Expected the opening bracket '(' to start the parameter list.");
 
-		ConcreteFunctionDeclarationStatementSyntax function = ParseFunctionDeclaration(name, start);
-		return new ConcreteLocalFunctionDeclarationStatementSyntax(keyword, function);
+		ConcreteFunctionDeclarationStatementSyntax function = ParseFunctionDeclaration(keyword, name, start);
+		return function;
 	}
 	private IConcreteStatementSyntax? TryParseFunctionDeclaration()
 	{
+		IConcreteStatementSyntax? local = TryParseLocalFunctionDeclaration();
+		if (local is not null)
+			return local;
+
 		if (Current?.Kind == SyntaxKind.Identifier && Next?.Kind == SyntaxKind.OpenBracket)
 		{
 			IConcreteToken name = Convert(Current, ClassificationKind.Function);
 			IConcreteToken start = Convert(Next, ClassificationKind.Punctuation);
 			Advance(2);
 
-			return ParseFunctionDeclaration(name, start);
+			return ParseFunctionDeclaration(null, name, start);
 		}
 
 		return null;
 	}
-	private ConcreteFunctionDeclarationStatementSyntax ParseFunctionDeclaration(IConcreteToken name, IConcreteToken start)
+	private ConcreteFunctionDeclarationStatementSyntax ParseFunctionDeclaration(IConcreteToken? keyword, IConcreteToken name, IConcreteToken start)
 	{
-		IConcreteFunctionDeclarationSignatureSyntax signature = ParseFunctionSignature(name, start);
+		IConcreteFunctionDeclarationSignatureSyntax signature = ParseFunctionSignature(keyword, name, start);
 		IConcreteFunctionBodySyntax body = ParseFunctionBody();
 
 		return new(signature, body);
 	}
-	private ConcreteFunctionDeclarationSignatureSyntax ParseFunctionSignature(IConcreteToken name, IConcreteToken start)
+	private ConcreteFunctionDeclarationSignatureSyntax ParseFunctionSignature(IConcreteToken? keyword, IConcreteToken name, IConcreteToken start)
 	{
 		List<IConcreteSyntaxNode> nodes = [];
 		List<IConcreteFunctionParameterSyntax> parameters = [];
@@ -448,6 +452,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		IConcreteFunctionReturnSyntax @return = ParseFunctionReturn();
 
 		return new(
+			keyword,
 			name,
 			start,
 			new SyntaxList<IConcreteFunctionParameterSyntax, IConcreteToken>(nodes, parameters, separators),

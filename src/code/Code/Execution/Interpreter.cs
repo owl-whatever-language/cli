@@ -139,6 +139,9 @@ public class Interpreter
 	}
 	private void Interpret(IAnnotatedStatementSyntax statement)
 	{
+		if (statement.IsExecutable)
+			return;
+
 		if (statement is IAnnotatedExpressionStatementSyntax expression)
 			_ = Evaluate(expression.Expression);
 		else if (statement is IAnnotatedBlockStatementSyntax block)
@@ -148,8 +151,6 @@ public class Interpreter
 			InterpreterValue value = Evaluate(variable.Value);
 			Values.Declare(variable.Variable, value);
 		}
-		else if (statement is IAnnotatedLocalFunctionDeclarationStatementSyntax)
-		{ /* We don't need to do anything for function declarations */ }
 		else if (statement is IAnnotatedReturnStatementSyntax)
 			throw new ReturnControlException(InterpreterValue.Void);
 		else if (statement is IAnnotatedValueReturnStatementSyntax @return)

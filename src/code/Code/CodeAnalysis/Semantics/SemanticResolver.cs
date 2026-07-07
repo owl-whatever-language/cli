@@ -120,9 +120,9 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	#endregion
 
 	#region Declaration methods
-	protected override SemanticVariableDeclarationStatementSyntax Convert(IDeclaredVariableDeclarationStatementSyntax declared)
+	protected override SemanticVariableDeclarationStatementSyntax ConvertCore(IDeclaredVariableDeclarationStatementSyntax declared)
 	{
-		var semantic = base.Convert(declared);
+		var semantic = base.ConvertCore(declared);
 		Update(semantic.Variable, semantic);
 
 		IType valueType = semantic.Value.ResultType;
@@ -133,20 +133,20 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return semantic;
 	}
-	protected override ISemanticFunctionParameterSyntax Convert(IDeclaredFunctionParameterSyntax declared)
+	protected override ISemanticFunctionParameterSyntax ConvertCore(IDeclaredFunctionParameterSyntax declared)
 	{
-		var semantic = base.Convert(declared);
+		var semantic = base.ConvertCore(declared);
 		Update(semantic.Parameter, semantic);
 
 		return semantic;
 	}
-	protected override SemanticFunctionDeclarationStatementSyntax Convert(IDeclaredFunctionDeclarationStatementSyntax declared)
+	protected override SemanticFunctionDeclarationStatementSyntax ConvertCore(IDeclaredFunctionDeclarationStatementSyntax declared)
 	{
 		SemanticFunctionDeclarationStatementSyntax semantic;
 		using (WithValue(ref _currentFunction, declared.Function))
 		using (EnterScope(declared))
 		{
-			semantic = base.Convert(declared);
+			semantic = base.ConvertCore(declared);
 			Update(semantic.Function, semantic);
 		}
 		Update(declared, semantic);
@@ -156,9 +156,9 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	#endregion
 
 	#region Statements
-	protected override SemanticReturnStatementSyntax Convert(IDeclaredReturnStatementSyntax declared)
+	protected override SemanticReturnStatementSyntax ConvertCore(IDeclaredReturnStatementSyntax declared)
 	{
-		var semantic = base.Convert(declared);
+		var semantic = base.ConvertCore(declared);
 		if (_currentFunction is null)
 		{
 			AddError("return_not_in_function", declared.Keyword.Position, "A return statement is only valid inside of a function body.");
@@ -170,9 +170,9 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return semantic;
 	}
-	protected override SemanticValueReturnStatementSyntax Convert(IDeclaredValueReturnStatementSyntax declared)
+	protected override SemanticValueReturnStatementSyntax ConvertCore(IDeclaredValueReturnStatementSyntax declared)
 	{
-		var semantic = base.Convert(declared);
+		var semantic = base.ConvertCore(declared);
 		if (_currentFunction is null)
 		{
 			AddError("return_not_in_function", declared.Keyword.Position, "A return statement is only valid inside of a function body.");
@@ -188,27 +188,27 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		return semantic;
 	}
 
-	protected override SemanticIfStatementSyntax Convert(IDeclaredIfStatementSyntax declared)
+	protected override SemanticIfStatementSyntax ConvertCore(IDeclaredIfStatementSyntax declared)
 	{
-		var semantic = base.Convert(declared);
+		var semantic = base.ConvertCore(declared);
 
 		if (semantic.Condition.ResultType != CoreScope.Bool)
 			AddError("invalid_condition_type", semantic.Condition.Position, "Expected the condition to be a boolean expression.");
 
 		return semantic;
 	}
-	protected override SemanticIfElseStatementSyntax Convert(IDeclaredIfElseStatementSyntax declared)
+	protected override SemanticIfElseStatementSyntax ConvertCore(IDeclaredIfElseStatementSyntax declared)
 	{
-		var semantic = base.Convert(declared);
+		var semantic = base.ConvertCore(declared);
 
 		if (semantic.Condition.ResultType != CoreScope.Bool)
 			AddError("invalid_condition_type", semantic.Condition.Position, "Expected the condition to be a boolean expression.");
 
 		return semantic;
 	}
-	protected override SemanticWhileStatementSyntax Convert(IDeclaredWhileStatementSyntax declared)
+	protected override SemanticWhileStatementSyntax ConvertCore(IDeclaredWhileStatementSyntax declared)
 	{
-		var semantic = base.Convert(declared);
+		var semantic = base.ConvertCore(declared);
 
 		if (semantic.Condition.ResultType != CoreScope.Bool)
 			AddError("invalid_condition_type", semantic.Condition.Position, "Expected the condition to be a boolean expression.");
@@ -218,7 +218,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	#endregion
 
 	#region Get expression methods
-	protected override SemanticGetExpressionSyntax Convert(IDeclaredGetExpressionSyntax declared)
+	protected override SemanticGetExpressionSyntax ConvertCore(IDeclaredGetExpressionSyntax declared)
 	{
 		// Note(Nightowl): This can later be used to contextually pick more appropriate symbols based on how they'll be used;
 
@@ -248,8 +248,8 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	#endregion
 
 	#region Expression methods
-	protected override SemanticEmptyExpressionSyntax Convert(IDeclaredEmptyExpressionSyntax declared) => new(SpecialTypes.Error);
-	protected override SemanticBinaryExpressionSyntax Convert(IDeclaredBinaryExpressionSyntax declared)
+	protected override SemanticEmptyExpressionSyntax ConvertCore(IDeclaredEmptyExpressionSyntax declared) => new(SpecialTypes.Error);
+	protected override SemanticBinaryExpressionSyntax ConvertCore(IDeclaredBinaryExpressionSyntax declared)
 	{
 		var left = Convert(declared.Left);
 		var op = Convert(declared.Operator);
@@ -265,7 +265,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return new(left, op, right, operation, operation?.Return.Type ?? SpecialTypes.Error);
 	}
-	protected override SemanticAssignmentExpressionSyntax Convert(IDeclaredAssignmentExpressionSyntax declared)
+	protected override SemanticAssignmentExpressionSyntax ConvertCore(IDeclaredAssignmentExpressionSyntax declared)
 	{
 		var expression = Convert(declared.Expression);
 		var op = Convert(declared.Operator);
@@ -293,7 +293,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return new(expression, op, value, symbol ?? SpecialSymbols.NotFound, resultType ?? SpecialTypes.Error);
 	}
-	protected override SemanticCompoundAssignmentExpressionSyntax Convert(IDeclaredCompoundAssignmentExpressionSyntax declared)
+	protected override SemanticCompoundAssignmentExpressionSyntax ConvertCore(IDeclaredCompoundAssignmentExpressionSyntax declared)
 	{
 		var expression = Convert(declared.Expression);
 		var op = Convert(declared.Operator);
@@ -328,10 +328,10 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		return new(expression, op, value, symbol ?? SpecialSymbols.NotFound, operation, operation?.Return.Type ?? SpecialTypes.Error);
 	}
 
-	protected override SemanticTernaryExpressionSyntax Convert(IDeclaredTernaryExpressionSyntax declared) => throw new NotImplementedException();
-	protected override SemanticGroupedExpressionSyntax Convert(IDeclaredGroupedExpressionSyntax declared) => throw new NotImplementedException();
-	protected override SemanticBooleanLiteralExpressionSyntax Convert(IDeclaredBooleanLiteralExpressionSyntax declared) => throw new NotImplementedException();
-	protected override SemanticIntegerLiteralExpressionSyntax Convert(IDeclaredIntegerLiteralExpressionSyntax declared)
+	protected override SemanticTernaryExpressionSyntax ConvertCore(IDeclaredTernaryExpressionSyntax declared) => throw new NotImplementedException();
+	protected override SemanticGroupedExpressionSyntax ConvertCore(IDeclaredGroupedExpressionSyntax declared) => throw new NotImplementedException();
+	protected override SemanticBooleanLiteralExpressionSyntax ConvertCore(IDeclaredBooleanLiteralExpressionSyntax declared) => throw new NotImplementedException();
+	protected override SemanticIntegerLiteralExpressionSyntax ConvertCore(IDeclaredIntegerLiteralExpressionSyntax declared)
 	{
 		IType? type = CoreScope.Int;
 		if (type is null)
@@ -344,7 +344,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return new(integer, (long?)integer.Value, type);
 	}
-	protected override SemanticBaseIntegerLiteralExpressionSyntax Convert(IDeclaredBaseIntegerLiteralExpressionSyntax declared)
+	protected override SemanticBaseIntegerLiteralExpressionSyntax ConvertCore(IDeclaredBaseIntegerLiteralExpressionSyntax declared)
 	{
 		IType? type = CoreScope.Int;
 		if (type is null)
@@ -358,8 +358,8 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return new(@base, integer, (ulong?)integer.Value, type);
 	}
-	protected override SemanticDecimalLiteralExpressionSyntax Convert(IDeclaredDecimalLiteralExpressionSyntax declared) => throw new NotImplementedException();
-	protected override SemanticInterpolatedStringExpressionSyntax Convert(IDeclaredInterpolatedStringExpressionSyntax declared)
+	protected override SemanticDecimalLiteralExpressionSyntax ConvertCore(IDeclaredDecimalLiteralExpressionSyntax declared) => throw new NotImplementedException();
+	protected override SemanticInterpolatedStringExpressionSyntax ConvertCore(IDeclaredInterpolatedStringExpressionSyntax declared)
 	{
 		IType? type = CoreScope.Text;
 		if (type is null)
@@ -374,7 +374,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return new(start, fragments, end, type);
 	}
-	protected override SemanticStringLiteralExpressionSyntax Convert(IDeclaredStringLiteralExpressionSyntax declared)
+	protected override SemanticStringLiteralExpressionSyntax ConvertCore(IDeclaredStringLiteralExpressionSyntax declared)
 	{
 		IType? type = CoreScope.Text;
 		if (type is null)
@@ -409,7 +409,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	#endregion
 
 	#region Function call methods
-	protected override SemanticFunctionCallExpressionSyntax Convert(IDeclaredFunctionCallExpressionSyntax declared)
+	protected override SemanticFunctionCallExpressionSyntax ConvertCore(IDeclaredFunctionCallExpressionSyntax declared)
 	{
 		var expression = Convert(declared.Expression);
 		ICallableType? callable = expression.ResultType as ICallableType;

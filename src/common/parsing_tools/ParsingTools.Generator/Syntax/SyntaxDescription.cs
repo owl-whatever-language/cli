@@ -1,21 +1,24 @@
 namespace OwlDomain.ParsingTools.Generator.Syntax;
 
-internal sealed record class MemberDescription(ITypeDescription Type, Name Name)
+internal sealed record class MemberDescription(ITypeDescription Type, Name Name, bool IsOptional)
 {
 }
 
 internal interface ITypeDescription
 {
+	#region Properties
+	public bool IsNullable { get; }
+	#endregion
 }
-internal sealed record class TypeDescription(Name Type) : ITypeDescription
+internal sealed record class TypeDescription(Name Type, bool IsNullable) : ITypeDescription
 {
 	public string TargetType => Type.Original;
 }
 
-internal sealed record class ListTypeDescription(Name ValueType) : ITypeDescription
+internal sealed record class ListTypeDescription(Name ValueType, bool IsNullable) : ITypeDescription
 {
 }
-internal sealed record class SeparatedListTypeDescription(Name ValueType, Name SeparatorType) : ITypeDescription
+internal sealed record class SeparatedListTypeDescription(Name ValueType, Name SeparatorType, bool IsNullable) : ITypeDescription
 {
 }
 
@@ -140,20 +143,21 @@ internal sealed record class SyntaxDescriptionFile(IReadOnlyList<ISyntaxDescript
 		int space = memberPart.LastIndexOf(' ');
 
 		string typeText = memberPart.Substring(0, space).Trim();
+
 		string name = memberPart.Substring(space + 1).Trim();
 
-		ITypeDescription type = ParseType(typeText);
-		container.Add(new(type, name));
+		ITypeDescription type = ParseType(typeText, typeText.EndsWith("?"));
+		container.Add(new(type, name, typeText.EndsWith("?")));
 
 		if (comma == text.Length || comma == text.Length - 1)
 			return "";
 
 		return text.Substring(comma + 1).Trim();
 	}
-	private static ITypeDescription ParseType(string text)
+	private static ITypeDescription ParseType(string text, bool isNullable)
 	{
 		if (text.StartsWith("list") is false)
-			return new TypeDescription(text);
+			return new TypeDescription(text, isNullable);
 
 		int open = text.IndexOf('<');
 		int close = text.IndexOf('>');
@@ -163,10 +167,10 @@ internal sealed record class SyntaxDescriptionFile(IReadOnlyList<ISyntaxDescript
 
 		return types.Length switch
 		{
-			1 => new ListTypeDescription(types[0].Trim()),
-			2 => new SeparatedListTypeDescription(types[0].Trim(), types[1].Trim()),
+			1 => new ListTypeDescription(types[0].Trim(), isNullable),
+			2 => new SeparatedListTypeDescription(types[0].Trim(), types[1].Trim(), isNullable),
 
-			_ => new TypeDescription(text.Trim())
+			_ => new TypeDescription(text.Trim(), isNullable)
 		};
 	}
 	#endregion
