@@ -34,6 +34,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 		GenerateGlobal(context, order.Last());
 		GenerateSyntaxNodeKind(context, order[0]);
+		GenerateSyntaxLevel(context, order);
 		foreach (StructuredTreeInfo info in order)
 		{
 			GenerateToken(context, info.Token);
@@ -104,6 +105,27 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 		string source = result.ToString();
 		context.AddSource("SyntaxNodeEnum.g.cs", source);
+	}
+	static void GenerateSyntaxLevel(SourceProductionContext context, IReadOnlyList<StructuredTreeInfo> order)
+	{
+		if (order.Count is 0)
+			return;
+
+		IndentedTextWriter writer = GetWriter(out StringWriter result);
+
+		using (writer.Preamble(order[0].RootNamespace))
+		using (writer.TypePreamble())
+		{
+			writer.WriteLine("public enum SyntaxLevel");
+			using (writer.Braced())
+			{
+				foreach (StructuredTreeInfo tree in order)
+					writer.WriteLine($"{tree.Kind.Pascal} = {tree.Level},");
+			}
+		}
+
+		string source = result.ToString();
+		context.AddSource("SyntaxNodeLevel.g.cs", source);
 	}
 	static void GenerateSyntaxBundle(SourceProductionContext context, IReadOnlyList<StructuredTreeInfo> order)
 	{
@@ -297,13 +319,16 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		using (writer.Preamble(token.Tree.Namespace))
 		{
 			using (writer.InterfacePreamble(token.Interface))
+			{
 				writer.WriteInterfaceProperties(token.InterfaceMembers);
+			}
 
 			using (writer.ClassPreamble(token.Class))
 			{
 				using (writer.Region("Properties", lineAfter: true))
 				{
-					writer.WriteLine($"public override int Level => {token.Tree.Level};");
+					writer.WriteLine($"protected override int LevelNumber => {token.Tree.Level};");
+					writer.WriteLine($"public SyntaxLevel Level => SyntaxLevel.{token.Kind.Pascal};");
 					writer.WriteLine($"protected override string? TreeKind => {$"\"{token.Kind.Original}\""};");
 					writer.WriteLine("public SyntaxNodeEnum NodeEnum => SyntaxNodeEnum.Token;");
 
@@ -312,7 +337,6 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 
 					writer.WriteClassProperties(token.ClassMembers, skipRegion: true);
 				}
-
 
 				using (writer.Region("Constructors"))
 				{
@@ -373,14 +397,20 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 				if (node.Shadows is null)
 				{
 					using (writer.Region("Properties"))
-						writer.WriteLine($"SyntaxNodeEnum NodeEnum {{ get; }}");
+					{
+						writer.WriteLine("new SyntaxLevel Level { get; }");
+						writer.WriteLine("SyntaxNodeEnum NodeEnum { get; }");
+						writer.WriteLine();
+						writer.WriteLine("int ISyntaxNode.Level => (int)Level;");
+					}
 				}
 			}
 			using (writer.ClassPreamble(node.Class))
 			{
 				using (writer.Region("Properties"))
 				{
-					writer.WriteLine($"public sealed override int Level => {node.Tree.Level};");
+					writer.WriteLine($"protected sealed override int LevelNumber => {node.Tree.Level};");
+					writer.WriteLine($"public SyntaxLevel Level => SyntaxLevel.{node.Tree.Kind.Pascal};");
 					writer.WriteLine($"public abstract SyntaxNodeEnum NodeEnum {{ get; }}");
 				}
 			}

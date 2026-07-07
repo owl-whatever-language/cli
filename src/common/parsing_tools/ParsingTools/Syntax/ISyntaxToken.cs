@@ -14,7 +14,8 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 	#region Properties
 	public SyntaxNodeKind NodeKind => new(TreeKind, Kind.Name, Kind.Category.Name);
 	protected abstract string? TreeKind { get; }
-	public abstract int Level { get; }
+	int ISyntaxNode.Level => LevelNumber;
+	protected abstract int LevelNumber { get; }
 
 	/// <inheritdoc/>
 	public SyntaxKind Kind { get; }
@@ -125,7 +126,7 @@ public sealed class SyntaxToken : BaseSyntaxToken
 {
 	#region Properties
 	protected override string? TreeKind => null;
-	public override int Level => 0;
+	protected override int LevelNumber => 0;
 	#endregion
 
 	#region Constructors

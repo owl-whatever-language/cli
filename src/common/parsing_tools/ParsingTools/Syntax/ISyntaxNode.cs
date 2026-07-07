@@ -23,7 +23,8 @@ public abstract class BaseSyntaxNode : ISyntaxNode
 {
 	#region Properties
 	public abstract SyntaxNodeKind NodeKind { get; }
-	public abstract int Level { get; }
+	int ISyntaxNode.Level => LevelNumber;
+	protected abstract int LevelNumber { get; }
 
 	/// <inheritdoc/>
 	[DisallowNull]
