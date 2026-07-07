@@ -47,7 +47,6 @@ variable_declaration @ declared       : IDeclaredLocalVariable variable
 function_declaration_signature        : token? keyword, token name, token start, list<function_parameter, token> parameters, token end, function_return return
 function_declaration statement        : function_declaration_signature signature, function_body body
 function_declaration @ declared       : IDeclaredFunction function, ISymbolScope scope
-#local_function_declaration statement  : token keyword, function_declaration_statement declaration
 
 group function_parameter : token name
 function_parameter @ declared : IDeclaredFunctionParameter parameter
