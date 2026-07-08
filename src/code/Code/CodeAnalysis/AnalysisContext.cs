@@ -56,6 +56,7 @@ public sealed class AnalysisContext : IAnalysisContext
 
 		RegisterPass<ControlFlow.ControlFlowAnalyser>();
 		RegisterPass<Passes.LocalCapture.LocalCaptureAnalyser>();
+		RegisterPass<Passes.EntryPoint.EntryPointAnalyser>();
 	}
 	#endregion
 
