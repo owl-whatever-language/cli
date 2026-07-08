@@ -13,13 +13,15 @@ public interface IClassificationStyling
 	bool TryGet(ClassificationKind? classification, out StyleInfo style);
 	StyleInfo Get(ClassificationKind? classification);
 	StyleInfo Get(params IReadOnlyList<ClassificationKind> classifications);
+	string? GetSymbol(DiagnosticKind diagnostic);
 	#endregion
 }
 
 public sealed class ClassificationStyling : IClassificationStyling
 {
 	#region Fields
-	private readonly Dictionary<ClassificationKind, StyleInfo> _styles = [];
+	private readonly Dictionary<ClassificationKind, StyleInfo?> _styles = [];
+	private readonly Dictionary<ClassificationKind, string?> _symbols = [];
 	#endregion
 
 	#region Properties
@@ -58,21 +60,33 @@ public sealed class ClassificationStyling : IClassificationStyling
 		StyleInfo style = new(colorHex, effect);
 		return Add(classification, style);
 	}
-	public ClassificationStyling Add(ClassificationKind classification, StyleInfo style)
+	public ClassificationStyling Add(ClassificationKind classification, StyleInfo? style)
 	{
 		_styles.Add(classification, style);
 
 		return this;
 	}
+	public ClassificationStyling AddSymbol(ClassificationKind classification, string? symbol)
+	{
+		_symbols.Add(classification, symbol);
 
+		return this;
+	}
+	public ClassificationStyling AddSymbol(DiagnosticKind diagnostic, string? symbol) => AddSymbol(diagnostic.ToClassification(), symbol);
 	public bool TryGet(ClassificationKind? classification, out StyleInfo style)
 	{
 		if (classification is not null)
 		{
 			foreach (ClassificationKind kind in classification.Value.Iterate())
 			{
-				if (_styles.TryGetValue(kind, out style))
+				if (_styles.TryGetValue(kind, out StyleInfo? stored))
+				{
+					if (stored is null)
+						break; // Null means to select the default style if possible.
+
+					style = stored.Value;
 					return true;
+				}
 			}
 		}
 
@@ -104,6 +118,17 @@ public sealed class ClassificationStyling : IClassificationStyling
 			styles[i] = Get(classifications[i]);
 
 		return StyleInfo.Merge(styles);
+	}
+	public string? GetSymbol(DiagnosticKind diagnostic) => GetSymbol(diagnostic.ToClassification());
+	private string? GetSymbol(ClassificationKind classification)
+	{
+		foreach (ClassificationKind kind in classification.Iterate())
+		{
+			if (_symbols.TryGetValue(kind, out string? symbol))
+				return symbol;
+		}
+
+		return default;
 	}
 	#endregion
 }

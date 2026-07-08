@@ -25,6 +25,10 @@ public static class OwlStyling
 			.Add(ClassificationKind.Warning, "#ffaf00", StylingEffect.Italic | StylingEffect.Wavy)
 			.Add(ClassificationKind.Suggestion, "#808080", StylingEffect.Italic | StylingEffect.Dotted)
 			.Add(ClassificationKind.Hint, "#808080", StylingEffect.Italic)
+			.AddSymbol(DiagnosticKind.Error, "🞫")
+			.AddSymbol(DiagnosticKind.Warning, "🞛")
+			.AddSymbol(DiagnosticKind.Suggestion, "⯌")
+			.AddSymbol(ClassificationKind.Diagnostic, "⯌")
 
 			// Pretty source
 			.Add(ClassificationKind.PrettySource, "#808080")
