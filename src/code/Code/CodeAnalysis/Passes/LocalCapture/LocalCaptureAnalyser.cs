@@ -1,6 +1,6 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Passes.LocalCapture;
 
-public class LocalCaptureAnalysis : AnalysisPass.PerTree, IDiagnosticProvider
+public sealed class LocalCaptureAnalyser : AnalysisPass.PerTree, IDiagnosticProvider
 {
 	#region Nested types
 	private sealed class Instance : BaseAnnotatedVisitor
@@ -12,13 +12,13 @@ public class LocalCaptureAnalysis : AnalysisPass.PerTree, IDiagnosticProvider
 		#endregion
 
 		#region Properties
-		private LocalCaptureAnalysis Analyser { get; }
+		private LocalCaptureAnalyser Analyser { get; }
 		private ISourceFile Source { get; }
 		public DiagnosticBag Diagnostics { get; } = [];
 		#endregion
 
 		#region Constructors
-		public Instance(LocalCaptureAnalysis analyser, ISourceFile source)
+		public Instance(LocalCaptureAnalyser analyser, ISourceFile source)
 		{
 			Analyser = analyser;
 			Source = source;
