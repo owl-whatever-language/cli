@@ -1,6 +1,8 @@
+using System.CodeDom.Compiler;
+
 namespace OwlDomain.ParsingTools.Text.Fragments;
 
-public interface ITextFragmentCollection : IReadOnlyList<TextFragment>
+public interface ITextFragmentCollection : IReadOnlyList<TextFragment>, IPlainTextPrintable
 {
 	#region Properties
 	bool IsWhitespace { get; }
@@ -50,6 +52,11 @@ public class TextFragmentCollection : List<TextFragment>, ITextFragmentCollectio
 
 			RemoveAt(Count - 1);
 		}
+	}
+	public void WritePlainText(IndentedTextWriter writer)
+	{
+		foreach (TextFragment fragment in this)
+			writer.Write(fragment.Text);
 	}
 	public override string ToString() => string.Concat(this);
 	#endregion

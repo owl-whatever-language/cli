@@ -235,37 +235,38 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	#endregion
 
 	#region Symbol helpers
-	private ISymbolGroup GetAll(ISyntaxToken token) => GetAll(token.Value as string, token.Position);
-	private ISymbolGroup GetAll(string? name, IndexedPositionRange position)
+	private ISymbolGroup GetAll(ISyntaxToken token)
 	{
-		if (name is null) // Note(Nightowl): Invalid names will have already been reported during parsing;
+		if (token.Value is not string name) // Note(Nightowl): Invalid names will have already been reported during parsing;
 			return new SymbolGroup();
 
 		ISymbolGroup group = CurrentScope.GetAll(name);
 		if (group.Count is 0)
-			AddError("symbol_not_found", position, $"No accessible symbol named '{name}' could be found.");
+		{
+			// Note(Nightowl): Could maybe do name similarity checking here to make suggestions as extra lines;
+
+			Diagnostics
+				.BuildError(this, "symbol_not_found")
+				.Add(token, lines => lines.AddLine($"No accessible symbol named '{name}' could be found."));
+		}
 
 		return group;
 	}
 	private ISymbol? GetSingle(ISyntaxToken token) => GetSingle<ISymbol>(token, "symbol", "symbols");
 	private T? GetSingle<T>(ISyntaxToken token, string kind, string kindPlural)
 	{
-		return GetSingle<T>(token.Value as string, kind, kindPlural, token.Position, out _);
+		return GetSingle<T>(token, kind, kindPlural, out _);
 	}
 	private T? GetSingle<T>(ISyntaxToken token, string kind, string kindPlural, out T[] ambiguity)
 	{
-		return GetSingle<T>(token.Value as string, kind, kindPlural, token.Position, out ambiguity);
-	}
-	private T? GetSingle<T>(string? name, string kind, string kindPlural, IndexedPositionRange position, out T[] ambiguity)
-	{
-		if (name is null) // Note(Nightowl): Invalid names will have already been reported during parsing;
+		if (token.Value is not string name) // Note(Nightowl): Invalid names will have already been reported during parsing;
 		{
 			ambiguity = [];
 			return default;
 		}
 
 		if (CurrentScope.TryGet(name, out ISymbolGroup? symbols) is false)
-			symbols = GetAll(name, position);
+			symbols = GetAll(token);
 
 		if (symbols.Count is 0)
 		{
@@ -277,13 +278,28 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 
 		if (ambiguity.Length is 0)
 		{
-			AddError($"{kind}_not_found", position, $"No accessible {kind} named '{name}' could be found.");
+			Diagnostics
+				.BuildError(this, $"{kind}_not_found")
+				.Add(token, lines =>
+				{
+					lines.AddLine($"No accessible {kind} named '{name}' could be found.");
+					if (symbols.Count is 1)
+						lines.AddLine($"But a symbol with the same name was found.");
+					else if (symbols.Count > 1)
+						lines.AddLine("But several symbols with the same name were found.");
+				});
+
 			return default;
 		}
 
 		if (ambiguity.Length > 1)
 		{
-			AddError($"{kind}_ambiguity", position, $"Multiple {kindPlural} named '{name}' were found, but they couldn't be disambiguated.");
+			// Note(Nightowl): Could maybe list the ambiguous symbols as extra lines here;
+
+			Diagnostics
+				.BuildError(this, $"{kind}_ambiguity")
+				.Add(token, lines => lines.AddLine($"Multiple {kindPlural} named '{name}' were found, but they couldn't be disambiguated."));
+
 			return default;
 		}
 
@@ -300,17 +316,6 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	private void Update(IConcreteSyntaxNode oldDeclaration, IDeclaredSyntaxNode newDeclaration)
 	{
 		CurrentScope.UpdateChild(oldDeclaration, newDeclaration);
-	}
-	#endregion
-
-	#region Diagnostic helpers
-	private void AddError(string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
-	{
-		AddDiagnostic(DiagnosticKind.Error, id, position, message, stackTrace);
-	}
-	private void AddDiagnostic(DiagnosticKind kind, string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
-	{
-		Diagnostics.Add(this, kind, id, Source, position, message, stackTrace);
 	}
 	#endregion
 }

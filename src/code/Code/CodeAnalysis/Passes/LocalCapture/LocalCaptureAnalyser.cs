@@ -7,7 +7,7 @@ public sealed class LocalCaptureAnalyser : AnalysisPass.PerTree, IDiagnosticProv
 	{
 		#region Fields
 		private readonly HashSet<IAnnotatedFunctionDeclarationStatementSyntax> _seen = [];
-		private readonly Stack<HashSet<ILocalVariable>> _used = [];
+		private readonly Stack<Dictionary<ILocalVariable, List<IAnnotatedGetExpressionSyntax>>> _used = [];
 		private readonly Stack<HashSet<ILocalVariable>> _declared = [];
 		#endregion
 
@@ -33,7 +33,7 @@ public sealed class LocalCaptureAnalyser : AnalysisPass.PerTree, IDiagnosticProv
 
 			_seen.Add(node);
 
-			HashSet<ILocalVariable> used = [];
+			Dictionary<ILocalVariable, List<IAnnotatedGetExpressionSyntax>> used = [];
 			HashSet<ILocalVariable> declared = [];
 
 			_used.Push(used);
@@ -45,7 +45,11 @@ public sealed class LocalCaptureAnalyser : AnalysisPass.PerTree, IDiagnosticProv
 			foreach (ILocalVariable variable in declared)
 				used.Remove(variable);
 
-			node.AddLocalCapture(used);
+			Dictionary<ILocalVariable, IReadOnlyCollection<IAnnotatedGetExpressionSyntax>> read = [];
+			foreach (var pair in used)
+				read.Add(pair.Key, pair.Value);
+
+			node.AddLocalCapture(read);
 
 			_used.Pop();
 			_declared.Pop();
@@ -57,8 +61,16 @@ public sealed class LocalCaptureAnalyser : AnalysisPass.PerTree, IDiagnosticProv
 		{
 			if (node.Symbol is ILocalVariable variable)
 			{
-				foreach (HashSet<ILocalVariable> set in _used)
-					set.Add(variable);
+				foreach (var use in _used)
+				{
+					if (use.TryGetValue(variable, out List<IAnnotatedGetExpressionSyntax>? uses) is false)
+					{
+						uses = [];
+						use.Add(variable, uses);
+					}
+
+					uses.Add(node);
+				}
 			}
 
 			if (node.Symbol is IDeclaredFunction function)
@@ -80,30 +92,39 @@ public sealed class LocalCaptureAnalyser : AnalysisPass.PerTree, IDiagnosticProv
 		}
 		private void CheckUse(IAnnotatedGetExpressionSyntax get, IAnnotatedFunctionDeclarationStatementSyntax function)
 		{
-			foreach (ILocalVariable variable in function.GetLocalCapture().Variables)
+			IReadOnlyDictionary<IDeclaredLocalVariable, IReadOnlyCollection<IAnnotatedGetExpressionSyntax>> GetInvalid()
 			{
-				// Note(Nightowl): It shouldn't be possible to have non-declared ones;
-				IDeclaredLocalVariable declared = (IDeclaredLocalVariable)variable;
+				Dictionary<IDeclaredLocalVariable, IReadOnlyCollection<IAnnotatedGetExpressionSyntax>> result = [];
 
-				IndexedLinePosition use = get.Name.Position.Start;
-				IndexedLinePosition declaration = declared.Declaration.Name.Position.Start;
-
-				if (declared.Declaration.Position.Start >= get.Position.Start)
+				foreach (var variable in function.GetLocalCapture().Variables)
 				{
-					Diagnostics.AddError(
-						Analyser,
-						"function_undeclared_variable_use",
-						Source,
-						get.Name.Position,
-						$"This function uses the variable '{variable.Name}' (declared on {declaration}) which is declared after this function is used.");
+					// Note(Nightowl): It shouldn't be possible to have non-declared ones;
+					IDeclaredLocalVariable declared = (IDeclaredLocalVariable)variable.Key;
 
-					Diagnostics.AddError(
-						Analyser,
-						"variable_defined_after_use",
-						Source,
-						declared.Declaration.Name.Position,
-						$"This variable is declared after the function '{function.Function.Name}' (which uses this variable) is used on {use}.");
+					IndexedLinePosition use = get.Name.Position.Start;
+					IndexedLinePosition declaration = declared.Declaration.Name.Position.Start;
+
+					if (declared.Declaration.Position.Start >= get.Position.Start)
+						result.Add(declared, variable.Value);
 				}
+
+				return result;
+			}
+
+			var invalid = GetInvalid();
+			if (invalid.Count is 0)
+				return;
+
+			Diagnostic diagnostic = Diagnostics
+				.BuildError(Analyser, "variable_used_before_declaration")
+				.Add(get.Name, lines => lines.AddLine("Some variables that this function uses have not been defined yet."));
+
+			foreach (var variable in invalid)
+			{
+				diagnostic.Add(variable.Key.Declaration.Name, lines => lines.AddLine("Declared here."));
+
+				foreach (var use in variable.Value)
+					diagnostic.Add(use.Name, lines => lines.AddLine("Used here."));
 			}
 		}
 		#endregion

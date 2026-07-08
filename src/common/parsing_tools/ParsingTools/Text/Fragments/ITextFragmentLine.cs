@@ -1,3 +1,5 @@
+using System.CodeDom.Compiler;
+
 namespace OwlDomain.ParsingTools.Text.Fragments;
 
 public interface ITextFragmentLine : ITextFragmentCollection
@@ -45,13 +47,51 @@ public sealed class TextFragmentLine : TextFragmentCollection, ITextFragmentLine
 	public TextFragmentLine(int? line, int capacity) : base(capacity) => Line = line;
 	#endregion
 
+	#region Functions
+	public static TextFragmentLine FromParts(int? line, params IEnumerable<object?> values)
+	{
+		TextFragmentLine l = new(line);
+
+		foreach (object? value in values)
+		{
+			if (value is null)
+				continue;
+
+			if (value is string str)
+				l.Add(str, null);
+			else if (value is TextFragment fragment)
+				l.Add(fragment);
+			else if (value is IEnumerable<TextFragment> fragments)
+				l.AddRange(fragments);
+			else if (value is (string text, ClassificationKind kind))
+			{
+				if (text is not null)
+					l.Add(text, kind);
+			}
+			else if (value is (char ch, ClassificationKind kind2))
+				l.Add(ch.ToString(), kind2);
+			else if (value is IDebugNodeFactory<IDebugTreeText> factory)
+				l.AddRange(factory.GetDebugNode().Fragments);
+		}
+
+		return l;
+	}
+	#endregion
+
 	#region Methods
+	public TextFragmentLine Replace(Func<TextFragment, TextFragment> callback)
+	{
+		for (int i = 0; i < Count; i++)
+			this[i] = callback.Invoke(this[i]);
+
+		return this;
+	}
 	public override string ToString() => $"{Line} | {string.Concat(this)}";
 	private string DebuggerDisplay() => $"Line #{Line} | {string.Concat(this)}";
 	#endregion
 }
 
-public interface ITextFragmentLineCollection : IReadOnlyList<ITextFragmentLine>
+public interface ITextFragmentLineCollection : IReadOnlyList<ITextFragmentLine>, IPlainTextPrintable
 {
 	#region Properties
 	int LowestLine { get; }
@@ -223,7 +263,24 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 	}
 	#endregion
 
+	#region Replace methods
+	public TextFragmentLineCollection Replace(Func<TextFragment, TextFragment> callback)
+	{
+		foreach (TextFragmentLine line in this)
+			line.Replace(callback);
+
+		return this;
+	}
+	#endregion
+
 	#region Methods
+	public TextFragmentLineCollection AddLine(params IEnumerable<object?> values)
+	{
+		TextFragmentLine line = TextFragmentLine.FromParts(null, values);
+		Add(line);
+
+		return this;
+	}
 	public IReadOnlyList<int> GetLineNumbers()
 	{
 		List<int> numbers = [];
@@ -268,6 +325,14 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 		}
 
 		return null;
+	}
+	public void WritePlainText(IndentedTextWriter writer)
+	{
+		foreach (TextFragmentLine line in this)
+		{
+			line.WritePlainText(writer);
+			writer.WriteLine();
+		}
 	}
 	IEnumerator<ITextFragmentLine> IEnumerable<ITextFragmentLine>.GetEnumerator() => GetEnumerator();
 	#endregion

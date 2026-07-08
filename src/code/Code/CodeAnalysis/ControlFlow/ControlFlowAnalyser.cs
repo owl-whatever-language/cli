@@ -405,24 +405,36 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 				return true; // These will have errors elsewhere so don't duplicate.
 
 			IReadOnlyCollection<IControlFlowBlock> missingReturns = GetBlocksWithMissingReturn(graph.End);
+			if (missingReturns.Count is 0)
+				return true;
+
+
+			Diagnostic diagnostic = Diagnostics
+				.BuildError(Analyser, "missing_return")
+				.Add(node.Signature.Name, lines => lines.AddLine("Function is missing a return statement."))
+				.Add(node.Signature.Return, lines => lines.AddLine("This is where the function defined that it needs a return type."));
+
+			// Note(Nightowl): 
+			// Isn't this just always going to be the very last block anyway?
+			// If so, maybe we can somehow make this look better by highlighting the blocks that do return.
 			foreach (IControlFlowBlock block in missingReturns)
 			{
-				IndexedPositionRange position = GetBestMissingReturnErrorPosition(graph, block);
-				AddError("missing_return_statement", position, "The function is missing a return statement.");
+				ISyntaxNode target = GetBestMissingReturnErrorPosition(graph, block);
+				diagnostic.Add(target, lines => lines.AddLine("Missing return statement here."));
 			}
 
 			return true;
 		}
-		private IndexedPositionRange GetBestMissingReturnErrorPosition(IControlFlowGraph graph, IControlFlowBlock block)
+		private ISyntaxNode GetBestMissingReturnErrorPosition(IControlFlowGraph graph, IControlFlowBlock block)
 		{
 			// Note(Nightowl): Improve this later;
 
 			return block switch
 			{
-				IControlFlowStatementBlock statement => statement.Statements.Any() ? statement.Statements[^1].Position : graph.Node.Position,
-				IControlFlowExpressionBlock expression => expression.Expression.Position,
+				IControlFlowStatementBlock statement => statement.Statements.Any() ? statement.Statements[^1] : graph.Node,
+				IControlFlowExpressionBlock expression => expression.Expression,
 
-				_ => ThrowHelper.ThrowInvalidOperationException<IndexedPositionRange>($"Unsupported control flow block type ({block.GetType().Name}).")
+				_ => ThrowHelper.ThrowInvalidOperationException<ISyntaxNode>($"Unsupported control flow block type ({block.GetType().Name}).")
 			};
 		}
 		private IReadOnlyCollection<IControlFlowBlock> GetBlocksWithMissingReturn(IControlFlowEndBlock end)
@@ -474,17 +486,6 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 				else if (function.Body is IAnnotatedShortFunctionBodySyntax @short)
 					GraphBuilder.Populate(graph, @short.Expression);
 			}
-		}
-		#endregion
-
-		#region Helpers
-		private void AddError(string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
-		{
-			AddDiagnostic(DiagnosticKind.Error, id, position, message, stackTrace);
-		}
-		private void AddDiagnostic(DiagnosticKind kind, string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
-		{
-			Diagnostics.Add(Analyser, kind, id, Source, position, message, stackTrace);
 		}
 		#endregion
 	}

@@ -17,15 +17,14 @@ public sealed class EntryPointAnalyser : AnalysisPass.PerCompilation, IDiagnosti
 
 		if (withExecutable.Count is 0)
 		{
-			diagnostics.Add(new Diagnostic()
-			{
-				Provider = this,
-				Id = "nothing_to_execute",
-				Kind = DiagnosticKind.Suggestion,
-
-				Location = CompilationDiagnosticLocation.Instance,
-				Message = "None of the files in the compilation contained executable statements, and so none of the files counted as entry point.",
-			});
+			diagnostics
+				.BuildSuggestion(this, "nothing_to_execute")
+				.Add(lines =>
+				{
+					lines.AddLine("None of the files in the compilation contained executable statements.");
+					lines.AddLine("This means that none of the files counted as an entry point.");
+					lines.AddLine("Which also means that nothing will happen by trying to run the program.");
+				});
 
 			return diagnostics;
 		}
@@ -33,15 +32,20 @@ public sealed class EntryPointAnalyser : AnalysisPass.PerCompilation, IDiagnosti
 		if (withExecutable.Count is 1)
 			return diagnostics;
 
+		Diagnostic diagnostic = diagnostics
+			.BuildError(this, "multiple_entry_point_files")
+			.Add(lines =>
+			{
+				lines.AddLine("The compilation contained several files with executable statements.");
+				lines.AddLine("This means that several files were counted as possible entry points to the program, however only one is allowed.");
+			});
+
 		foreach (IAnnotatedSyntaxTree tree in withExecutable)
 		{
 			IAnnotatedStatementSyntax first = tree.Document.Statements.First(s => s.IsExecutable);
-			diagnostics.AddError(
-				this,
-				"multiple_entry_points",
-				tree.Source,
-				new(first.Position.Start, first.Position.Start),
-				$"The file '{tree.Source.SimpleName}' is one of the multiple entry points in the compilation, but only having one is allowed.");
+			ISyntaxNode target = first.Flatten().FirstOrDefault() ?? (ISyntaxNode)first;
+
+			diagnostic.Add(target, lines => lines.AddLine("This is an executable statement."));
 		}
 
 		return diagnostics;

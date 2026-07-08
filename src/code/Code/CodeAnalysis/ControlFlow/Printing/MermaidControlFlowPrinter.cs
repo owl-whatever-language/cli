@@ -347,7 +347,7 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 	{
 		writer.Write($"{block.Id}(((\"");
 		TextFragment end = new("end", ClassificationKind.Keyword);
-		PrintHtmlLines(writer, [new(null, end)], center: true);
+		PrintHtmlLines(writer, [new TextFragmentLine(null, end)], center: true);
 		writer.WriteLine("\")))");
 	}
 

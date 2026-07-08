@@ -33,47 +33,35 @@ public sealed class DiagnosticBag : IDiagnosticBag, ICollection<IDiagnostic>
 	internal DiagnosticBag(List<IDiagnostic> diagnostics) => _diagnostics = diagnostics;
 	#endregion
 
+	#region Build new methods
+	public Diagnostic BuildNew(IDiagnosticProvider provider, string id, DiagnosticKind kind, StackTrace? stackTrace = null)
+	{
+		Diagnostic diagnostic = new(provider, id, kind, stackTrace);
+		Add(diagnostic);
+
+		return diagnostic;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public Diagnostic BuildError(IDiagnosticProvider provider, string id, StackTrace? stackTrace = null)
+	{
+		return BuildNew(provider, id, DiagnosticKind.Error, stackTrace);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public Diagnostic BuildWarning(IDiagnosticProvider provider, string id, StackTrace? stackTrace = null)
+	{
+		return BuildNew(provider, id, DiagnosticKind.Warning, stackTrace);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public Diagnostic BuildSuggestion(IDiagnosticProvider provider, string id, StackTrace? stackTrace = null)
+	{
+		return BuildNew(provider, id, DiagnosticKind.Suggestion, stackTrace);
+	}
+	#endregion
+
 	#region Methods
-	public void Add(
-		IDiagnosticProvider provider,
-		DiagnosticKind kind,
-		string id,
-		ISourceFile source,
-		IndexedPositionRange position,
-		string message,
-		StackTrace? stackTrace = null)
-	{
-		Add(new Diagnostic()
-		{
-			Provider = provider,
-			Kind = kind,
-			Id = id,
-			StackTrace = stackTrace,
-
-			Location = new DiagnosticSourceLocation(source, position),
-			Message = message
-		});
-	}
-	public void AddError(
-		IDiagnosticProvider provider,
-		string id,
-		ISourceFile source,
-		IndexedPositionRange position,
-		string message,
-		StackTrace? stackTrace = null)
-	{
-		Add(new Diagnostic()
-		{
-			Provider = provider,
-			Kind = DiagnosticKind.Error,
-			Id = id,
-			StackTrace = stackTrace,
-
-			Location = new DiagnosticSourceLocation(source, position),
-			Message = message
-		});
-	}
-
 	/// <inheritdoc/>
 	public void Add(IDiagnostic item) => _diagnostics.Add(item);
 	public void AddRange(IEnumerable<IDiagnostic> items) => _diagnostics.AddRange(items);

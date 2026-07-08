@@ -8,7 +8,6 @@ global using OwlDomain.ParsingTools.Text.Fragments;
 global using OwlDomain.ParsingTools.Syntax.Debugging;
 
 global using OwlDomain.Owl.Code.CodeAnalysis;
-global using OwlDomain.Owl.Code.CodeAnalysis.Diagnostics;
 global using OwlDomain.Owl.Code.CodeAnalysis.Parsing;
 global using OwlDomain.Owl.Code.CodeAnalysis.Semantics;
 global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols;

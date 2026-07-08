@@ -76,6 +76,19 @@ public sealed class ParallelParsingResult : IParallelStageResult<LexingAndParsin
 
 public sealed class Parser : BaseParser, IDiagnosticProvider
 {
+	#region Token fragments
+	private static TextFragment SemicolonFragment => new(";", ClassificationKind.Punctuation);
+	private static TextFragment CommaFragment => new(",", ClassificationKind.Punctuation);
+	private static TextFragment OpeningBracketFragment => new("(", ClassificationKind.Punctuation);
+	private static TextFragment ClosingBracketFragment => new(")", ClassificationKind.Punctuation);
+	private static TextFragment OpeningBraceFragment => new("{", ClassificationKind.Punctuation);
+	private static TextFragment ClosingBraceFragment => new("}", ClassificationKind.Punctuation);
+	private static TextFragment OpeningAngleBracketFragment => new("<", ClassificationKind.Punctuation);
+	private static TextFragment ClosingAngleBracketFragment => new(">", ClassificationKind.Punctuation);
+	private static TextFragment NumberUnderscoreFragment => new("_", ClassificationKind.Number);
+	private static TextFragment EqualSignFragment => new("=", ClassificationKind.Punctuation);
+	#endregion
+
 	#region Properties
 	public string Name => "parser";
 	private ISourceFile Source { get; }
@@ -165,10 +178,10 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 
 		Debug.Assert(Current is not null);
 		if (Current.Kind != SyntaxKind.EndOfInput)
-			ReportExpectedStatement(Current.Position);
+			ReportExpectedSimple(Current, "statement", "Expected a statement here.");
 
 		SkipToEndOfInput();
-		IConcreteToken endOfInput = Expect(SyntaxKind.EndOfInput, "Expected the end of the input.");
+		IConcreteToken endOfInput = Expect(SyntaxKind.EndOfInput, token => ReportExpectedSimple(token, "eof", "Expected the end of the input."));
 
 		return new(statements, endOfInput);
 	}
@@ -192,18 +205,18 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 				// Note(Nightowl):
 				// When possible, use the previous, correctly parsed brace
 				// so that the "smart" diagnostic shows a better location;
-				ISyntaxNode target = Current;
+				ISyntaxToken target = Current;
 				ISyntaxToken? last = statements.LastOrDefault()?.Flatten().LastOrDefault();
 				if (last?.Kind == SyntaxKind.CloseBrace)
 					target = last;
 
-				AddError("duplicate_closing_brace", target.Position, "A duplicate closing brace was encountered.");
+				ReportDuplicate(target, "closing_brace", ClosingBraceFragment);
 				SkipCurrent();
 			}
 			else
 			{
 				Debug.Assert(Current is not null, "EOF should still be here.");
-				ReportExpectedStatement(Current.Position);
+				ReportExpectedSimple(Current, "statement", "Expected a statement here.");
 				SkipCurrent();
 			}
 		}
@@ -221,7 +234,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		terminator = Fabricate(SyntaxKind.Semicolon, ClassificationKind.Punctuation);
 
 		IndexedPositionRange position = Previous?.Position ?? terminator.Position;
-		ReportExpectedToken(position, SyntaxKind.Semicolon, "Expected a semi-colon ';' to end the statement.");
+		ReportExpectedSimple(terminator, "terminator", "Expected a semi-colon '", SemicolonFragment, "' here to end the statement.");
 
 		return terminator;
 	}
@@ -231,7 +244,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			return statement;
 
 		Debug.Assert(Current is not null, "EOF should still be there.");
-		ReportExpectedStatement(Current.Position);
+		ReportExpectedSimple(Current, "statement", "Expected a statement here.");
 
 		return new ConcreteEmptyStatementSyntax();
 	}
@@ -260,7 +273,14 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		if (Match(SyntaxKind.Semicolon, ClassificationKind.Punctuation, out IConcreteToken? terminator) is false)
 			return null;
 
-		AddSuggestion("remove_empty_statement", terminator.Position, "Remove empty statement.");
+		Diagnostics
+			.BuildSuggestion(this, "remove_empty_statement")
+			.Add(terminator, lines =>
+			{
+				lines
+					.AddLine("Remove the empty statement.")
+					.AddLine("This statement only contains the terminator, it does nothing, and you probably included it by accident.");
+			});
 
 		return new ConcreteOnlyTerminatedStatementSyntax(terminator);
 	}
@@ -293,8 +313,10 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		if (TryParseType(out IConcreteTypeSyntax? type) is false)
 			return null;
 
-		IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Variable, "Expect the name of the new variable.");
-		IConcreteToken assignment = Expect(SyntaxKind.EqualSign, ClassificationKind.Punctuation, "Expect an equal sign '=' between the variable name and its value.");
+		IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Variable, token => ReportExpectedSimple(token, "variable_name", "Expect the name of the new variable."));
+		IConcreteToken assignment = Expect(SyntaxKind.EqualSign, ClassificationKind.Punctuation, token =>
+			ReportExpectedSimple(token, "equal_sign", "Expect an equal sign '", EqualSignFragment, "' between the variable name and its value."));
+
 		IConcreteExpressionSyntax value = ParseExpression();
 		IConcreteToken terminator = ExpectStatementTerminator();
 
@@ -306,7 +328,10 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			return null;
 
 		SyntaxList<IConcreteStatementSyntax> statements = ParseStatements(SyntaxKind.CloseBrace);
-		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBrace, ClassificationKind.Punctuation, start, "Expected a closing brace '}' to match this one.");
+		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBrace, ClassificationKind.Punctuation, start, token =>
+		{
+			ReportExpectedMatchingBrace(token, start, "end the block statement");
+		});
 
 		return new ConcreteBlockStatementSyntax(start, statements, end);
 	}
@@ -332,9 +357,10 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		if (Match(SyntaxKind.If, ClassificationKind.Keyword, out IConcreteToken? keyword) is false)
 			return null;
 
-		IConcreteToken start = Expect(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, "Expected the opening bracket '(' to prefix the if statement condition.");
+		IConcreteToken start = Expect(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, token => ReportExpectedOpeningBracket(token, "prefix the if statement condition"));
 		IConcreteExpressionSyntax condition = ParseExpression();
-		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, start, "Expected a closing bracket ')' to end the condition.");
+		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, start, token => ReportExpectedMatchingBracket(token, start, "end the condition"));
+
 		IConcreteStatementSyntax trueClause = ParseStatement();
 
 		if (Match(SyntaxKind.Else, ClassificationKind.Keyword, out IConcreteToken? @else) is false)
@@ -348,9 +374,9 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		if (Match(SyntaxKind.While, ClassificationKind.Keyword, out IConcreteToken? keyword) is false)
 			return null;
 
-		IConcreteToken start = Expect(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, "Expected the opening bracket '(' to prefix the while statement condition.");
+		IConcreteToken start = Expect(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, token => ReportExpectedOpeningBracket(token, "prefix the while statement condition"));
 		IConcreteExpressionSyntax condition = ParseExpression();
-		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, start, "Expected a closing bracket ')' to end the condition.");
+		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, start, token => ReportExpectedMatchingBracket(token, start, "end the condition"));
 		IConcreteStatementSyntax body = ParseStatement();
 
 		return new ConcreteWhileStatementSyntax(keyword, start, condition, end, body);
@@ -363,8 +389,8 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		if (Match(SyntaxKind.Fun, ClassificationKind.Keyword, out IConcreteToken? keyword) is false)
 			return null;
 
-		IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Function, "Expected the function name.");
-		IConcreteToken start = Expect(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, "Expected the opening bracket '(' to start the parameter list.");
+		IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Function, token => ReportExpectedSimple(token, "function_name", "Expected the function name"));
+		IConcreteToken start = Expect(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, token => ReportExpectedOpeningBracket(token, "start the parameter list"));
 
 		ConcreteFunctionDeclarationStatementSyntax function = ParseFunctionDeclaration(keyword, name, start);
 		return function;
@@ -413,7 +439,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 				nodes.Add(parameter);
 			}
 			else
-				ReportExpectedFunctionArgument(Current.Position);
+				ReportExpectedSimple(Current, "function_parameter", "Expected a function parameter here.");
 
 			if (RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket)
 			{
@@ -425,19 +451,19 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 				else if (IsCurrentAny(SyntaxKind.Semicolon, SyntaxKind.OpenBrace, SyntaxKind.EqualArrow)) // missing ')' but body started
 					break;
 				else
-					ReportExpectedFunctionParameterSeparator(Current.Position);
+					ReportExpectedComma(Current, "separate the function parameters");
 			}
 		}
 
 		if (separators.Count > 0 && separators.Count >= parameters.Count)
-			ReportExpectedFunctionParameter(separators[^1].Position);
+			ReportExpectedSimple(separators[^1], "function_parameter", "Expected a function parameter here.");
 
 		IConcreteToken end;
 		if (IsCurrentAny(SyntaxKind.Semicolon, SyntaxKind.OpenBrace, SyntaxKind.EqualArrow))
 		{
 			// Note(Nightowl): I don't know if this is really needed, but I'm doing it this way for now;
-			ISyntaxNode target = nodes.LastOrDefault()?.Flatten().LastOrDefault() ?? start;
-			ReportExpectedToken(target.Position, SyntaxKind.CloseBracket, "Expected a closing bracket ')' to end the function parameters.");
+			IConcreteToken target = nodes.LastOrDefault()?.Flatten().LastOrDefault() ?? start;
+			ReportExpectedSimple(target, "closing_bracket", "Expected a closing bracket '", ClosingBracketFragment, "' here to end the function parameters.");
 			end = Fabricate(SyntaxKind.Semicolon, ClassificationKind.Punctuation);
 		}
 		else
@@ -446,7 +472,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 				SyntaxKind.CloseBracket,
 				ClassificationKind.Punctuation,
 				start,
-				"Expecting a closing bracket ')' to match this one.");
+				token => ReportExpectedMatchingBracket(token, start, "end the function parameters"));
 		}
 
 		IConcreteFunctionReturnSyntax @return = ParseFunctionReturn();
@@ -469,7 +495,11 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		if (TryParseType(out IConcreteTypeSyntax? type) is false)
 			return null;
 
-		IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Parameter, "Expected the function parameter name.");
+		IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Parameter, token =>
+		{
+			ReportExpectedSimple(token, "function_parameter_name", "Expected the name of the function parameter.");
+		});
+
 		return new ConcreteRegularFunctionParameterSyntax(type, name);
 	}
 	private IConcreteFunctionReturnSyntax ParseFunctionReturn()
@@ -486,7 +516,10 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			return body;
 
 		Debug.Assert(Current is not null, "EOF should still be here.");
-		ReportExpectedFunctionBody(Current.Position);
+
+		Diagnostics
+			.BuildError(this, "expected_function_body")
+			.Add(Current, lines => lines.AddLine("Expected a function body here."));
 
 		return new ConcreteEmptyFunctionBodySyntax();
 	}
@@ -515,7 +548,13 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			return null;
 
 		IConcreteExpressionSyntax expression = ParseExpression();
-		IConcreteToken terminator = Expect(SyntaxKind.Semicolon, ClassificationKind.Punctuation, "Expected a semi-colon ';' to end the short function body.");
+		IConcreteToken terminator = Expect(SyntaxKind.Semicolon, ClassificationKind.Punctuation, token =>
+		{
+			Diagnostics
+				.BuildError(this, "expected_terminator")
+				.Add(token, lines => lines.AddLine("Expected a semi-colon '", SemicolonFragment, "' here to end the function body short-hand."))
+				.Add(arrow, lines => lines.AddLine("This arrow here means that you started the function body short-hand."));
+		});
 
 		return new ConcreteShortFunctionBodySyntax(arrow, expression, terminator);
 	}
@@ -536,7 +575,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			return type;
 
 		Debug.Assert(Current is not null, "EOF should still be there.");
-		ReportExpectedType(Current.Position);
+		ReportExpectedSimple(Current, "type", "Expected a type here");
 
 		return new ConcreteEmptyTypeSyntax();
 	}
@@ -589,7 +628,11 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 				nodes.Add(argument);
 			}
 			else
-				ReportExpectedType(Current.Position);
+			{
+				Diagnostics
+					.BuildError(this, "expected_generic_type_argument")
+					.Add(Current, lines => lines.AddLine("Expected a type here to use as an argument to the generic type."));
+			}
 
 			if (RealisticHasRemaining && Current.Kind != SyntaxKind.CloseAngleBracket)
 			{
@@ -601,7 +644,13 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			}
 		}
 
-		IConcreteToken end = Expect(SyntaxKind.CloseAngleBracket, ClassificationKind.Punctuation, "Expecting a closing angle bracket '>' to end a generic type.");
+		IConcreteToken end = Expect(SyntaxKind.CloseAngleBracket, ClassificationKind.Punctuation, token =>
+		{
+			Diagnostics
+				.BuildError(this, "expected_generic_type_end")
+				.Add(token, lines => lines.AddLine("Expected a closing angle bracket '", ClosingAngleBracketFragment, "' to end the generic type."))
+				.Add(start, lines => lines.AddLine("It needs to match this opening angle bracket '", OpeningAngleBracketFragment, "'."));
+		});
 
 		return new ConcreteGenericTypeSyntax(
 			type,
@@ -614,7 +663,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		if (Match(SyntaxKind.Period, ClassificationKind.Punctuation, out IConcreteToken? period) is false)
 			return null;
 
-		IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Type, "Expected a type name.");
+		IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Type, token => ReportExpectedSimple(token, "type_name", "Expected the name of the nested type here."));
 
 		return new ConcreteNestedTypeSyntax(type, period, name);
 	}
@@ -634,7 +683,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			return expression;
 
 		Debug.Assert(Current is not null, "EOF should still be there.");
-		ReportExpectedExpression(Current.Position);
+		ReportExpectedSimple(Current, "expression", "Expected an expression here.");
 
 		return new ConcreteEmptyExpressionSyntax();
 	}
@@ -708,6 +757,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		List<IConcreteFunctionArgumentSyntax> arguments = [];
 		List<IConcreteToken> separators = [];
 
+		IConcreteToken? lastComma = null;
 		while (RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket)
 		{
 			using LoopGuardScope _ = LoopGuard();
@@ -720,7 +770,34 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			}
 			else
 			{
-				ReportExpectedFunctionArgument(Current.Position);
+				Diagnostic diagnostic = Diagnostics
+					.BuildError(this, "expected_function_argument")
+					.Add(Source, Current.Position, lines =>
+					{
+						lines.AddLine("Expected a function argument.");
+						if (lastComma is null && Current.Kind != SyntaxKind.CloseBracket)
+							lines.AddLine("I don't know why the parsing failed here, I'd appreciate it if you could let me know this happened.");
+					})
+					.Add(start, lines =>
+					{
+						lines.AddLine(
+							"This opening bracket '",
+							OpeningBracketFragment,
+							"' is used to call a function. You end this call with a closing bracket '",
+							ClosingBracketFragment,
+							"'.");
+					});
+
+				if (lastComma is not null)
+				{
+					diagnostic.Add(lastComma, lines =>
+					{
+						lines
+						.AddLine("This is a comma '", CommaFragment, "', in this context, it is used to separate the function arguments.")
+						.AddLine("Writing it here means that you intended to pass in another argument to the function.");
+					});
+				}
+
 				SkipCurrent();
 			}
 
@@ -731,6 +808,8 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 
 				nodes.Add(comma);
 				separators.Add(comma);
+
+				lastComma = comma;
 			}
 		}
 
@@ -740,10 +819,21 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			.OfType<IConcreteNamedFunctionArgumentSyntax>()
 			.Where(a => a.Position.Start < lastNonNamed.Position.Start);
 
-		foreach (IConcreteNamedFunctionArgumentSyntax argument in mispositionedNamed)
-			AddError("named_argument_not_at_end", argument.Name.Position, "Named arguments should come after positioned ones.");
+		if (mispositionedNamed.Any())
+		{
+			Debug.Assert(lastNonNamed is not null);
+			Diagnostic diagnostic = Diagnostics.BuildError(this, "named_argument_not_at_end");
 
-		IConcreteToken end = Expect(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, "Expecting a closing bracket ')' to end the function call.");
+			diagnostic.Add(mispositionedNamed.First(), lines => lines.AddLine("Named arguments should come after positioned ones."));
+			foreach (IConcreteNamedFunctionArgumentSyntax argument in mispositionedNamed.Skip(1))
+				diagnostic.Add(argument.Name, lines => lines.AddLine("Also wrong."));
+
+			IndexedLinePosition endOfLast = lastNonNamed.Position.End;
+			IndexedLinePosition afterLast = new(endOfLast.Index + 1, endOfLast.Line, endOfLast.Column + 1);
+			diagnostic.Add(Source, afterLast, lines => lines.AddLine("Move them here."));
+		}
+
+		IConcreteToken end = Expect(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, token => ReportExpectedMatchingBracket(token, start, "End the function call"));
 
 		return new(
 			expression,
@@ -785,7 +875,25 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	{
 		if (Match(SyntaxKind.IntegerBase, ClassificationKind.Number, out IConcreteToken? @base))
 		{
-			IConcreteToken basedInteger = Expect(SyntaxKind.Integer, ClassificationKind.Number, "Expected an integer literal after the base specifier.");
+			Debug.Assert(@base.Value is not null);
+			NumberBase numberBase = (NumberBase)@base.Value;
+			IConcreteToken basedInteger = Expect(SyntaxKind.Integer, ClassificationKind.Number, token =>
+			{
+				Diagnostics
+					.BuildError(this, "expected_integer_literal")
+					.Add(token, lines => lines.AddLine("Expected an integer literal after the base specifier."))
+					.Add(@base, lines =>
+					{
+						lines.AddLine(
+							"This is a number base specifier, this particular one is for ",
+							(numberBase.Name.ToLower(), ClassificationKind.Number),
+							$" digits, meaning you can only use the {numberBase.CharacterSetDisplay} characters, or an underscore '",
+							NumberUnderscoreFragment,
+							"' to separate the digits.");
+					});
+
+			});
+
 			return new ConcreteBaseIntegerLiteralExpressionSyntax(@base, basedInteger, (ulong?)basedInteger.Value);
 		}
 
@@ -804,7 +912,9 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			if (decimal.TryParse(valueText, out decimal v) is false)
 			{
 				value = default;
-				AddError("invalid_decimal_literal", new(integer.Position.Start, @decimal.Position.End), "Couldn't convert the number literal to a decimal value, it is likely too precise.");
+				Diagnostics
+					.BuildError(this, "invalid_decimal_literal")
+					.Add(integer, lines => lines.AddLine("Couldn't convert the number literal to a decimal value, it is likely too precise. I would appreciate it if you'd let me know what number didn't work."));
 			}
 			else
 				value = v;
@@ -951,22 +1061,27 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		ISyntaxToken token = ExpectSilentCore(kind);
 		return Convert(token, classification);
 	}
-	private IConcreteToken Expect(SyntaxKind kind, ClassificationKind classification, string message)
+	private IConcreteToken Expect(SyntaxKind kind, ClassificationKind classification, Action<IConcreteToken> callback)
 	{
-		ISyntaxToken token = ExpectCore(kind, message);
-		return Convert(token, classification);
+		if (Match(kind, classification, out IConcreteToken? token))
+			return token;
+
+		token = Fabricate(kind, classification);
+		callback.Invoke(token);
+
+		return token;
 	}
-	private IConcreteToken ExpectMatching(SyntaxKind kind, ClassificationKind classification, ISyntaxToken start, string message)
+	private IConcreteToken ExpectMatching(SyntaxKind kind, ClassificationKind classification, ISyntaxToken start, Action<IConcreteToken> callback)
 	{
 		if (Match(kind, classification, out IConcreteToken? end) is false)
 		{
 			end = Fabricate(kind, classification);
-			ReportExpectedToken(start.Position, kind, message);
+			callback.Invoke(end);
 		}
 
 		return end;
 	}
-	private IConcreteToken Expect(SyntaxKind kind, string message)
+	private IConcreteToken Expect(SyntaxKind kind, Action<ISyntaxToken> message)
 	{
 		ISyntaxToken token = ExpectCore(kind, message);
 		return Convert(token);
@@ -1084,65 +1199,61 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	#endregion
 
 	#region Diagnostic methods
-	protected override void ReportExpectedToken(IndexedPositionRange position, SyntaxKind kind, string message)
+	private void ReportDuplicate(ISyntaxToken token, string kind, TextFragment fragment)
 	{
-		AddError("expected_token", position, message);
+		Diagnostics
+			.BuildError(this, $"duplicate_{kind}")
+			.Add(token, lines => lines.AddLine($"A duplicate {kind.Replace('_', ' ')} '", fragment, "' was encountered here."));
 	}
-	protected override void ReportInfiniteLoop(IndexedPositionRange position)
+	private void ReportExpectedSimple(ISyntaxToken fabricatedToken, string kind, params IEnumerable<object?> message)
+	{
+		Diagnostics
+			.BuildError(this, $"expected_{kind}")
+			.Add(fabricatedToken, lines => lines.AddLine(message));
+	}
+	private void ReportExpectedOpeningBracket(ISyntaxToken fabricatedToken, string purpose)
+	{
+		Diagnostics
+			.BuildError(this, $"expected_bracket")
+			.Add(fabricatedToken, lines => lines.AddLine("Expected an opening bracket '", OpeningBracketFragment, $"' here to {purpose}."));
+	}
+	private void ReportExpectedComma(ISyntaxToken fabricatedToken, string purpose)
+	{
+		Diagnostics
+			.BuildError(this, $"expected_comma")
+			.Add(fabricatedToken, lines => lines.AddLine("Expected a comma '", CommaFragment, $"' here to {purpose}."));
+	}
+	private void ReportExpectedMatchingBracket(ISyntaxToken fabricated, ISyntaxToken start, string purpose)
+	{
+		Diagnostics
+				.BuildError(this, "expected_closing_bracket")
+				.Add(fabricated, lines => lines.AddLine("Expected a closing bracket '", ClosingBracketFragment, $"' to {purpose}."))
+				.Add(start, lines => lines.AddLine("It needs to match this opening bracket '", OpeningBracketFragment, "'."));
+	}
+	private void ReportExpectedMatchingAngleBracket(ISyntaxToken fabricated, ISyntaxToken start, string purpose)
+	{
+		Diagnostics
+				.BuildError(this, "expected_closing_angle_bracket")
+				.Add(fabricated, lines => lines.AddLine("Expected a closing angle bracket '", ClosingAngleBracketFragment, $"' to {purpose}."))
+				.Add(start, lines => lines.AddLine("It needs to match this opening angle bracket '", OpeningAngleBracketFragment, "'."));
+	}
+	private void ReportExpectedMatchingBrace(ISyntaxToken fabricated, ISyntaxToken start, string purpose)
+	{
+		Diagnostics
+				.BuildError(this, "expected_closing_brace")
+				.Add(fabricated, lines => lines.AddLine("Expected a closing brace '", ClosingBraceFragment, $"' to {purpose}."))
+				.Add(start, lines => lines.AddLine("It needs to match this opening brace '", OpeningBraceFragment, "'."));
+	}
+
+
+	protected override void ReportInfiniteLoop(ISyntaxToken token)
 	{
 		StackTrace trace = new();
-		AddError(
-			"infinite_parsing_loop",
-			position,
-			"An unaccounted for infinite loop occurred during parsing, this is likely an error with the OWL parser. Feel free to scold me.",
-			trace);
-	}
-	private void ReportExpectedStatement(IndexedPositionRange position)
-	{
-		AddError("expected_statement", position, "Expected a statement.");
-	}
-	private void ReportExpectedExpression(IndexedPositionRange position)
-	{
-		AddError("expected_expression", position, "Expected an expression.");
-	}
-	private void ReportExpectedFunctionArgument(IndexedPositionRange position)
-	{
-		AddError("expected_function_argument", position, "Expected a function argument.");
-	}
-	private void ReportExpectedFunctionArgumentSeparator(IndexedPositionRange position)
-	{
-		AddError("expected_function_argument_separator", position, "Expect a comma ',' to separate the function arguments.");
-	}
-	private void ReportExpectedType(IndexedPositionRange position)
-	{
-		AddError("expected_type", position, "Expected a type name.");
-	}
-	private void ReportExpectedFunctionParameter(IndexedPositionRange position)
-	{
-		AddError("expected_function_parameter", position, "Expected a function parameter.");
-	}
-	private void ReportExpectedFunctionParameterSeparator(IndexedPositionRange position)
-	{
-		AddError("expected_function_parameter_separator", position, "Expect a comma ',' to separate the function parameters.");
-	}
-	private void ReportExpectedFunctionBody(IndexedPositionRange position)
-	{
-		AddError("expected_function_body", position, "Expected the body of the function, or a semi-colon ';' to end the function declaration.");
+
+		Diagnostics
+			.BuildError(this, "infinite_parsing_loop", trace)
+			.Add(token, lines => lines.AddLine("The parser got stuck in an infinite loop without me accounting for it. I'd appreciate it if you told me that it happened."));
 	}
 	#endregion
 
-	#region Helpers
-	private void AddSuggestion(string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
-	{
-		AddDiagnostic(DiagnosticKind.Suggestion, id, position, message, stackTrace);
-	}
-	private void AddError(string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
-	{
-		AddDiagnostic(DiagnosticKind.Error, id, position, message, stackTrace);
-	}
-	private void AddDiagnostic(DiagnosticKind kind, string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
-	{
-		Diagnostics.Add(this, kind, id, Source, position, message, stackTrace);
-	}
-	#endregion
 }

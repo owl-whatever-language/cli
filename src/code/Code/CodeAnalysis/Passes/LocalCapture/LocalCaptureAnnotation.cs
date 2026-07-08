@@ -9,11 +9,11 @@ public class LocalCaptureAnnotation : CodeAnnotation
 	// It might be fine for this to be a IDeclaredLocalVariable,
 	// Why do I even have types for non-declared ones?
 	// How could that possibly even occur?
-	public IReadOnlySet<ILocalVariable> Variables { get; }
+	public IReadOnlyDictionary<ILocalVariable, IReadOnlyCollection<IAnnotatedGetExpressionSyntax>> Variables { get; }
 	#endregion
 
 	#region Constructors
-	public LocalCaptureAnnotation(IReadOnlySet<ILocalVariable> variables)
+	public LocalCaptureAnnotation(IReadOnlyDictionary<ILocalVariable, IReadOnlyCollection<IAnnotatedGetExpressionSyntax>> variables)
 	{
 		Variables = variables;
 	}
@@ -25,7 +25,7 @@ public static class LocalCaptureExtensions
 	extension(IAnnotatedFunctionDeclarationStatementSyntax function)
 	{
 		#region Methods
-		public void AddLocalCapture(IReadOnlySet<ILocalVariable> variables)
+		public void AddLocalCapture(IReadOnlyDictionary<ILocalVariable, IReadOnlyCollection<IAnnotatedGetExpressionSyntax>> variables)
 		{
 			LocalCaptureAnnotation annotation = new(variables);
 			function.Annotations.Add(annotation);

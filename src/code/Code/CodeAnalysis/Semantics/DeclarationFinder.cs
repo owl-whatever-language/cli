@@ -80,14 +80,14 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 	protected override bool Visit(IConcreteVariableDeclarationStatementSyntax node)
 	{
 		DeclaredLocalVariable variable = new(node);
-		AddSingle(variable, node.Name.Position);
+		AddSingle(variable, node.Name);
 
 		return true;
 	}
 	protected override bool Visit(IConcreteFunctionDeclarationStatementSyntax node)
 	{
 		DeclaredFunction function = new(node);
-		using (NewScopeSingle("function", function, node.Signature.Name.Position))
+		using (NewScopeSingle("function", function, node.Signature.Name))
 		{
 			foreach (IDeclaredFunctionParameter parameter in function.Parameters)
 				Add(parameter);
@@ -100,22 +100,26 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 	#endregion
 
 	#region Scope methods
-	private void AddSingle(IDeclaredSymbol symbol, IndexedPositionRange position)
+	private void AddSingle(IDeclaredSymbol symbol, IConcreteToken nameToken)
 	{
 		if (symbol.Name is not null && CurrentScope.TryGetLocal(symbol.Name, out ISymbolGroup? symbols))
 		{
-			if (symbol is IFunction && symbols.OfType<IFunction>().Any())
-				AddError("duplicate_symbol", position, $"A symbol named '{symbol.Name}' already exists in this scope. Function overloading is not yet supported.");
-			else
-				AddError("duplicate_symbol", position, $"A symbol named '{symbol.Name}' already exists in this scope.");
+			Diagnostics
+				.BuildError(this, "duplicate_symbol")
+				.Add(nameToken, lines =>
+				{
+					lines.AddLine($"A symbol named '{symbol.Name}' already exists in this scope.");
+					if (symbol is IFunction && symbols.OfType<IFunction>().Any())
+						lines.AddLine("function overloading is not yet supported.");
+				});
 		}
 
 		Add(symbol);
 	}
 	private void Add(IDeclaredSymbol symbol) => CurrentScope.Add(symbol);
-	private Scope NewScopeSingle(string kind, IDeclaredSymbol symbol, IndexedPositionRange position)
+	private Scope NewScopeSingle(string kind, IDeclaredSymbol symbol, IConcreteToken nameToken)
 	{
-		AddSingle(symbol, position);
+		AddSingle(symbol, nameToken);
 
 		string name = $"{kind}({symbol.Name})";
 		return NewScope(name, symbol.Declaration);
@@ -143,18 +147,6 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 			CurrentScope = scope;
 		else
 			ThrowHelper.ThrowInvalidOperationException($"Exiting the '{ResultScope.Name}' scope is not allowed.");
-	}
-	#endregion
-
-	#region Diagnostic helpers
-	private void AddError(string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
-	{
-		AddDiagnostic(DiagnosticKind.Error, id, position, message, stackTrace);
-	}
-	private void AddDiagnostic(DiagnosticKind kind, string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
-	{
-		Debug.Assert(Source.Value is not null);
-		Diagnostics.Add(this, kind, id, Source.Value, position, message, stackTrace);
 	}
 	#endregion
 }

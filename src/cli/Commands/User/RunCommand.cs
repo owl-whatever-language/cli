@@ -1,5 +1,6 @@
 using System.IO;
 using OwlDomain.Owl.Code.Execution.Builtins;
+using OwlDomain.ParsingTools.Text.Fragments;
 
 namespace OwlDomain.Owl.CLI.Commands.User;
 
@@ -53,7 +54,7 @@ public sealed class RunCommand : Command<RunCommand.Settings>
 	private void Display(IEnumerable<IDiagnostic> diagnostics)
 	{
 		foreach (IDiagnostic diagnostic in diagnostics)
-			Console.Error.WriteLine($"[{diagnostic.Provider.Name}/{diagnostic.Id}/{diagnostic.Kind}] ({diagnostic.Location}): {diagnostic.Message}");
+			Console.Error.WriteLine($"[{diagnostic.Provider.Name}/{diagnostic.Id}/{diagnostic.Kind}] ({diagnostic.Source}, {diagnostic.Position}): {diagnostic.ShortMessage.ToPlainText()}");
 	}
 	#endregion
 }

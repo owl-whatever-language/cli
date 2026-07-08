@@ -31,6 +31,16 @@ public readonly struct TextFragment
 	}
 	#endregion
 
+	#region Functions
+	public static TextFragmentLineCollection LineBuilder(Action<TextFragmentLineCollection> callback)
+	{
+		TextFragmentLineCollection lines = [];
+		callback.Invoke(lines);
+
+		return lines;
+	}
+	#endregion
+
 	#region Methods
 	public override string ToString() => Text;
 	#endregion

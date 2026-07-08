@@ -181,6 +181,8 @@ public abstract class BaseLexer
 
 		ReportCurrentBadCharacters();
 
+		// Note(Nightowl): Optimise this to use TriviaList.Empty when nothing has been added;
+
 		leadingTrivia = new(LeadingTrivia);
 		LeadingTrivia = new(InitialLeadingTriviaCapacity);
 	}

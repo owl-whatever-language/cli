@@ -182,10 +182,15 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 	{
 		IndexedLinePosition start = Text.Position;
 
-		if (Text.MatchSequence("0x"))
+		foreach (NumberBase @base in NumberBase.WithSpecifier)
 		{
+			Debug.Assert(@base.Specifier is not null);
+
+			if (Text.MatchSequence(@base.Specifier) is false)
+				continue;
+
 			FinishPrefixToken(out TriviaList leadingTrivia);
-			token = new(SyntaxKind.IntegerBase, new(start, Text.Position), "0x", NumberBase.Hex, leadingTrivia, TriviaList.Empty);
+			token = new(SyntaxKind.IntegerBase, new(start, Text.Position), @base.Specifier, @base, leadingTrivia, TriviaList.Empty);
 			Tokens.Add(token);
 
 			return true;
@@ -206,7 +211,6 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 		ThrowIfValueBuilderNotCleared();
 
 		IndexedLinePosition start = Text.Position;
-
 		while (Text.HasRemaining)
 		{
 			if (Text.Match('_'))
@@ -216,7 +220,7 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 			}
 
 			TextElement current = Text.Current;
-			if (Rune.IsDigit(current.AsRune))
+			if (Rune.IsLetterOrDigit(current.AsRune))
 			{
 				LexemeBuilder.Append(current.Value);
 				ValueBuilder.Append(current.Value);
@@ -232,36 +236,51 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 
 		string lexeme = GetLexeme();
 		string valueStr = GetValue();
-
-		NumberStyles style = @base switch
-		{
-			NumberBase.Hex => NumberStyles.AllowHexSpecifier,
-			NumberBase.Decimal => NumberStyles.Integer,
-
-			_ or NumberBase.Unknown => ThrowHelper.ThrowInvalidOperationException<NumberStyles>($"Unknown number base ({@base}).")
-		};
-
 		object? value;
 
+		IndexedPositionRange position = new(start, Text.Position);
+
+		NumberStyles style = @base.Kind switch
+		{
+			NumberBaseKind.Binary => NumberStyles.AllowBinarySpecifier,
+			NumberBaseKind.Decimal => NumberStyles.Integer,
+			NumberBaseKind.Hexadecimal => NumberStyles.AllowHexSpecifier,
+
+			_ => ThrowHelper.ThrowInvalidOperationException<NumberStyles>($"Unknown number base kind ({@base.Kind}).")
+		};
+
 		if (style is NumberStyles.Integer)
-		{
-			if (long.TryParse(valueStr, style, provider: null, out long v) is false)
-			{
-				value = default;
-				AddError("number_too_big", new(start, Text.Position), $"The number literal is too big.");
-			}
-			else
-				value = v;
-		}
+			value = long.TryParse(valueStr, style, provider: null, out long v) ? v : default;
 		else
+			value = ulong.TryParse(valueStr, style, provider: null, out ulong v) ? v : default;
+
+		if (value is null)
 		{
-			if (ulong.TryParse(valueStr, style, provider: null, out ulong v) is false)
+			if (@base.IsValid(valueStr))
 			{
-				value = default;
-				AddError("invalid_base_number", new(start, Text.Position), "The base integer value is either too big, or contains invalid numbers, I'll add better checks later.");
+				Diagnostics
+					.BuildError(this, "number_too_big")
+					.Add(Source, position, lines => lines.AddLine("The number had too many digits."));
 			}
 			else
-				value = v;
+			{
+				Diagnostics
+					.BuildError(this, "invalid_number_characters")
+					.Add(Source, position, lines =>
+					{
+						if (@base.Kind == NumberBaseKind.Decimal)
+							lines.AddLine("The number literal contained invalid characters.");
+						else
+							lines.AddLine("The number literal contained invalid characters for this base.");
+
+						lines.AddLine(
+							"Please only use the '",
+							(@base.CharacterSetDisplay, ClassificationKind.Number),
+							"' characters, or an underscore '",
+							("_", ClassificationKind.Number),
+							"' to separate the digits.");
+					});
+			}
 		}
 
 		IndexedLinePosition end = Text.Position;
@@ -289,7 +308,7 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 	#region String methods
 	private bool TryLexString()
 	{
-		if (TryLexStringStart() is false)
+		if (TryLexStringStart(out SyntaxToken? start) is false)
 			return false;
 
 		while (Text.HasRemaining)
@@ -304,12 +323,16 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 				continue;
 		}
 
-		ReportUnclosedString(new(Text.Position, Text.Position));
+		Diagnostics
+			.BuildError(this, "unclosed_string")
+			.Add(Source, Text.Position, lines => lines.AddLine("Line breaks are not allowed in string fragments. Use a quote mark '", ('"', ClassificationKind.String), "' to close the string."))
+			.Add(start, lines => lines.AddLine("Need to match this quote mark '", ('"', ClassificationKind.String), "'."));
+
 		return true;
 	}
 	private bool TryLexInterpolatedString()
 	{
-		if (TryLexInterpolatedStringStart() is false)
+		if (TryLexInterpolatedStringStart(out SyntaxToken? start) is false)
 			return false;
 
 		while (Text.HasRemaining)
@@ -324,32 +347,48 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 				continue;
 		}
 
-		ReportUnclosedString(new(Text.Position, Text.Position));
+		Diagnostics
+			.BuildError(this, "unclosed_string")
+			.Add(Source, Text.Position, lines => lines.AddLine("Line breaks are not allowed in string fragments. Use a quote mark '", ('"', ClassificationKind.String), "' to close the string."))
+			.Add(start, lines => lines.AddLine("Need to match this quote mark '", ('"', ClassificationKind.String), "'."));
+
 		return true;
 	}
-	private bool TryLexStringStart()
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private bool TryLexStringStart() => TryLexStringStart(out _);
+	private bool TryLexStringStart([NotNullWhen(true)] out SyntaxToken? token)
 	{
 		IndexedLinePosition start = Text.Position;
 		if (Text.Match('"') is false)
+		{
+			token = default;
 			return false;
+		}
 
 		FinishPrefixToken(out TriviaList leadingTrivia);
-		SyntaxToken token = new(SyntaxKind.StringStart, new(start, Text.Position), "\"", null, leadingTrivia, TriviaList.Empty);
+		token = new(SyntaxKind.StringStart, new(start, Text.Position), "\"", null, leadingTrivia, TriviaList.Empty);
 		Tokens.Add(token);
 
 		return true;
 	}
-	private bool TryLexInterpolatedStringStart()
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private bool TryLexInterpolatedStringStart() => TryLexInterpolatedStringStart(out _);
+	private bool TryLexInterpolatedStringStart([NotNullWhen(true)] out SyntaxToken? token)
 	{
 		IndexedLinePosition start = Text.Position;
 
 		if ((Text.Current == '$' && Text.Next == '"') is false)
+		{
+			token = default;
 			return false;
+		}
 
 		Text.Advance(2);
 
 		FinishPrefixToken(out TriviaList leadingTrivia);
-		SyntaxToken token = new(SyntaxKind.InterpolatedStringStart, new(start, Text.Position), "$\"", null, leadingTrivia, TriviaList.Empty);
+		token = new(SyntaxKind.InterpolatedStringStart, new(start, Text.Position), "$\"", null, leadingTrivia, TriviaList.Empty);
 		Tokens.Add(token);
 
 		return true;
@@ -384,17 +423,15 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 			return true;
 		}
 
-		bool matched =
-			TryMatch('n', "\n") ||
-			TryMatch('r', "\r") ||
-			TryMatch('t', "\t") ||
-			TryMatch('f', "\f") ||
-			TryMatch('v', "\v") ||
-			TryMatch('b', "\b") ||
-			TryMatch('a', "\a") ||
-			TryMatch('e', "\e") ||
-			TryMatch('"', "\"")
-		;
+		bool matched = false;
+		foreach (EscapeSequence escape in EscapeSequence.Known)
+		{
+			if (TryMatch(escape.Character, escape.Value))
+			{
+				matched = true;
+				break;
+			}
+		}
 
 		if (matched)
 			return true;
@@ -403,7 +440,16 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 		SyntaxToken badToken = new(SyntaxKind.StringEscape, new(start, Text.Position), "\\", "\\");
 		Tokens.Add(badToken);
 
-		ReportUnknownEscapeSequence(new(start, Text.Position));
+		Diagnostics
+					.BuildError(this, "unknown_escape_sequence")
+					.Add(badToken, lines =>
+					{
+						lines.AddLine("This escape sequence is not recognised.");
+						lines.AddLine("The currently recognised escape sequences are:");
+						foreach (EscapeSequence escape in EscapeSequence.Known)
+							lines.AddLine($"• \\{escape.Character} - {escape.Name}.");
+					});
+
 		return true;
 	}
 	private bool TryLexStringText(bool allowLineBreak, params ReadOnlySpan<char> stopAt)
@@ -447,7 +493,7 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 	}
 	private bool TryLexStringInterpolation()
 	{
-		if (TryLexStringInterpolationStart() is false)
+		if (TryLexStringInterpolationStart(out SyntaxToken? start) is false)
 			return false;
 
 		while (Text.HasRemaining)
@@ -461,17 +507,27 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 			LexTokenSequence();
 		}
 
-		ReportUnclosedStringInterpolation(new(Text.Position, Text.Position));
+		Diagnostics
+			.BuildError(this, "unclosed_string_interpolation")
+			.Add(Source, Text.Position, lines => lines.AddLine("String value interpolation was not closed. Use a closing brace '", ("}", ClassificationKind.Punctuation), "' to end the interpolation."))
+			.Add(start, lines => lines.AddLine("Need to match this opening brace '", ("{", ClassificationKind.Punctuation), "'."));
+
 		return true;
 	}
-	private bool TryLexStringInterpolationStart()
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private bool TryLexStringInterpolationStart() => TryLexStringInterpolationStart(out _);
+	private bool TryLexStringInterpolationStart([NotNullWhen(true)] out SyntaxToken? token)
 	{
 		IndexedLinePosition start = Text.Position;
 		if (Text.Match('{') is false)
+		{
+			token = default;
 			return false;
+		}
 
 		FinishSuffixToken(out TriviaList trailingTrivia);
-		SyntaxToken token = new(SyntaxKind.StringInterpolationStart, new(start, Text.Position), "{", null, TriviaList.Empty, trailingTrivia);
+		token = new(SyntaxKind.StringInterpolationStart, new(start, Text.Position), "{", null, TriviaList.Empty, trailingTrivia);
 		Tokens.Add(token);
 
 		return true;
@@ -491,6 +547,23 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 	#endregion
 
 	#region Trivia methods
+	protected override void ReportBadCharacters(ISyntaxTrivia badGroup)
+	{
+		Debug.Assert(badGroup.Position.Length > 0);
+
+		if (badGroup.Position.Length is 1)
+		{
+			Diagnostics
+				.BuildError(this, "bad_character")
+				.Add(badGroup, lines => lines.AddLine("This character is not recognised by the lexer."));
+		}
+		else
+		{
+			Diagnostics
+				.BuildError(this, "bad_characters")
+				.Add(badGroup, lines => lines.AddLine("These characters are not recognised by the lexer."));
+		}
+	}
 	protected override ISyntaxTrivia? LexTrivia()
 	{
 		return
@@ -522,41 +595,6 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 		string value = GetValue().Trim();
 
 		return new SyntaxTrivia(SyntaxKind.Comment, new(start, Text.Position), lexeme, ClassificationKind.SinglelineComment, value);
-	}
-	#endregion
-
-	#region Diagnostic methods
-	protected override void ReportBadCharacters(ISyntaxTrivia badGroup)
-	{
-		AddError("bad_characters", badGroup.Position, "Unexpected characters found.");
-	}
-	private void ReportUnclosedString(IndexedPositionRange position)
-	{
-		AddError("unclosed_string", position, "Line breaks are not allowed in string fragments. Use a '\"' to close the string.");
-	}
-	private void ReportUnclosedStringInterpolation(IndexedPositionRange position)
-	{
-		AddError("unclosed_string_interpolation", position, "String value interpolation was not closed. Use a '}' to end the interpolation.");
-	}
-	private void ReportUnknownEscapeSequence(IndexedPositionRange position)
-	{
-		AddError("unknown_escape_sequence", position, "Unknown escape sequence.");
-	}
-	#endregion
-
-	#region Helpers
-	private void AddError(string id, IndexedPositionRange position, string message) => AddDiagnostic(DiagnosticKind.Error, id, position, message);
-	private void AddDiagnostic(DiagnosticKind kind, string id, IndexedPositionRange position, string message)
-	{
-		Diagnostics.Add(new Diagnostic()
-		{
-			Provider = this,
-			Kind = kind,
-			Id = id,
-
-			Location = new DiagnosticSourceLocation(Source, position),
-			Message = message
-		});
 	}
 	#endregion
 }

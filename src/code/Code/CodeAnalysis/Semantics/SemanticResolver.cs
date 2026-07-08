@@ -129,8 +129,8 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		IType valueType = semantic.Value.ResultType;
 		IType variableType = semantic.Variable.Type;
 
-		if (valueType.CanAssignTo(variableType) is false && valueType.IsNotError && variableType.IsNotError)
-			AddError("incompatible_type", declared.Assignment.Position, $"A value of the type '{valueType}' cannot be assigned to a variable of the type '{variableType}'.");
+		if (ShouldReportIncompatibleType(valueType, variableType))
+			ReportIncompatibleType(declared.Assignment, $"A value of the type '{valueType}' cannot be assigned to a variable of the type '{variableType}'.");
 
 		return semantic;
 	}
@@ -162,12 +162,16 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		var semantic = base.ConvertCore(declared);
 		if (_currentFunction is null)
 		{
-			AddError("return_not_in_function", declared.Keyword.Position, "A return statement is only valid inside of a function body.");
+			ReportReturnNotInFunction(declared.Keyword);
 			return semantic;
 		}
 
-		if (_currentFunction.Return.Type != SpecialTypes.Void)
-			AddError("return_value_expected", semantic.Keyword.Position, $"The function '{_currentFunction.Name}' specifies a return type, so a return value was expected.");
+		if (_currentFunction.Return.Type != SpecialTypes.Void && _currentFunction.Return.Type.IsNotError)
+		{
+			ReportIncompatibleType(semantic.Keyword, $"The function '{(_currentFunction.Name, ClassificationKind.Function)}' specifies a return type, so a return value was expected.")
+				.Add(_currentFunction.Declaration.Signature.Return, lines => lines.AddLine("This is where the function specifies the return type."));
+
+		}
 
 		return semantic;
 	}
@@ -176,15 +180,23 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		var semantic = base.ConvertCore(declared);
 		if (_currentFunction is null)
 		{
-			AddError("return_not_in_function", declared.Keyword.Position, "A return statement is only valid inside of a function body.");
+			ReportReturnNotInFunction(declared.Keyword);
 			return semantic;
 		}
 
 		IType valueType = semantic.Value.ResultType;
 		IType targetType = _currentFunction.Return.Type;
 
-		if (valueType.CanAssignTo(targetType) is false && valueType.IsNotError)
-			AddError("incompatible_type", declared.Value.Position, $"A return value of the type '{valueType}' cannot be assigned to the function's return type '{targetType}'.");
+		if (ShouldReportIncompatibleType(valueType, targetType))
+		{
+			ReportIncompatibleType(declared.Value, $"A return value of the type '", valueType, "' cannot be assigned to the function's return type '", targetType, "'.")
+				.Add(_currentFunction.Declaration.Signature.Return, lines =>
+				{
+					lines
+						.AddLine("If you want to return a value, specify the return type here like so:")
+						.AddLine($"{(_currentFunction.Name, ClassificationKind.Function)}(): ", targetType);
+				});
+		}
 
 		return semantic;
 	}
@@ -193,8 +205,10 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	{
 		var semantic = base.ConvertCore(declared);
 
-		if (semantic.Condition.ResultType != CoreScope.Bool && semantic.Condition.ResultType.IsNotError)
-			AddError("invalid_condition_type", semantic.Condition.Position, "Expected the condition to be a boolean expression.");
+		if (CoreScope.Bool is null)
+			ReportCoreTypeNotFound(declared.Keyword, "bool", "if statements");
+
+		CheckConditionType(semantic.Condition);
 
 		return semantic;
 	}
@@ -202,8 +216,10 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	{
 		var semantic = base.ConvertCore(declared);
 
-		if (semantic.Condition.ResultType != CoreScope.Bool && semantic.Condition.ResultType.IsNotError)
-			AddError("invalid_condition_type", semantic.Condition.Position, "Expected the condition to be a boolean expression.");
+		if (CoreScope.Bool is null)
+			ReportCoreTypeNotFound(declared.Keyword, "bool", "if statements");
+
+		CheckConditionType(semantic.Condition);
 
 		return semantic;
 	}
@@ -211,8 +227,10 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	{
 		var semantic = base.ConvertCore(declared);
 
-		if (semantic.Condition.ResultType != CoreScope.Bool && semantic.Condition.ResultType.IsNotError)
-			AddError("invalid_condition_type", semantic.Condition.Position, "Expected the condition to be a boolean expression.");
+		if (CoreScope.Bool is null)
+			ReportCoreTypeNotFound(declared.Keyword, "bool", "while statements");
+
+		CheckConditionType(semantic.Condition);
 
 		return semantic;
 	}
@@ -241,7 +259,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 			if (classification is not null)
 			{
-				// Note(Nightowl): 
+				// Note(Nightowl):
 				// If they are both of the same type, and the same name, and the same scope, then it's probably just an accident,
 				// so in order to try and decrease the amount of errors, we just use the first one.
 				// The same logic check will be used to suppress the error.
@@ -250,7 +268,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		}
 
 		var name = Convert(declared.Name, classification, symbol);
-		IType resultType = GetResultType(symbol, declared.Name.Position);
+		IType resultType = GetResultType(symbol, declared.Name);
 
 		return new(name, symbol ?? SpecialSymbols.NotFound, resultType);
 	}
@@ -269,8 +287,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			left.ResultType.FindOperation(left.ResultType, right.ResultType, kind) ??
 			right.ResultType.FindOperation(left.ResultType, right.ResultType, kind)
 		;
-		if (operation is null && left.ResultType.IsNotError && right.ResultType.IsNotError)
-			AddError("unknown_operator", op.Position, $"Unknown binary expression operator '{left.ResultType} {op.Lexeme} {right.ResultType}'.");
+		TryReportUnknownOperator("binary expression", op, operation, left.ResultType, right.ResultType);
 
 		return new(left, op, right, operation, operation?.Return.Type ?? SpecialTypes.Error);
 	}
@@ -295,10 +312,10 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 				resultType = parameter.Type;
 			}
 			else if (get.Symbol.IsKnown)
-				AddError("invalid_assignment", op.Position, $"Cannot assign a value to the symbol '{get.Symbol.Name}'.");
+				ReportCantAssignToSymbol(op, get.Symbol);
 		}
 		else if (IsLiteral(expression))
-			AddError("invalid_assignment", op.Position, "Literals cannot be assigned to.");
+			ReportCantAssignToLiteral(op);
 
 		return new(expression, op, value, symbol ?? SpecialSymbols.NotFound, resultType ?? SpecialTypes.Error);
 	}
@@ -314,10 +331,10 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			if (get.Symbol is ILocalVariable or IFunctionParameter)
 				symbol = get.Symbol;
 			else if (get.Symbol.IsKnown)
-				AddError("invalid_assignment", op.Position, $"Cannot assign a value to the symbol '{get.Symbol.Name}'.");
+				ReportCantAssignToSymbol(op, get.Symbol);
 		}
 		else if (IsLiteral(expression))
-			AddError("invalid_assignment", op.Position, "Literals cannot be assigned to.");
+			ReportCantAssignToLiteral(op);
 
 		OperatorKind kind = op.Kind.GetOperator();
 		IFunction? operation;
@@ -330,8 +347,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 				value.ResultType.FindOperation(expression.ResultType, value.ResultType, kind)
 			;
 
-			if (operation is null)
-				AddError("unknown_operator", op.Position, $"Unknown compound assignment operator '{expression.ResultType} {op.Lexeme} {value.ResultType}'.");
+			TryReportUnknownOperator("compound assignment", op, operation, expression.ResultType, value.ResultType);
 		}
 
 		return new(expression, op, value, symbol ?? SpecialSymbols.NotFound, operation, operation?.Return.Type ?? SpecialTypes.Error);
@@ -345,7 +361,8 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		IType? type = CoreScope.Int;
 		if (type is null)
 		{
-			AddError("core_type_not_found", declared.Position, "The core 'int' type was not defined, as such number literals are not allowed.");
+
+			ReportCoreTypeNotFound(declared, "int", "number literals.");
 			type = SpecialTypes.Error;
 		}
 
@@ -358,7 +375,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		IType? type = CoreScope.Int;
 		if (type is null)
 		{
-			AddError("core_type_not_found", declared.Position, "The core 'int' type was not defined, as such number literals are not allowed.");
+			ReportCoreTypeNotFound(declared, "int", "number literals.");
 			type = SpecialTypes.Error;
 		}
 
@@ -373,7 +390,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		IType? type = CoreScope.Text;
 		if (type is null)
 		{
-			AddError("core_type_not_found", declared.Position, "The core 'text' type was not defined, as such string literals are not allowed.");
+			ReportCoreTypeNotFound(declared, "text", "string literals.");
 			type = SpecialTypes.Error;
 		}
 
@@ -388,7 +405,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		IType? type = CoreScope.Text;
 		if (type is null)
 		{
-			AddError("core_type_not_found", declared.Position, "The core 'text' type was not defined, as such string literals are not allowed.");
+			ReportCoreTypeNotFound(declared, "text", "string literals.");
 			type = SpecialTypes.Error;
 		}
 
@@ -424,7 +441,11 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		ICallableType? callable = expression.ResultType as ICallableType;
 
 		if (callable is null && expression.ResultType.IsNotError)
-			AddError("type_not_callable", declared.Start.Position, "The result type of the expression is not callable.");
+		{
+			Diagnostics
+				.BuildError(this, "type_not_callable")
+				.Add(declared.Start, lines => lines.AddLine("The result type of the expression '", expression.ResultType, "' is not a type that can be called."));
+		}
 
 		using (WithValue(ref _currentCallable, callable))
 		{
@@ -486,15 +507,19 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	#endregion
 
 	#region Symbol helpers
-	private ISymbolGroup GetAll(ISyntaxToken token) => GetAll(token.Value as string, token.Position);
-	private ISymbolGroup GetAll(string? name, IndexedPositionRange position)
+	private ISymbolGroup GetAll(ISyntaxToken token)
 	{
-		if (name is null) // Note(Nightowl): Invalid names will have already been reported during parsing;
+		if (token.Value is not string name) // Note(Nightowl): Invalid names will have already been reported during parsing;
 			return new SymbolGroup();
 
 		ISymbolGroup group = CurrentScope.GetAll(name);
 		if (group.Count is 0)
-			AddError("symbol_not_found", position, $"No accessible symbol named '{name}' could be found.");
+		{// Note(Nightowl): Could maybe do name similarity checking here to make suggestions as extra lines;
+
+			Diagnostics
+				.BuildError(this, "symbol_not_found")
+				.Add(token, lines => lines.AddLine($"No accessible symbol named '{name}' could be found."));
+		}
 
 		return group;
 	}
@@ -502,23 +527,19 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	private ISymbol? GetSingle(ISyntaxToken token, out ISymbol[] ambiguity) => GetSingle(token, "symbol", "symbols", out ambiguity);
 	private T? GetSingle<T>(ISyntaxToken token, string kind, string kindPlural) where T : notnull, ISymbol
 	{
-		return GetSingle<T>(token.Value as string, kind, kindPlural, token.Position, out _);
+		return GetSingle<T>(token, kind, kindPlural, out _);
 	}
-	private T? GetSingle<T>(ISyntaxToken token, string kind, string kindPlural, out T[] ambiguity) where T : notnull, ISymbol
-	{
-		return GetSingle(token.Value as string, kind, kindPlural, token.Position, out ambiguity);
-	}
-	private T? GetSingle<T>(string? name, string kind, string kindPlural, IndexedPositionRange position, out T[] ambiguity)
+	private T? GetSingle<T>(ISyntaxToken token, string kind, string kindPlural, out T[] ambiguity)
 		where T : notnull, ISymbol
 	{
-		if (name is null) // Note(Nightowl): Invalid names will have already been reported during parsing;
+		if (token.Value is not string name) // Note(Nightowl): Invalid names will have already been reported during parsing;
 		{
 			ambiguity = [];
 			return default;
 		}
 
 		if (CurrentScope.TryGet(name, out ISymbolGroup? symbols) is false)
-			symbols = GetAll(name, position);
+			symbols = GetAll(token);
 
 		if (symbols.Count is 0)
 		{
@@ -529,14 +550,28 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		ambiguity = symbols.OfType<T>().ToArray();
 		if (ambiguity.Length is 0)
 		{
-			AddError($"{kind}_not_found", position, $"No accessible {kind} named '{name}' could be found.");
+			Diagnostics
+				.BuildError(this, $"{kind}_not_found")
+				.Add(token, lines =>
+				{
+					lines.AddLine($"No accessible {kind} named '{name}' could be found.");
+					if (symbols.Count is 1)
+						lines.AddLine($"But a symbol with the same name was found.");
+					else if (symbols.Count > 1)
+						lines.AddLine("But several symbols with the same name were found.");
+				});
+
 			return default;
 		}
 
 		if (ambiguity.Length > 1)
 		{
-			if (_knownDuplicateUses.Add(name) && ambiguity.GetSharedClassification() is not null)
-				AddError($"{kind}_ambiguity", position, $"Multiple {kindPlural} named '{name}' were found, but they couldn't be disambiguated.");
+			// Note(Nightowl): Could maybe list the ambiguous symbols as extra lines here;
+
+			Diagnostics
+				.BuildError(this, $"{kind}_ambiguity")
+				.Add(token, lines => lines.AddLine($"Multiple {kindPlural} named '{name}' were found, but they couldn't be disambiguated."));
+
 			return default;
 		}
 
@@ -550,11 +585,14 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	{
 		CurrentScope.UpdateChild(oldDeclaration, newDeclaration);
 	}
-	private IType GetResultType(ISymbol? symbol, IndexedPositionRange position)
+	private IType GetResultType(ISymbol? symbol, ISyntaxNode node)
 	{
 		if (symbol is IType)
 		{
-			AddError("invalid_type_use", position, "Accessing types in this way is not yet supported.");
+			Diagnostics
+				.BuildError(this, "invalid_type_use")
+				.Add(node, lines => lines.AddLine("Accessing types in this way is not yet supported."));
+
 			return SpecialTypes.Error;
 		}
 
@@ -570,14 +608,105 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	}
 	#endregion
 
-	#region Diagnostic helpers
-	private void AddError(string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
+	#region Helpers
+	private Diagnostic ReportCoreTypeNotFound(ISyntaxNode node, string type, string missingFeature)
 	{
-		AddDiagnostic(DiagnosticKind.Error, id, position, message, stackTrace);
+		TextFragment typeFragment = new(type, ClassificationKind.Type);
+
+		return Diagnostics
+			.BuildError(this, "core_type_not_found")
+			.Add(node, lines => lines.AddLine($"The '", typeFragment, $"' core type was not defined, as such {missingFeature} are not allowed."));
 	}
-	private void AddDiagnostic(DiagnosticKind kind, string id, IndexedPositionRange position, string message, StackTrace? stackTrace = null)
+	private void CheckConditionType(ISemanticExpressionSyntax condition)
 	{
-		Diagnostics.Add(this, kind, id, Source, position, message, stackTrace);
+		if (condition.ResultType != CoreScope.Bool && condition.ResultType.IsNotError)
+			ReportInvalidConditionType(condition);
+	}
+	private Diagnostic ReportInvalidConditionType(ISemanticExpressionSyntax condition)
+	{
+		TextFragment boolType = new("bool", ClassificationKind.Type);
+
+		return Diagnostics
+			.BuildError(this, "invalid_condition_type")
+			.Add(condition, lines =>
+			{
+				lines.AddLine("Expected the condition to result in a '", boolType, "' type.");
+				if (condition.ResultType.IsNotError)
+					lines.AddLine("The actual result type of the condition was '", condition.ResultType, "'.");
+			});
+	}
+	private Diagnostic ReportReturnNotInFunction(ISyntaxToken keyword)
+	{
+		return Diagnostics
+			.BuildError(this, "return_not_in_function")
+			.Add(keyword, lines => lines.AddLine("A return statement is only valid inside of a function body."));
+	}
+
+	private bool ShouldReportIncompatibleType(IType valueType, IType targetType)
+	{
+		if (valueType.IsError || targetType.IsError)
+			return false; // Note(Nightowl): This would just result in cascade errors;
+
+		return valueType.CanAssignTo(targetType) is false;
+	}
+	private Diagnostic ReportIncompatibleType(ISyntaxNode node, params IEnumerable<object?> message)
+	{
+		return Diagnostics
+			.BuildError(this, "incompatible_type")
+			.Add(node, lines => lines.AddLine(message));
+	}
+	private bool ShouldReportUnknownOperator(IFunction? operation, params IEnumerable<IType> types)
+	{
+		if (operation is not null)
+			return false;
+
+		return types.Any(t => t.IsError is false);
+	}
+	private void TryReportUnknownOperator(string kind, ISyntaxToken op, IFunction? operation, params IReadOnlyList<IType> types)
+	{
+		if (ShouldReportUnknownOperator(operation, types))
+			ReportUnknownOperator(kind, op, types);
+	}
+	private Diagnostic ReportUnknownOperator(string kind, ISyntaxToken op, params IReadOnlyList<IType> types)
+	{
+		return Diagnostics
+			.BuildError(this, "unknown_operator")
+			.Add(op, lines =>
+			{
+				string typePlural = types.Count is 1 ? "type" : "types";
+
+				List<object?> values = [$"Unknown {kind} operator for the {typePlural}: "];
+				for (int i = 0; i < types.Count; i++)
+				{
+					if (i > 0)
+					{
+						if (i + 1 == types.Count)
+							values.Add(" and ");
+						else
+							values.Add(new TextFragment(", ", ClassificationKind.Punctuation));
+					}
+
+					values.Add("'");
+					values.Add(types[i]);
+					values.Add("'");
+				}
+
+				lines.AddLine(values);
+			});
+	}
+	private Diagnostic ReportCantAssignToSymbol(ISyntaxNode node, ISymbol symbol)
+	{
+		return Diagnostics
+			.BuildError(this, "invalid_assignment")
+			.Add(node, lines => lines.AddLine("Cannot assign a value to the symbol '", symbol, "'."));
+	}
+	private Diagnostic ReportCantAssignToLiteral(ISyntaxNode node)
+	{
+		// Note(Nightowl): Figure out a way to point to the literal;
+
+		return Diagnostics
+					.BuildError(this, "invalid_assignment")
+					.Add(node, lines => lines.AddLine("Literals cannot be assigned to."));
 	}
 	#endregion
 }

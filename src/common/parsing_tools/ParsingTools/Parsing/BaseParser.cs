@@ -23,7 +23,7 @@ public abstract class BaseParser
 			if (Parser.Current == Token)
 			{
 				if (OldDiagnosticCount >= Parser.DiagnosticCount)
-					Parser.ReportInfiniteLoop(Token.Position);
+					Parser.ReportInfiniteLoop(Token);
 
 				Parser.SkipCurrent();
 			}
@@ -179,13 +179,13 @@ public abstract class BaseParser
 		token = default;
 		return false;
 	}
-	protected ISyntaxToken ExpectCore(SyntaxKind kind, string errorMessage)
+	protected ISyntaxToken ExpectCore(SyntaxKind kind, Action<ISyntaxToken> callback)
 	{
 		if (Match(kind, out ISyntaxToken? token))
 			return token;
 
 		token = FabricateCore(kind);
-		ReportExpectedToken(token.Position, kind, errorMessage);
+		callback.Invoke(token);
 
 		return token;
 	}
@@ -255,7 +255,6 @@ public abstract class BaseParser
 	#endregion
 
 	#region Diagnostic methods
-	protected abstract void ReportInfiniteLoop(IndexedPositionRange position);
-	protected abstract void ReportExpectedToken(IndexedPositionRange position, SyntaxKind kind, string message);
+	protected abstract void ReportInfiniteLoop(ISyntaxToken token);
 	#endregion
 }

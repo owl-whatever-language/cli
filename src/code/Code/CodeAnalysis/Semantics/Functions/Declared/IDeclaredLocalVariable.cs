@@ -3,6 +3,7 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions.Declared;
 public interface IDeclaredLocalVariable : IDeclaredSymbol<IConcreteVariableDeclarationStatementSyntax>, ILocalVariable
 {
 	#region Properties
+	new string? Name { get; }
 	new IType Type { get; set; }
 	#endregion
 }
