@@ -166,19 +166,17 @@ public sealed class Diagnostic : IDiagnostic
 			// Otherwise there would probably be a lot of intimidating red all over.
 
 			if (annotation.Message.Count > 0)
-				annotation.Message[0].Replace(ReplaceWithDiagnosticClassification);
+				annotation.Message[0].AddClassification(Kind.ToClassification());
+
+			for (int i = 1; i < annotation.Message.Count; i++)
+				annotation.Message[i].AddClassification(ClassificationKind.Message);
 		}
+		else
+			annotation.Message.AddClassification(ClassificationKind.Message);
 
 		Annotations.Add(annotation);
 
 		return this;
-	}
-	private TextFragment ReplaceWithDiagnosticClassification(TextFragment fragment)
-	{
-		if (fragment.Classification is not null)
-			return fragment;
-
-		return new(fragment.Text, Kind.ToClassification(), fragment.Syntax);
 	}
 	#endregion
 }

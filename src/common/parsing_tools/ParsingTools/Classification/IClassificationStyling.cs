@@ -12,6 +12,7 @@ public interface IClassificationStyling
 	#region Methods
 	bool TryGet(ClassificationKind? classification, out StyleInfo style);
 	StyleInfo Get(ClassificationKind? classification);
+	StyleInfo Get(params IReadOnlyList<ClassificationKind> classifications);
 	#endregion
 }
 
@@ -47,6 +48,11 @@ public sealed class ClassificationStyling : IClassificationStyling
 	#endregion
 
 	#region Methods
+	public ClassificationStyling Add(ClassificationKind classification, StylingEffect effect)
+	{
+		StyleInfo style = new(effect: effect);
+		return Add(classification, style);
+	}
 	public ClassificationStyling Add(ClassificationKind classification, string colorHex, StylingEffect? effect = null)
 	{
 		StyleInfo style = new(colorHex, effect);
@@ -85,6 +91,19 @@ public sealed class ClassificationStyling : IClassificationStyling
 			return style;
 
 		return default;
+	}
+	public StyleInfo Get(IReadOnlyList<ClassificationKind> classifications)
+	{
+		Span<StyleInfo> styles = new StyleInfo[classifications.Count];
+
+		// Note(Nightowl):
+		// There might be some problems here if the first classification(s) result in a default style, but the rest do not.
+		// That might also end up actually being the indented behaviour, not sure yet.
+
+		for (int i = 0; i < classifications.Count; i++)
+			styles[i] = Get(classifications[i]);
+
+		return StyleInfo.Merge(styles);
 	}
 	#endregion
 }

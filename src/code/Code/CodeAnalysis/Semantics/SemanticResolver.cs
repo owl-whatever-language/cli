@@ -130,7 +130,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		IType variableType = semantic.Variable.Type;
 
 		if (ShouldReportIncompatibleType(valueType, variableType))
-			ReportIncompatibleType(declared.Assignment, $"A value of the type '{valueType}' cannot be assigned to a variable of the type '{variableType}'.");
+			ReportIncompatibleType(declared.Assignment, $"A value of the type '", valueType, "' cannot be assigned to a variable of the type '", variableType, "'.");
 
 		return semantic;
 	}

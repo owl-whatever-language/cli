@@ -11,21 +11,31 @@ partial struct ClassificationKind
 
 	/// <summary>Represents a classification for keywords.</summary>
 	public static ClassificationKind Keyword { get; } = new("keyword");
+	#endregion
+
+	#region Diagnostics
+	/// <summary>Represents a classification for diagnostic messages.</summary>
+	public static ClassificationKind Diagnostic { get; } = new("diagnostic");
 
 	/// <summary>Represents a classification for errors.</summary>
-	public static ClassificationKind Error { get; } = new("error");
+	public static ClassificationKind Error { get; } = Diagnostic + "error";
 
 	/// <summary>Represents a classification for warnings.</summary>
-	public static ClassificationKind Warning { get; } = new("warning");
+	public static ClassificationKind Warning { get; } = Diagnostic + "warning";
+
+	/// <summary>Represents a classification for suggestions.</summary>
+	public static ClassificationKind Suggestion { get; } = Diagnostic + "suggestion";
 
 	/// <summary>Represents a classification for hints.</summary>
-	public static ClassificationKind Hint { get; } = new("hint");
+	public static ClassificationKind Hint { get; } = Diagnostic + "hint";
 	#endregion
 
 	#region Source printing
 	public static ClassificationKind PrettySource { get; } = new("pretty_source");
 	public static ClassificationKind LineNumber { get; } = PrettySource + "line_number";
 	public static ClassificationKind Margin { get; } = PrettySource + "margin";
+	public static ClassificationKind Message { get; } = PrettySource + "message";
+	public static ClassificationKind Dim { get; } = PrettySource + "dim";
 	#endregion
 
 	#region Trivia

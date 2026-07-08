@@ -11,7 +11,7 @@ public static class StyledTextFragmentExtensions
 				// I have to convert to space because terminal output is weird with tabs.
 				// I'm not just doing this because I like seeing 3 spaces.
 				fragment.Text.Replace("\t", "   "),
-				styling.Get(fragment.Classification).AsSpectre,
+				styling.Get(fragment.Classifications).AsSpectre,
 				null);
 		}
 		#endregion

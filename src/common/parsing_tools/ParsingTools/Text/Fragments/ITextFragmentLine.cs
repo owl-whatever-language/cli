@@ -86,6 +86,13 @@ public sealed class TextFragmentLine : TextFragmentCollection, ITextFragmentLine
 
 		return this;
 	}
+	public TextFragmentLine AddClassification(ClassificationKind alternate)
+	{
+		for (int i = 0; i < Count; i++)
+			this[i] = this[i].With(alternate);
+
+		return this;
+	}
 	public override string ToString() => $"{Line} | {string.Concat(this)}";
 	private string DebuggerDisplay() => $"Line #{Line} | {string.Concat(this)}";
 	#endregion
@@ -268,6 +275,13 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 	{
 		foreach (TextFragmentLine line in this)
 			line.Replace(callback);
+
+		return this;
+	}
+	public TextFragmentLineCollection AddClassification(ClassificationKind alternate)
+	{
+		foreach (TextFragmentLine line in this)
+			line.AddClassification(alternate);
 
 		return this;
 	}

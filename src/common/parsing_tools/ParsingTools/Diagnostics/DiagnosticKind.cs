@@ -108,6 +108,9 @@ public static class DiagnosticKindExtensions
 			if (kind >= DiagnosticKind.Warning)
 				return ClassificationKind.Warning;
 
+			if (kind >= DiagnosticKind.Suggestion)
+				return ClassificationKind.Suggestion;
+
 			return ClassificationKind.Hint;
 		}
 		#endregion

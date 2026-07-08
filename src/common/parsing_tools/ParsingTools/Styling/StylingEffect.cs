@@ -14,6 +14,8 @@ public enum StylingEffect
 	/// <summary>This should be preferred over the underlined effect.</summary>
 	Dotted = 1 << 4,
 
+	Dim = 1 << 5,
+
 	WavyOrUnderlined = Wavy | Underline,
 	DottedOrUnderlined = Dotted | Underline,
 	WavyOrDotted = Wavy | Dotted,

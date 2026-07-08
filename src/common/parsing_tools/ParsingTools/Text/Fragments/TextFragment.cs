@@ -4,8 +4,9 @@ public readonly struct TextFragment
 {
 	#region Properties
 	public string Text { get; }
-	public ClassificationKind? Classification { get; }
 	public ISyntaxPart? Syntax { get; }
+	public IReadOnlyList<ClassificationKind> Classifications { get; }
+	public ClassificationKind? Classification => Classifications.FirstOrDefault();
 	public bool IsWhitespace
 	{
 		get
@@ -26,8 +27,16 @@ public readonly struct TextFragment
 	public TextFragment(string text, ClassificationKind? classification = null, ISyntaxPart? syntax = null)
 	{
 		Text = text;
-		Classification = classification;
 		Syntax = syntax;
+
+		Classifications = classification is not null ? [classification.Value] : [];
+	}
+	public TextFragment(string text, ISyntaxPart? syntax, params IReadOnlyList<ClassificationKind>? classifications)
+	{
+		Text = text;
+		Syntax = syntax;
+
+		Classifications = classifications ?? [];
 	}
 	#endregion
 
@@ -42,6 +51,7 @@ public readonly struct TextFragment
 	#endregion
 
 	#region Methods
+	public TextFragment With(ClassificationKind alternate) => new(Text, Syntax, [.. Classifications, alternate]);
 	public override string ToString() => Text;
 	#endregion
 }

@@ -41,6 +41,9 @@ public static class StyleInfoExtensions
 				if (effect.HasFlag(StylingEffect.Underline))
 					decoration |= Decoration.Underline;
 
+				if (effect.HasFlag(StylingEffect.Dim))
+					decoration |= Decoration.Dim;
+
 				return decoration;
 			}
 		}

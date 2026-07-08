@@ -26,6 +26,52 @@ public readonly struct StyleInfo :
 	}
 	#endregion
 
+	#region Functions
+	public static StyleInfo Merge(params IReadOnlyList<StyleInfo> styles)
+	{
+		if (styles.Count is 0)
+			return default;
+
+		Color? color = styles[0].Color;
+		StylingEffect? effect = styles[0].Effect;
+
+		foreach (StyleInfo style in styles.Skip(1))
+		{
+			color ??= style.Color;
+
+			if (style.Effect is not null)
+			{
+				effect ??= StylingEffect.None;
+				effect |= style.Effect;
+			}
+		}
+
+		return new(color, effect);
+	}
+	public static StyleInfo Merge(params ReadOnlySpan<StyleInfo> styles)
+	{
+		if (styles.Length is 0)
+			return default;
+
+		Color? color = styles[0].Color;
+		StylingEffect? effect = styles[0].Effect;
+
+		for (int i = 1; i < styles.Length; i++)
+		{
+			StyleInfo style = styles[i];
+			color ??= style.Color;
+
+			if (style.Effect is not null)
+			{
+				effect ??= StylingEffect.None;
+				effect |= style.Effect;
+			}
+		}
+
+		return new(color, effect);
+	}
+	#endregion
+
 	#region Methods
 	public bool Equals(StyleInfo other)
 	{
