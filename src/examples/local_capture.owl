@@ -1,0 +1,31 @@
+// OWL is more lenient with declarations, and instead checks whether they're used properly.
+// This will likely end up being configurable, in case you do prefer being forced to
+// declare all the variables, before you declare the local functions.
+
+// We can declare a variable before a function declaration.
+int declaredBeforeFunction = 1;
+
+fun LocalFunction()
+{
+	// We can use a variable that was declared before the function declaration.
+	int a = declaredBeforeFunction;
+
+	// We can use a variable that was declared after the function declaration.
+	int b = declaredAfterFunction;
+
+	// We can use a variable that was declared before the function is used.
+	int c = declaredBeforeCall;
+
+	// We CANNOT use a variable that was declared after the function is used.
+	int d = declaredAfterCall;
+}
+
+// We can declared a variable after a function declaration.
+int declaredAfterFunction = 2;
+
+// We can declare a variable before the function is used.
+int declaredBeforeCall = 3;
+LocalFunction();
+
+// We CANNOT declare a variable after the function is used.
+int declaredAfterCall = 4;

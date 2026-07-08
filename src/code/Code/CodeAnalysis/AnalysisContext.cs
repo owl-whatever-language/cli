@@ -55,6 +55,7 @@ public sealed class AnalysisContext : IAnalysisContext
 		BaseScope = baseScope;
 
 		RegisterPass<ControlFlow.ControlFlowAnalyser>();
+		RegisterPass<Passes.LocalCapture.LocalCaptureAnalysis>();
 	}
 	#endregion
 

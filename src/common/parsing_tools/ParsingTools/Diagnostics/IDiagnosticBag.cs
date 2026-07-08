@@ -54,6 +54,25 @@ public sealed class DiagnosticBag : IDiagnosticBag, ICollection<IDiagnostic>
 			Message = message
 		});
 	}
+	public void AddError(
+		IDiagnosticProvider provider,
+		string id,
+		ISourceFile source,
+		IndexedPositionRange position,
+		string message,
+		StackTrace? stackTrace = null)
+	{
+		Add(new Diagnostic()
+		{
+			Provider = provider,
+			Kind = DiagnosticKind.Error,
+			Id = id,
+			StackTrace = stackTrace,
+
+			Location = new DiagnosticSourceLocation(source, position),
+			Message = message
+		});
+	}
 
 	/// <inheritdoc/>
 	public void Add(IDiagnostic item) => _diagnostics.Add(item);
