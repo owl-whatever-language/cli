@@ -109,7 +109,7 @@ public sealed class AnalysisContext : IAnalysisContext
 
 		DiagnosticBag diagnostics = _parsingDiagnostics.Values.Combine();
 
-		// Note(Nightowl): Ad diagnostics for the next update, to make sure we don't duplicate them for this update;
+		// Note(Nightowl): Add diagnostics for the next update, to make sure we don't duplicate them for this update;
 		foreach (LexingAndParsingResult result in parsing.GetByFile().Values)
 			_parsingDiagnostics.Add(result.Source, result.GetAllDiagnostics());
 
