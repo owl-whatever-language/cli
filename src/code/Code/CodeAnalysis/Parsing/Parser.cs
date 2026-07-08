@@ -672,7 +672,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 
 					if (@operator.Kind == SyntaxKind.EqualSign)
 						expression = new ConcreteAssignmentExpressionSyntax(expression, @operator, right);
-					if (@operator.Kind.IsCompoundAssignmentOperator())
+					else if (@operator.Kind.IsCompoundAssignmentOperator())
 						expression = new ConcreteCompoundAssignmentExpressionSyntax(expression, @operator, right);
 					else
 						expression = new ConcreteBinaryExpressionSyntax(expression, @operator, right);
