@@ -22,17 +22,10 @@ internal partial class CoreBuiltins
 		#endregion
 
 		#region Operators
-		[Operator]
-		public static Bool LogicalAnd(Bool left, Bool right) => new(left.Value && right.Value);
-
-		[Operator]
-		public static Bool LogicalOr(Bool left, Bool right) => new(left.Value || right.Value);
-
-		[Operator]
-		public static Bool Equal(Bool left, Bool right) => new(left.Value == right.Value);
-
-		[Operator]
-		public static Bool NotEqual(Bool left, Bool right) => new(left.Value != right.Value);
+		[Operator] public static Bool LogicalAnd(Bool left, Bool right) => new(left.Value && right.Value);
+		[Operator] public static Bool LogicalOr(Bool left, Bool right) => new(left.Value || right.Value);
+		[Operator] public static Bool Equal(Bool left, Bool right) => new(left.Value == right.Value);
+		[Operator] public static Bool NotEqual(Bool left, Bool right) => new(left.Value != right.Value);
 		#endregion
 	}
 
@@ -40,8 +33,7 @@ internal partial class CoreBuiltins
 	public sealed class Text
 	{
 		#region Properties
-		[Ignore]
-		public string Value { get; }
+		[Ignore] public string Value { get; }
 		#endregion
 
 		#region Constructors
@@ -49,8 +41,13 @@ internal partial class CoreBuiltins
 		#endregion
 
 		#region Methods
-		[Ignore]
-		public override string ToString() => Value;
+		[Ignore] public override string ToString() => Value;
+		#endregion
+
+		#region Operators
+		[Operator] public static Bool Equal(Text left, Text right) => new(left.Value == right.Value);
+		[Operator] public static Bool NotEqual(Text left, Text right) => new(left.Value != right.Value);
+		[Operator] public static Text Add(Text left, Text right) => new(left.Value + right.Value);
 		#endregion
 	}
 
@@ -58,8 +55,7 @@ internal partial class CoreBuiltins
 	public sealed class Int
 	{
 		#region Properties
-		[Ignore]
-		public object Value { get; }
+		[Ignore] public object Value { get; }
 		#endregion
 
 		#region Constructors
@@ -72,8 +68,7 @@ internal partial class CoreBuiltins
 		#endregion
 
 		#region Operators
-		[Ignore]
-		private static int Compare(Int left, Int right) => ((IComparable)left.Value).CompareTo(right.Value);
+		[Ignore] private static int Compare(Int left, Int right) => ((IComparable)left.Value).CompareTo(right.Value);
 
 		[Operator]
 		public static Int Modulo(Int left, Int right)
@@ -83,24 +78,12 @@ internal partial class CoreBuiltins
 
 			return new(l % r);
 		}
-
-		[Operator]
-		public static Bool Equal(Int left, Int right) => new(Compare(left, right) == 0);
-
-		[Operator]
-		public static Bool NotEqual(Int left, Int right) => new(Compare(left, right) != 0);
-
-		[Operator]
-		public static Bool LessThan(Int left, Int right) => new(Compare(left, right) < 0);
-
-		[Operator]
-		public static Bool LessThanOrEqual(Int left, Int right) => new(Compare(left, right) <= 0);
-
-		[Operator]
-		public static Bool GreaterThan(Int left, Int right) => new(Compare(left, right) > 0);
-
-		[Operator]
-		public static Bool GreaterThanOrEqual(Int left, Int right) => new(Compare(left, right) >= 0);
+		[Operator] public static Bool Equal(Int left, Int right) => new(Compare(left, right) == 0);
+		[Operator] public static Bool NotEqual(Int left, Int right) => new(Compare(left, right) != 0);
+		[Operator] public static Bool LessThan(Int left, Int right) => new(Compare(left, right) < 0);
+		[Operator] public static Bool LessThanOrEqual(Int left, Int right) => new(Compare(left, right) <= 0);
+		[Operator] public static Bool GreaterThan(Int left, Int right) => new(Compare(left, right) > 0);
+		[Operator] public static Bool GreaterThanOrEqual(Int left, Int right) => new(Compare(left, right) >= 0);
 
 		[Operator]
 		public static Int Add(Int left, Int right)
@@ -109,6 +92,33 @@ internal partial class CoreBuiltins
 			long r = (long)right.Value;
 
 			return new(l + r);
+		}
+
+		[Operator]
+		public static Int Subtract(Int left, Int right)
+		{
+			long l = (long)left.Value;
+			long r = (long)right.Value;
+
+			return new(l - r);
+		}
+
+		[Operator]
+		public static Int Multiply(Int left, Int right)
+		{
+			long l = (long)left.Value;
+			long r = (long)right.Value;
+
+			return new(l * r);
+		}
+
+		[Operator]
+		public static Int Divide(Int left, Int right)
+		{
+			long l = (long)left.Value;
+			long r = (long)right.Value;
+
+			return new(l / r);
 		}
 		#endregion
 	}

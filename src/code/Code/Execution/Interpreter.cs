@@ -308,14 +308,15 @@ public class Interpreter
 
 	private InterpreterValue Evaluate(IAnnotatedFunctionCallExpressionSyntax expression)
 	{
-		InterpreterValue value = Evaluate(expression.Expression);
+		_ = Evaluate(expression.Expression);
 
-		return value.Value switch
+		// Note(Nightowl): This definitely feels hacky.;
+		return (expression.Callable as ICallableFunction)?.Function switch
 		{
 			BuiltinFunction function => Evaluate(expression, function),
 			IDeclaredFunction function => Evaluate(expression, (IAnnotatedFunctionDeclarationStatementSyntax)function.Declaration),
 
-			_ => ThrowHelper.ThrowInvalidOperationException<InterpreterValue>($"The type '{value.Type}' is not supported for calling by the interpreter.")
+			_ => ThrowHelper.ThrowInvalidOperationException<InterpreterValue>($"The type '{expression.Callable}' is not supported for calling by the interpreter.")
 		};
 	}
 	private InterpreterValue Evaluate(IAnnotatedFunctionCallExpressionSyntax expression, IAnnotatedFunctionDeclarationStatementSyntax function)

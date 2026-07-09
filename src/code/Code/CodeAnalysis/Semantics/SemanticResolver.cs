@@ -63,7 +63,6 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 	#region Fields
 	private readonly HashSet<string> _knownDuplicateUses = [];
-	private ICallableType? _currentCallable;
 	private IDeclaredFunction? _currentFunction;
 	#endregion
 
@@ -273,8 +272,16 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return declared.Parent switch
 		{
+			// Note(Nightowl): We should handle assignments to and declarations for variables/parameters with callable types;
+			IDeclaredFunctionCallExpressionSyntax => ConvertForFunctionCall(declared),
+
 			_ => ConvertGeneral(declared)
 		};
+	}
+	private SemanticGetExpressionSyntax ConvertForFunctionCall(IDeclaredGetExpressionSyntax _)
+	{
+		ThrowHelper.ThrowInvalidOperationException("This should've been handled by the function call converting function.");
+		return default;
 	}
 	private SemanticGetExpressionSyntax ConvertGeneral(IDeclaredGetExpressionSyntax declared)
 	{
@@ -484,7 +491,13 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	#region Function call methods
 	protected override SemanticFunctionCallExpressionSyntax ConvertCore(IDeclaredFunctionCallExpressionSyntax declared)
 	{
+		if (declared.Expression is IDeclaredGetExpressionSyntax get)
+			return ConvertFromGet(declared, get);
+
 		var expression = Convert(declared.Expression);
+		var start = Convert(declared.Start);
+		var arguments = Convert(declared.Arguments);
+		var end = Convert(declared.End);
 		ICallableType? callable = expression.ResultType as ICallableType;
 
 		if (callable is null && expression.ResultType.IsNotError)
@@ -494,16 +507,130 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 				.Add(declared.Start, lines => lines.AddLine("The result type of the expression '", expression.ResultType, "' is not a type that can be called."));
 		}
 
-		using (WithValue(ref _currentCallable, callable))
+		return new(expression, start, arguments, end, callable, callable?.Return.Type ?? SpecialTypes.Error);
+	}
+	private SemanticFunctionCallExpressionSyntax ConvertFromGet(IDeclaredFunctionCallExpressionSyntax declared, IDeclaredGetExpressionSyntax get)
+	{
+		var start = Convert(declared.Start);
+		var arguments = Convert(declared.Arguments);
+		var end = Convert(declared.End);
+
+		SemanticFunctionCallExpressionSyntax CreateFromPair(KeyValuePair<ISymbol, ICallableType> pair) => Create(pair.Key, pair.Value);
+		SemanticFunctionCallExpressionSyntax Create(ISymbol? symbol, ICallableType? callable)
 		{
-			var start = Convert(declared.Start);
-			var arguments = Convert(declared.Arguments);
-			var end = Convert(declared.End);
+			symbol ??= SpecialSymbols.NotFound;
 
-			// Todo(Nightowl): Check argument value types;
-
-			return new(expression, start, arguments, end, callable, callable?.Return.Type ?? SpecialTypes.Error);
+			var name = Convert(get.Name, symbol.Classification ?? ClassificationKind.Identifier, symbol);
+			SemanticGetExpressionSyntax semanticGet = new(name, symbol, callable ?? (IType)SpecialTypes.Error);
+			return new(semanticGet, start, arguments, end, callable, callable?.Return.Type ?? SpecialTypes.Error);
 		}
+
+		ISymbolGroup symbols = GetAll(get.Name);
+		if (symbols.Count is 0) // Note(Nightowl): Error reported by GetAll;
+			return Create(null, null);
+
+		IReadOnlyDictionary<ISymbol, ICallableType> allCallable = GetCallable(symbols);
+		if (allCallable.Count is 1)
+			return CreateFromPair(allCallable.First());
+
+		IReadOnlyDictionary<ISymbol, ICallableType> candidates = GetCandidates(allCallable, arguments.Values);
+		if (candidates.Count is 1)
+			return CreateFromPair(candidates.First());
+
+		if (candidates.Count is 0)
+		{
+			Diagnostics
+				.BuildError(this, "no_suitable_callable")
+				.Add(start, lines => lines.AddLine("Couldn't figure out a suitable target to call."));
+		}
+		else
+		{
+			Diagnostics
+				.BuildError(this, "callable_ambiguity")
+				.Add(start, lines => lines.AddLine("There were several suitable targets to call, but they couldn't be disambiguated."));
+		}
+
+		return Create(null, null);
+	}
+	private IReadOnlyDictionary<ISymbol, ICallableType> GetCandidates(
+		IReadOnlyDictionary<ISymbol, ICallableType> allCallable,
+		IReadOnlyList<ISemanticFunctionArgumentSyntax> arguments)
+	{
+		bool HasAllNamed(ICallableType callable)
+		{
+			foreach (var named in arguments.OfType<ISemanticNamedFunctionArgumentSyntax>())
+			{
+				if (callable.Parameters.Any(p => p.Name == named.Name.Value as string) is false)
+					return false;
+			}
+
+			return true;
+		}
+		bool HasValidArguments(ICallableType callable)
+		{
+			Debug.Assert(callable.Parameters.Count == arguments.Count);
+
+			for (int i = 0; i < callable.Parameters.Count; i++)
+			{
+				ICallableTypeParameter parameter = callable.Parameters[i];
+				ISemanticFunctionArgumentSyntax argument = arguments[i];
+
+				if (IsValidArgument(parameter, argument) is false)
+					return false;
+			}
+
+			return true;
+		}
+		bool IsValidArgument(ICallableTypeParameter parameter, ISemanticFunctionArgumentSyntax argument)
+		{
+			return argument switch
+			{
+				ISemanticRegularFunctionArgumentSyntax regular => regular.Value.ResultType.CanAssignTo(parameter.Type),
+				ISemanticNamedFunctionArgumentSyntax named => named.Value.ResultType.CanAssignTo(parameter.Type),
+
+				_ => ThrowHelper.ThrowInvalidOperationException<bool>($"Unhandled function argument type ({argument.GetType().Name}).")
+			};
+		}
+
+		Dictionary<ISymbol, ICallableType> candidates = [];
+		foreach (KeyValuePair<ISymbol, ICallableType> pair in allCallable)
+		{
+			ICallableType callable = pair.Value;
+
+			if (HasAllNamed(callable) is false)
+				continue;
+
+			if (callable.Parameters.Count != arguments.Count)
+				continue;
+
+			if (HasValidArguments(callable) is false)
+				continue;
+
+			candidates.Add(pair.Key, callable);
+		}
+
+		return candidates;
+	}
+	private IReadOnlyDictionary<ISymbol, ICallableType> GetCallable(ISymbolGroup symbols)
+	{
+		Dictionary<ISymbol, ICallableType> result = [];
+
+		foreach (ISymbol symbol in symbols)
+		{
+			ICallableType? callable = symbol switch
+			{
+				IFunction function => function.AsCallable,
+				ILocalVariable variable => variable.Type as ICallableType,
+				IFunctionParameter parameter => parameter.Type as ICallableType,
+
+				_ => null
+			};
+
+			if (callable is not null)
+				result.Add(symbol, callable);
+		}
+
+		return result;
 	}
 	#endregion
 
