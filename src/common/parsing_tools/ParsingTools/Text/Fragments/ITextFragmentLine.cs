@@ -248,6 +248,9 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 		for (int i = 0; i < Count; i++)
 		{
 			TextFragmentLine line = this[i];
+			if (line.Any() is false)
+				continue;
+
 			TextFragment current = line[0];
 
 			Debug.Assert(current.Text.Any());
@@ -311,13 +314,13 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 	{
 		IEnumerable<TextFragmentLine> enumerable = this;
 
-		if (Count is 0 || enumerable.Any(l => l.FirstOrDefault().Classification != ClassificationKind.Indentation))
+		if (Count is 0 || enumerable.Any(l => (l.IsWhitespace is false) && l.FirstOrDefault().Classification != ClassificationKind.Indentation))
 		{
 			sharedIndent = default;
 			return false;
 		}
 
-		TextFragment[] indents = enumerable.Select(l => l.First()).ToArray();
+		TextFragment[] indents = enumerable.Where(l => l.IsWhitespace is false).Select(l => l.First()).ToArray();
 		TextFragment shortest = indents.MinBy(f => f.Text.Length);
 
 		if (shortest.Text.Length is 0 || indents.Any(f => f.Text.FirstOrDefault() != shortest.Text[0]))

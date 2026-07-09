@@ -179,7 +179,11 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 			foreach (IAnnotatedStatementSyntax current in statement.Statements)
 				lines.AddRange(current.GetLines());
 
-			lines.TrimCommented().TrimLines().TrimSharedIndent().PrefixLineMargin();
+			lines
+				.TrimCommented()
+				.TrimLines()
+				.TrimSharedIndent()
+				.PrefixLineMargin();
 
 			PrintHtmlLines(writer, lines);
 
@@ -389,8 +393,8 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 			parts[i] = HttpUtility.HtmlEncode(parts[i]);
 		string encoded = string.Join("&#x3b;", parts);
 
-		if (encoded is "\t")
-			encoded = "   "; // Note(Nightowl): Yet another thing that doesn't actually respect tab size, even though it's explicitly set;
+		// Note(Nightowl): Yet another thing that doesn't actually respect tab size, even though it's explicitly set;
+		encoded = encoded.Replace("\t", "   ");
 
 		if (style == default)
 		{

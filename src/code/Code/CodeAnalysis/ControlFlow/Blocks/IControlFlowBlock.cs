@@ -9,8 +9,6 @@ public interface IControlFlowBlock
 	string Id { get; }
 	IReadOnlyList<IControlFlowIncomingBranch> Incoming { get; }
 	IReadOnlyList<IControlFlowOutgoingBranch> Outgoing { get; }
-	bool IsReachable { get; }
-	bool EndsWithReturn { get; }
 	#endregion
 }
 
@@ -47,8 +45,6 @@ public abstract class MutableControlFlowBlock : IMutableControlFlowBlock
 	public abstract string Id { get; }
 	public IReadOnlyList<IMutableControlFlowIncomingBranch> Incoming => _incoming;
 	public IReadOnlyList<IMutableControlFlowOutgoingBranch> Outgoing => _outgoing;
-	public virtual bool IsReachable => Incoming.Count > 0 && Incoming.All(b => b.IsReachable);
-	public abstract bool EndsWithReturn { get; }
 	#endregion
 
 	#region Methods
@@ -77,19 +73,22 @@ public abstract class MutableControlFlowBlock : IMutableControlFlowBlock
 public static class IControlFlowBlockExtensions
 {
 	#region Functions
-	private static void Flatten(List<IMutableControlFlowBlock> target, IMutableControlFlowBlock block)
+	private static void Flatten(List<IMutableControlFlowBlock> target, HashSet<IControlFlowBlock> seen, IMutableControlFlowBlock block)
 	{
+		if (seen.Add(block) is false)
+			return;
+
 		target.Add(block);
 
 		if (block is IMutableControlFlowExpressionBlock expression)
 		{
 			foreach (IMutableControlFlowExpressionBlock current in expression.Blocks)
-				Flatten(target, current);
+				Flatten(target, seen, current);
 		}
 		else if (block is IMutableControlFlowConstructBlock construct)
 		{
 			foreach (IMutableControlFlowBlock current in construct.Blocks)
-				Flatten(target, current);
+				Flatten(target, seen, current);
 		}
 	}
 	#endregion
@@ -100,9 +99,10 @@ public static class IControlFlowBlockExtensions
 		public IReadOnlyList<IMutableControlFlowBlock> Flatten()
 		{
 			List<IMutableControlFlowBlock> target = [];
+			HashSet<IControlFlowBlock> seen = [];
 
 			foreach (IMutableControlFlowBlock current in blocks)
-				Flatten(target, current);
+				Flatten(target, seen, current);
 
 			return target;
 		}
@@ -115,7 +115,9 @@ public static class IControlFlowBlockExtensions
 		public IReadOnlyList<IMutableControlFlowBlock> Flatten()
 		{
 			List<IMutableControlFlowBlock> target = [];
-			Flatten(target, block);
+			HashSet<IControlFlowBlock> seen = [];
+
+			Flatten(target, seen, block);
 
 			return target;
 		}

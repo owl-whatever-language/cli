@@ -27,7 +27,7 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 				Connect(_graph.Start, blocks.First());
 				IMutableControlFlowBlock last = blocks.Last().EndMarkerIfConstruct;
 
-				if (ConnectLastBlock(last))
+				if (ShouldConnect(last, _graph.End))
 					Connect(last, _graph.End);
 			}
 			else
@@ -43,20 +43,6 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 
 			IReadOnlyList<IMutableControlFlowBlock> all = block.Flatten();
 			_graph.AddRange(all);
-		}
-		private bool ConnectLastBlock(IMutableControlFlowBlock last)
-		{
-			if (last is not IControlFlowStatementBlock block)
-				return true;
-
-			IAnnotatedStatementSyntax? statement = block.Statements.LastOrDefault();
-			if (statement is null)
-				return true;
-
-			if (statement is IAnnotatedReturnStatementSyntax or IAnnotatedValueReturnStatementSyntax)
-				return false;
-
-			return true;
 		}
 		#endregion
 
@@ -140,7 +126,7 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 					continue;
 				}
 
-				if (ConnectLastBlock(current))
+				if (ShouldConnect(current.EndMarkerIfConstruct, next))
 					Connect(current.EndMarkerIfConstruct, next);
 			}
 
@@ -199,6 +185,9 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 			IReadOnlyList<IMutableControlFlowBlock> body = Create(statement.TrueClause);
 			construct.AddRange(body);
 
+			if (body.Any())
+				TryConnect(body.Last().EndMarkerIfConstruct, construct.End);
+
 			IMutableControlFlowBlock target = body.FirstOrDefault(construct.End); // In-case body is empty
 			IMutableControlFlowExpressionBlock condition = Create("if", statement.Condition, target, construct.End);
 			construct.Add(condition);
@@ -216,10 +205,10 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 			construct.AddRange(falseBody);
 
 			if (trueBody.Any())
-				Connect(trueBody.Last().EndMarkerIfConstruct, construct.End);
+				TryConnect(trueBody.Last().EndMarkerIfConstruct, construct.End);
 
 			if (falseBody.Any())
-				Connect(falseBody.Last().EndMarkerIfConstruct, construct.End);
+				TryConnect(falseBody.Last().EndMarkerIfConstruct, construct.End);
 
 			IMutableControlFlowBlock trueTarget = trueBody.FirstOrDefault(construct.End); // In-case body is empty
 			IMutableControlFlowBlock falseTarget = falseBody.FirstOrDefault(construct.End); // In-case body is empty
@@ -246,7 +235,7 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 			construct.Add(condition);
 
 			Connect(construct, condition);
-			Connect(body.Last().EndMarkerIfConstruct, condition);
+			TryConnect(body.Last().EndMarkerIfConstruct, condition);
 
 			return construct;
 		}
@@ -329,6 +318,16 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 		#endregion
 
 		#region Connect methods
+		private bool ShouldConnect(IControlFlowBlock current, IControlFlowBlock next)
+		{
+			if (current is IControlFlowStatementBlock statement)
+			{
+				if (statement.EndsWithReturn())
+					return false;
+			}
+
+			return true;
+		}
 		private void ConnectBranching(
 			IMutableControlFlowExpressionBlock from,
 			IMutableControlFlowBlock success,
@@ -342,6 +341,11 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 
 			Connect(from, success, from.Expression);
 			ConnectNegated(from, failure, from.Expression);
+		}
+		private void TryConnect(IMutableControlFlowBlock from, IMutableControlFlowBlock to)
+		{
+			if (ShouldConnect(from, to))
+				Connect(from, to);
 		}
 		private void Connect(IMutableControlFlowBlock from, IMutableControlFlowBlock to)
 		{
@@ -414,7 +418,7 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 				.Add(node.Signature.Name, lines => lines.AddLine("Function is missing a return statement."))
 				.Add(node.Signature.Return, lines => lines.AddLine("This is where the function defined that it needs a return type."));
 
-			// Note(Nightowl): 
+			// Note(Nightowl):
 			// Isn't this just always going to be the very last block anyway?
 			// If so, maybe we can somehow make this look better by highlighting the blocks that do return.
 			foreach (IControlFlowBlock block in missingReturns)
@@ -444,12 +448,12 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 
 			foreach (IControlFlowIncomingBranch branch in end.Incoming)
 			{
-				if (branch.IsReachable is false)
+				if (branch.From.IsReachable() is false)
 					continue;
 
-				if (branch.From.EndsWithReturn is false)
+				if (branch.From.EndsWithReturn() is false)
 				{
-					if (branch.From is IControlFlowMarkerBlock marker)
+					if (branch.From is IControlFlowMarkerBlock)
 						missing.Add(end);
 					else
 						missing.Add(branch.From);
@@ -476,9 +480,13 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 					GraphBuilder.Populate(graph, @short.Expression);
 			}
 
-			foreach (IMutableControlFlowBlock block in graph.Blocks)
+			AnnotateReachable(graph);
+		}
+		private void AnnotateReachable(IControlFlowGraph graph)
+		{
+			foreach (IControlFlowBlock block in graph.Blocks)
 			{
-				bool reachable = block.IsReachable;
+				bool reachable = block.IsReachable();
 
 				IAnnotatedSyntaxNode? node = null;
 
@@ -496,10 +504,7 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 					node = expression.Expression;
 				}
 				else if (block is IControlFlowConstructBlock construct)
-				{
-					construct.Expression?.SetFlag(AnnotationFlag.IsReachable, reachable);
-					node = construct.Expression;
-				}
+					node = construct.Node.Flatten().FirstOrDefault() ?? construct.Node;
 
 				if (reachable is false && node is not null)
 				{

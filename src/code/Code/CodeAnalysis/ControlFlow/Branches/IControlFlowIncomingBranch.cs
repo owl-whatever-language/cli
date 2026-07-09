@@ -6,7 +6,6 @@ public interface IControlFlowIncomingBranch : IControlFlowBranch
 {
 	#region Properties
 	IControlFlowBlock From { get; }
-	bool IsReachable { get; }
 	#endregion
 }
 
