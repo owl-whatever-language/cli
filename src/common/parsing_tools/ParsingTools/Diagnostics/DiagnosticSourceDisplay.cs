@@ -48,21 +48,7 @@ public sealed class DiagnosticSourceDisplay
 		foreach (TextFragmentLine line in lines)
 		{
 			Debug.Assert(line.Line is not null);
-
-			TextFragmentLine newLine = new(line.Line);
-
-			foreach (TextFragment fragment in line)
-			{
-				// Note(Nightowl):
-				// Right now, no errors will be made about the comments themselves, so single line ones
-				// can be fully removed, as they cannot possibly be used as a significant token separator.
-				// This will help to declutter things in case the start of the commented line is considered relevant.
-
-				if (fragment.Classification != ClassificationKind.SinglelineComment)
-					newLine.Add(fragment);
-			}
-
-			_lines.Add(line.Line.Value, new(newLine, line.Line.Value));
+			_lines.Add(line.Line.Value, new(line, line.Line.Value));
 		}
 	}
 	#endregion
@@ -143,6 +129,7 @@ public sealed class DiagnosticSourceDisplay
 
 		TrimIrrelevant(output);
 		SnipIrrelevantGroups(output);
+		TrimRemainingComments(output);
 		AttachAnnotations(output);
 		AttachDiagnostics(output);
 		AttachSourceDiagnostics(output);
@@ -239,6 +226,17 @@ public sealed class DiagnosticSourceDisplay
 
 			TextFragmentLine line = PrepareShortLine(diagnostic, false, null);
 			output.Add(line);
+		}
+	}
+	private void TrimRemainingComments(TextFragmentLineCollection output)
+	{
+		foreach (TextFragmentLine line in output)
+		{
+			if (line.Line is null || line.Count is 0 || line.IsOnlyCommented)
+				continue;
+
+			if (line[^1].Classification == ClassificationKind.SinglelineComment)
+				line.RemoveAt(line.Count - 1);
 		}
 	}
 	private TextFragmentLine PrepareShortLine(IDiagnostic diagnostic, bool isSuffix, TextFragment? indent)

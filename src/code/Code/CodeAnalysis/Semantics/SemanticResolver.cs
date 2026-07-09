@@ -208,6 +208,28 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return semantic;
 	}
+	protected override SemanticShortFunctionBodySyntax ConvertCore(IDeclaredShortFunctionBodySyntax declared)
+	{
+		var semantic = base.ConvertCore(declared);
+		Debug.Assert(_currentFunction is not null);
+
+		IType valueType = semantic.Expression.ResultType;
+		IType targetType = _currentFunction.Return.Type;
+
+		if (targetType.IsVoid)
+			return semantic;
+
+		if (ShouldReportIncompatibleType(valueType, targetType))
+		{
+			ReportIncompatibleType(declared.Expression, $"A return value of the type '", valueType, "' cannot be assigned to the function's return type '", targetType, "'.")
+				.Add(_currentFunction.Declaration.Signature.Return, lines =>
+				{
+					lines.AddLine("This is where you specified the '", targetType, "' return type.");
+				});
+		}
+
+		return semantic;
+	}
 
 	protected override SemanticIfStatementSyntax ConvertCore(IDeclaredIfStatementSyntax declared)
 	{
@@ -305,25 +327,37 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		var op = Convert(declared.Operator);
 		var value = Convert(declared.Value);
 
+		IType valueType = value.ResultType;
+
 		ISymbol? symbol = null;
 		IType? resultType = null;
+		string? target = null;
+
 		if (expression is ISemanticGetExpressionSyntax get)
 		{
-			if (get.Symbol is ILocalVariable variable)
+			symbol = get.Symbol;
+			(resultType, target) = symbol switch
 			{
-				symbol = variable;
-				resultType = variable.Type;
-			}
-			else if (get.Symbol is IFunctionParameter parameter)
-			{
-				symbol = parameter;
-				resultType = parameter.Type;
-			}
-			else if (get.Symbol.IsKnown)
+				ILocalVariable variable => (variable.Type, "variable"),
+				IFunctionParameter parameter => (parameter.Type, "parameter"),
+				_ => (null, null)
+			};
+
+			if (resultType is null && get.Symbol.IsKnown)
 				ReportCantAssignToSymbol(op, get.Symbol);
 		}
 		else if (IsLiteral(expression))
 			ReportCantAssignToLiteral(op);
+
+		if (resultType is not null)
+		{
+			if (ShouldReportIncompatibleType(valueType, resultType))
+			{
+				Diagnostic diagnostic = ReportIncompatibleType(declared.Operator, $"A value of the type '", valueType, $"' cannot be assigned to a {target} of the type '", resultType, "'.");
+				TryAddDeclaration(diagnostic, expression);
+				TryAddDeclaration(diagnostic, value);
+			}
+		}
 
 		return new(expression, op, value, symbol ?? SpecialSymbols.NotFound, resultType ?? SpecialTypes.Error);
 	}
@@ -355,7 +389,12 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 				value.ResultType.FindOperation(expression.ResultType, value.ResultType, kind)
 			;
 
-			TryReportUnknownOperator("compound assignment", op, operation, expression.ResultType, value.ResultType);
+			Diagnostic? diagnostic = TryReportUnknownOperator("compound assignment", op, operation, expression.ResultType, value.ResultType);
+			if (diagnostic is not null)
+			{
+				TryAddDeclaration(diagnostic, expression);
+				TryAddDeclaration(diagnostic, value);
+			}
 		}
 
 		return new(expression, op, value, symbol ?? SpecialSymbols.NotFound, operation, operation?.Return.Type ?? SpecialTypes.Error);
@@ -693,10 +732,12 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return types.Any(t => t.IsError is false);
 	}
-	private void TryReportUnknownOperator(string kind, ISyntaxToken op, IFunction? operation, params IReadOnlyList<IType> types)
+	private Diagnostic? TryReportUnknownOperator(string kind, ISyntaxToken op, IFunction? operation, params IReadOnlyList<IType> types)
 	{
 		if (ShouldReportUnknownOperator(operation, types))
-			ReportUnknownOperator(kind, op, types);
+			return ReportUnknownOperator(kind, op, types);
+
+		return null;
 	}
 	private Diagnostic ReportUnknownOperator(string kind, ISyntaxToken op, params IReadOnlyList<IType> types)
 	{
