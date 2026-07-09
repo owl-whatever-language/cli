@@ -330,16 +330,21 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 		return true;
 	}
 
-	public TextFragmentLine? TryGetLineAt(int lineNumber)
+	public bool TryGetLineAt(int lineNumber, [NotNullWhen(true)] out TextFragmentLine? line)
 	{
-		foreach (TextFragmentLine line in this)
+		foreach (TextFragmentLine current in this)
 		{
-			if (line.Line == lineNumber)
-				return line;
+			if (current.Line == lineNumber)
+			{
+				line = current;
+				return true;
+			}
 		}
 
-		return null;
+		line = default;
+		return false;
 	}
+	public TextFragmentLine? TryGetLineAt(int lineNumber) => TryGetLineAt(lineNumber, out TextFragmentLine? line) ? line : null;
 	public void WritePlainText(IndentedTextWriter writer)
 	{
 		foreach (TextFragmentLine line in this)

@@ -167,6 +167,20 @@ public static class ISyntaxNodeExtensions
 
 			return default;
 		}
+		public IEnumerable<ISyntaxNode> GetChain(bool includeSelf = true)
+		{
+			List<ISyntaxNode> chain = [];
+
+			ISyntaxNode? current = includeSelf ? node : node.Parent;
+
+			while (current is not null)
+			{
+				chain.Add(current);
+				current = current.Parent;
+			}
+
+			return chain;
+		}
 		public ISyntaxNode GetRoot()
 		{
 			while (node.Parent is not null)
@@ -194,6 +208,7 @@ public static class ISyntaxNodeExtensions
 			return document.Tree;
 		}
 		public T GetTree<T>() where T : notnull, ISyntaxTree => (T)node.GetTree();
+
 		#endregion
 
 		#region Search methods

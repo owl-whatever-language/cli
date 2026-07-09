@@ -29,6 +29,10 @@ public interface IAnalysisContext
 	#region Properties
 	IReadOnlyCollection<IAnnotatedSyntaxTree> Annotated { get; }
 	#endregion
+
+	#region Methods
+	bool TryGet(ISourceFile source, [NotNullWhen(true)] out ISyntaxTreeBundle? bundle);
+	#endregion
 }
 
 public sealed class AnalysisContext : IAnalysisContext
@@ -61,6 +65,18 @@ public sealed class AnalysisContext : IAnalysisContext
 	#endregion
 
 	#region Methods
+	public bool TryGet(ISourceFile source, [NotNullWhen(true)] out ISyntaxTreeBundle? bundle)
+	{
+		if (_trees.TryGetValue(source, out SyntaxTreeBundle? typed))
+		{
+			bundle = typed;
+			return true;
+		}
+
+		bundle = default;
+		return false;
+	}
+
 	public AnalysisContext RegisterPass(IAnalysisPass pass)
 	{
 		_passes.Add(pass);

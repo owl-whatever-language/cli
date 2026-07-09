@@ -23,8 +23,9 @@ public static class OwlStyling
 			.Add(ClassificationKind.Diagnostic, StylingEffect.Italic)
 			.Add(ClassificationKind.Error, "#ff0000", StylingEffect.Italic | StylingEffect.Wavy)
 			.Add(ClassificationKind.Warning, "#ffaf00", StylingEffect.Italic | StylingEffect.Wavy)
-			.Add(ClassificationKind.Suggestion, "#808080", StylingEffect.Italic | StylingEffect.Dotted)
-			.Add(ClassificationKind.Hint, "#808080", StylingEffect.Italic)
+			.Add(ClassificationKind.Suggestion, "#a0a0a0", StylingEffect.Italic | StylingEffect.Dotted)
+			.Add(ClassificationKind.Hint, "#a0a0a0", StylingEffect.Italic)
+
 			.AddSymbol(DiagnosticKind.Error, "🞫")
 			.AddSymbol(DiagnosticKind.Warning, "🞛")
 			.AddSymbol(DiagnosticKind.Suggestion, "⯌")
@@ -34,8 +35,12 @@ public static class OwlStyling
 			.Add(ClassificationKind.PrettySource, "#808080")
 			.Add(ClassificationKind.Margin, "#808080")
 			.Add(ClassificationKind.LineNumber, "#3d8de9")
-			.Add(ClassificationKind.Message, StylingEffect.Italic)
+			.Add(ClassificationKind.Message, "#a0a0a0", StylingEffect.Italic)
 			.Add(ClassificationKind.Dim, StylingEffect.Dim)
+			.Add(ClassificationKind.Snipped, "#707070", StylingEffect.Italic | StylingEffect.Dim)
+
+			.AddSymbol(ClassificationKind.Message, "⯌")
+			.AddSymbol(ClassificationKind.Snipped, "✂")
 
 			// Trivia
 			.Add(ClassificationKind.Comment, "#589058")

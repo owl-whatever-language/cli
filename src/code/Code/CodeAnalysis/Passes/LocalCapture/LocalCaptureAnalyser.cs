@@ -115,16 +115,24 @@ public sealed class LocalCaptureAnalyser : AnalysisPass.PerTree, IDiagnosticProv
 			if (invalid.Count is 0)
 				return;
 
+			bool isCall = get.Parent is IConcreteFunctionCallExpressionSyntax;
+
 			Diagnostic diagnostic = Diagnostics
 				.BuildError(Analyser, "variable_used_before_declaration")
-				.Add(get.Name, lines => lines.AddLine("Some variables that this function uses have not been defined yet."));
+				.Add(get.Name, lines =>
+				{
+					string call = isCall ? "call" : "access";
+					string called = isCall ? "called" : "accessed";
+
+					lines.AddLine($"The {called} function uses some variables that haven't been declared before this {call}.");
+				});
 
 			foreach (var variable in invalid)
 			{
-				diagnostic.Add(variable.Key.Declaration.Name, lines => lines.AddLine("Declared here."));
+				diagnostic.Add(variable.Key.Declaration.Name, lines => lines.AddLine("Declared here, after the function is used."));
 
 				foreach (var use in variable.Value)
-					diagnostic.Add(use.Name, lines => lines.AddLine("Used here."));
+					diagnostic.Add(use.Name, lines => lines.AddLine("Used here, in the function."));
 			}
 		}
 		#endregion

@@ -36,6 +36,7 @@ partial struct ClassificationKind
 	public static ClassificationKind Margin { get; } = PrettySource + "margin";
 	public static ClassificationKind Message { get; } = PrettySource + "message";
 	public static ClassificationKind Dim { get; } = PrettySource + "dim";
+	public static ClassificationKind Snipped { get; } = PrettySource + "snipped";
 	#endregion
 
 	#region Trivia

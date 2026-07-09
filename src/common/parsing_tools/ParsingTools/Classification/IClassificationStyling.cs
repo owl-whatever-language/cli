@@ -14,6 +14,7 @@ public interface IClassificationStyling
 	StyleInfo Get(ClassificationKind? classification);
 	StyleInfo Get(params IReadOnlyList<ClassificationKind> classifications);
 	string? GetSymbol(DiagnosticKind diagnostic);
+	string? GetSymbol(ClassificationKind classification);
 	#endregion
 }
 
@@ -120,7 +121,7 @@ public sealed class ClassificationStyling : IClassificationStyling
 		return StyleInfo.Merge(styles);
 	}
 	public string? GetSymbol(DiagnosticKind diagnostic) => GetSymbol(diagnostic.ToClassification());
-	private string? GetSymbol(ClassificationKind classification)
+	public string? GetSymbol(ClassificationKind classification)
 	{
 		foreach (ClassificationKind kind in classification.Iterate())
 		{
