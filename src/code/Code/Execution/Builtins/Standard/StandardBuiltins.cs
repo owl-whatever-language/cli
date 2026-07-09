@@ -6,19 +6,19 @@ using static Core.CoreBuiltins;
 internal partial class StandardBuiltins
 {
 	[Name("print")]
-	public static void Print(IExecutionContext context, Text text)
+	public static void Print(Text text)
 	{
 		Console.Write(text.Value);
 	}
 
 	[Name("println")]
-	public static void Println(IExecutionContext context, Text text)
+	public static void Println(Text text)
 	{
 		Console.WriteLine(text.Value);
 	}
 
 	[Name("input")]
-	public static Text Input(IExecutionContext context, Text prompt)
+	public static Text Input(Text prompt)
 	{
 		Console.Write(prompt.Value);
 		string input = Console.ReadLine() ?? string.Empty;

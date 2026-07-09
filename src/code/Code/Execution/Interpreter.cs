@@ -139,7 +139,7 @@ public class Interpreter
 	}
 	private void Interpret(IAnnotatedStatementSyntax statement)
 	{
-		if (statement.IsExecutable)
+		if (statement.IsExecutable is false)
 			return;
 
 		if (statement is IAnnotatedExpressionStatementSyntax expression)

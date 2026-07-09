@@ -191,11 +191,11 @@ public sealed class BuiltinResolver
 		string name = GetName(function);
 
 		ParameterInfo[] parameters = function.GetParameters();
-		if (parameters.Length is 0 || (parameters[0].ParameterType != typeof(IExecutionContext)))
-			ThrowHelper.ThrowInvalidOperationException($"Expected the builtin function '{name}' to have a first parameter of the type '{typeof(IExecutionContext)}'.");
+		bool hasContext = parameters.FirstOrDefault()?.ParameterType == typeof(IExecutionContext);
 
 		List<BuiltinFunctionParameter> builtinParameters = [];
-		for (int i = 1; i < parameters.Length; i++)
+		int start = hasContext ? 1 : 0;
+		for (int i = start; i < parameters.Length; i++)
 		{
 			ParameterInfo parameter = parameters[i];
 
@@ -204,7 +204,7 @@ public sealed class BuiltinResolver
 				ThrowHelper.ThrowInvalidOperationException($"Expected the parameter '{parameter}' on '{function}' to have a name.");
 
 			IType type = TypeLookup[parameter.ParameterType];
-			BuiltinFunctionParameter builtinParameter = new(i, type, parameterName);
+			BuiltinFunctionParameter builtinParameter = new(i - start, type, parameterName);
 			builtinParameters.Add(builtinParameter);
 		}
 

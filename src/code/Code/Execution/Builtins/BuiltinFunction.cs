@@ -7,6 +7,7 @@ internal sealed class BuiltinFunction : IFunction
 	#region Properties
 	public string Name { get; }
 	public MethodInfo Method { get; }
+	public bool TakesContext { get; }
 	public IReadOnlyList<IFunctionParameter> Parameters { get; }
 	public IFunctionReturn Return { get; }
 	public ICallableFunction AsCallable { get; }
@@ -17,6 +18,7 @@ internal sealed class BuiltinFunction : IFunction
 	{
 		Name = name;
 		Method = method;
+		TakesContext = method.GetParameters().FirstOrDefault()?.ParameterType == typeof(IExecutionContext);
 
 		Parameters = parameters;
 		Return = @return;
@@ -28,9 +30,11 @@ internal sealed class BuiltinFunction : IFunction
 	#region Methods
 	public InterpreterValue Execute(IExecutionContext context, IReadOnlyList<InterpreterValue> values)
 	{
+		object?[] withContext = TakesContext ? [context] : [];
+
 		object?[] arguments =
 		[
-			context,
+			..withContext,
 			.. values.Select(v => v.Value)
 		];
 

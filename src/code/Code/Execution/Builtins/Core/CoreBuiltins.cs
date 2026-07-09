@@ -23,16 +23,16 @@ internal partial class CoreBuiltins
 
 		#region Operators
 		[Operator]
-		public static Bool LogicalAnd(IExecutionContext _, Bool left, Bool right) => new(left.Value && right.Value);
+		public static Bool LogicalAnd(Bool left, Bool right) => new(left.Value && right.Value);
 
 		[Operator]
-		public static Bool LogicalOr(IExecutionContext _, Bool left, Bool right) => new(left.Value || right.Value);
+		public static Bool LogicalOr(Bool left, Bool right) => new(left.Value || right.Value);
 
 		[Operator]
-		public static Bool Equal(IExecutionContext _, Bool left, Bool right) => new(left.Value == right.Value);
+		public static Bool Equal(Bool left, Bool right) => new(left.Value == right.Value);
 
 		[Operator]
-		public static Bool NotEqual(IExecutionContext _, Bool left, Bool right) => new(left.Value != right.Value);
+		public static Bool NotEqual(Bool left, Bool right) => new(left.Value != right.Value);
 		#endregion
 	}
 
@@ -76,7 +76,7 @@ internal partial class CoreBuiltins
 		private static int Compare(Int left, Int right) => ((IComparable)left.Value).CompareTo(right.Value);
 
 		[Operator]
-		public static Int Modulo(IExecutionContext _, Int left, Int right)
+		public static Int Modulo(Int left, Int right)
 		{
 			long l = (long)left.Value;
 			long r = (long)right.Value;
@@ -85,25 +85,25 @@ internal partial class CoreBuiltins
 		}
 
 		[Operator]
-		public static Bool Equal(IExecutionContext _, Int left, Int right) => new(Compare(left, right) == 0);
+		public static Bool Equal(Int left, Int right) => new(Compare(left, right) == 0);
 
 		[Operator]
-		public static Bool NotEqual(IExecutionContext _, Int left, Int right) => new(Compare(left, right) != 0);
+		public static Bool NotEqual(Int left, Int right) => new(Compare(left, right) != 0);
 
 		[Operator]
-		public static Bool LessThan(IExecutionContext _, Int left, Int right) => new(Compare(left, right) < 0);
+		public static Bool LessThan(Int left, Int right) => new(Compare(left, right) < 0);
 
 		[Operator]
-		public static Bool LessThanOrEqual(IExecutionContext _, Int left, Int right) => new(Compare(left, right) <= 0);
+		public static Bool LessThanOrEqual(Int left, Int right) => new(Compare(left, right) <= 0);
 
 		[Operator]
-		public static Bool GreaterThan(IExecutionContext _, Int left, Int right) => new(Compare(left, right) > 0);
+		public static Bool GreaterThan(Int left, Int right) => new(Compare(left, right) > 0);
 
 		[Operator]
-		public static Bool GreaterThanOrEqual(IExecutionContext _, Int left, Int right) => new(Compare(left, right) >= 0);
+		public static Bool GreaterThanOrEqual(Int left, Int right) => new(Compare(left, right) >= 0);
 
 		[Operator]
-		public static Int Add(IExecutionContext _, Int left, Int right)
+		public static Int Add(Int left, Int right)
 		{
 			long l = (long)left.Value;
 			long r = (long)right.Value;
