@@ -475,6 +475,39 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 				else if (function.Body is IAnnotatedShortFunctionBodySyntax @short)
 					GraphBuilder.Populate(graph, @short.Expression);
 			}
+
+			foreach (IMutableControlFlowBlock block in graph.Blocks)
+			{
+				bool reachable = block.IsReachable;
+
+				IAnnotatedSyntaxNode? node = null;
+
+				if (block is IControlFlowStatementBlock statement)
+				{
+					foreach (IAnnotatedStatementSyntax current in statement.Statements)
+					{
+						current.SetFlag(AnnotationFlag.IsReachable, reachable);
+						node ??= current;
+					}
+				}
+				else if (block is IControlFlowExpressionBlock expression)
+				{
+					expression.Expression.SetFlag(AnnotationFlag.IsReachable, reachable);
+					node = expression.Expression;
+				}
+				else if (block is IControlFlowConstructBlock construct)
+				{
+					construct.Expression?.SetFlag(AnnotationFlag.IsReachable, reachable);
+					node = construct.Expression;
+				}
+
+				if (reachable is false && node is not null)
+				{
+					Diagnostics
+						.BuildSuggestion(Analyser, "unreachable_code")
+						.Add(node, lines => lines.AddLine("This code is unreachable."));
+				}
+			}
 		}
 		#endregion
 	}
