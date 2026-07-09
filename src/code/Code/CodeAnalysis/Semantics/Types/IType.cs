@@ -20,6 +20,7 @@ public static class ITypeExtensions
 		#region Properties
 		public bool IsError => type == SpecialTypes.Error;
 		public bool IsNotError => type != SpecialTypes.Error;
+		public bool IsVoid => type == SpecialTypes.Void;
 		#endregion
 
 		#region Methods

@@ -9,6 +9,8 @@ public interface IControlFlowBlock
 	string Id { get; }
 	IReadOnlyList<IControlFlowIncomingBranch> Incoming { get; }
 	IReadOnlyList<IControlFlowOutgoingBranch> Outgoing { get; }
+	bool IsReachable { get; }
+	bool EndsWithReturn { get; }
 	#endregion
 }
 
@@ -45,6 +47,8 @@ public abstract class MutableControlFlowBlock : IMutableControlFlowBlock
 	public abstract string Id { get; }
 	public IReadOnlyList<IMutableControlFlowIncomingBranch> Incoming => _incoming;
 	public IReadOnlyList<IMutableControlFlowOutgoingBranch> Outgoing => _outgoing;
+	public virtual bool IsReachable => Incoming.Count > 0 && Incoming.All(b => b.IsReachable);
+	public abstract bool EndsWithReturn { get; }
 	#endregion
 
 	#region Methods

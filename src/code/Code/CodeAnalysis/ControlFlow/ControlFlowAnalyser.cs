@@ -140,7 +140,8 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 					continue;
 				}
 
-				Connect(current.EndMarkerIfConstruct, next);
+				if (ConnectLastBlock(current))
+					Connect(current.EndMarkerIfConstruct, next);
 			}
 
 			return blocks;
@@ -408,7 +409,6 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 			if (missingReturns.Count is 0)
 				return true;
 
-
 			Diagnostic diagnostic = Diagnostics
 				.BuildError(Analyser, "missing_return")
 				.Add(node.Signature.Name, lines => lines.AddLine("Function is missing a return statement."))
@@ -431,8 +431,9 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 
 			return block switch
 			{
-				IControlFlowStatementBlock statement => statement.Statements.Any() ? statement.Statements[^1] : graph.Node,
+				IControlFlowStatementBlock statement => statement.Statements.Any() ? statement.Statements[^1] : graph.Node.Flatten().LastOrDefault() ?? graph.Node,
 				IControlFlowExpressionBlock expression => expression.Expression,
+				IControlFlowEndBlock end => graph.Node.Flatten().LastOrDefault() ?? graph.Node,
 
 				_ => ThrowHelper.ThrowInvalidOperationException<ISyntaxNode>($"Unsupported control flow block type ({block.GetType().Name}).")
 			};
@@ -443,28 +444,16 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 
 			foreach (IControlFlowIncomingBranch branch in end.Incoming)
 			{
-				// Note(Nightowl):
-				// We only call this function for block body functions so there won't
-				// be any expression blocks that directly connect to the end block;
-				IControlFlowStatementBlock from = (IControlFlowStatementBlock)branch.From;
-				IAnnotatedStatementSyntax? last = from.Statements.LastOrDefault();
-				while (true)
-				{
-					// Note(Nightowl): We merge non-branching statements, so the last statement could be a container;
-					if (last is IAnnotatedBlockStatementSyntax block)
-					{
-						last = block.Statements.LastOrDefault();
-						continue;
-					}
-
-					break;
-				}
-
-				// Note(Nightowl): Return statements that don't have a value will have an error during semantic resolution;
-				if (last is IAnnotatedReturnStatementSyntax or IAnnotatedValueReturnStatementSyntax)
+				if (branch.IsReachable is false)
 					continue;
 
-				missing.Add(from);
+				if (branch.From.EndsWithReturn is false)
+				{
+					if (branch.From is IControlFlowMarkerBlock marker)
+						missing.Add(end);
+					else
+						missing.Add(branch.From);
+				}
 			}
 
 			return missing;

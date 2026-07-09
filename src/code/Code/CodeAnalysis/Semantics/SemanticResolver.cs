@@ -130,7 +130,10 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		IType variableType = semantic.Variable.Type;
 
 		if (ShouldReportIncompatibleType(valueType, variableType))
-			ReportIncompatibleType(declared.Assignment, $"A value of the type '", valueType, "' cannot be assigned to a variable of the type '", variableType, "'.");
+		{
+			Diagnostic diagnostic = ReportIncompatibleType(semantic.Assignment, $"A value of the type '", valueType, "' cannot be assigned to a variable of the type '", variableType, "'.");
+			TryAddDeclaration(diagnostic, semantic.Value);
+		}
 
 		return semantic;
 	}
@@ -192,9 +195,14 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			ReportIncompatibleType(declared.Value, $"A return value of the type '", valueType, "' cannot be assigned to the function's return type '", targetType, "'.")
 				.Add(_currentFunction.Declaration.Signature.Return, lines =>
 				{
-					lines
-						.AddLine("If you want to return a value, specify the return type here like so:")
-						.AddLine($"{(_currentFunction.Name, ClassificationKind.Function)}(): ", targetType);
+					if (targetType.IsVoid)
+					{
+						lines
+							.AddLine("If you want to return a value, specify the return type here like so:")
+							.AddLine($"{(_currentFunction.Name, ClassificationKind.Function)}(): ", targetType);
+					}
+					else
+						lines.AddLine("This is where you specified the '", targetType, "' return type.");
 				});
 		}
 
@@ -654,6 +662,29 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		return Diagnostics
 			.BuildError(this, "incompatible_type")
 			.Add(node, lines => lines.AddLine(message));
+	}
+	private Diagnostic TryAddDeclaration(Diagnostic diagnostic, ISemanticExpressionSyntax value)
+	{
+		if (value is not ISemanticGetExpressionSyntax get)
+			return diagnostic;
+
+		ISyntaxNode? position = get.Symbol switch
+		{
+			IDeclaredFunctionParameter parameter => parameter.Declaration,
+			IDeclaredLocalVariable variable => variable.Declaration.Name,
+			IDeclaredFunction function => function.Declaration.Signature,
+
+			_ => null
+		};
+
+		ClassificationKind classification = get.Symbol.Classification ?? ClassificationKind.Identifier;
+
+		if (position is null)
+			return diagnostic;
+
+		diagnostic.Add(position, lines => lines.AddLine("This is where '", (get.Symbol.Name, classification), "' is declared."));
+
+		return diagnostic;
 	}
 	private bool ShouldReportUnknownOperator(IFunction? operation, params IEnumerable<IType> types)
 	{

@@ -47,6 +47,7 @@ public sealed class ControlFlowConstructBlock : MutableControlFlowBlock, IMutabl
 	public IAnnotatedExpressionSyntax? Expression { get; }
 	public IReadOnlyList<IMutableControlFlowBlock> Blocks => _blocks;
 	public IMutableControlFlowMarkerBlock End { get; }
+	public override bool EndsWithReturn => End.EndsWithReturn;
 	#endregion
 
 	#region Constructors

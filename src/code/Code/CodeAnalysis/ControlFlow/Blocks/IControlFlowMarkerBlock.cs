@@ -24,6 +24,7 @@ public sealed class ControlFlowMarkerBlock : MutableControlFlowBlock, IMutableCo
 	public IMutableControlFlowBlock Parent { get; }
 	public string Name { get; }
 	public override string Id => $"{Parent.Id}_{Name}_marker";
+	public override bool EndsWithReturn => Incoming.All(b => b.From.EndsWithReturn);
 	#endregion
 
 	#region Constructors

@@ -143,8 +143,8 @@ public sealed class DiagnosticSourceDisplay
 
 		TrimIrrelevant(output);
 		SnipIrrelevantGroups(output);
-		AttachDiagnostics(output);
 		AttachAnnotations(output);
+		AttachDiagnostics(output);
 		AttachSourceDiagnostics(output);
 
 		return output;
@@ -174,7 +174,7 @@ public sealed class DiagnosticSourceDisplay
 			TextFragmentLine? target = output.TryGetLineAt(info.Line);
 			Debug.Assert(target is not null);
 
-			if (info.Diagnostics.Count is 1)
+			if (info.Diagnostics.Count is 1 && info.Annotations.Count is 0)
 			{
 				IDiagnostic diagnostic = info.Diagnostics[0];
 				TextFragmentLine line = PrepareShortLine(diagnostic, true, null);
@@ -185,9 +185,9 @@ public sealed class DiagnosticSourceDisplay
 				TextFragment? indent = target.Indentation;
 
 				List<TextFragmentLine> lines = [];
-				foreach (IDiagnosticAnnotation annotation in info.Annotations)
+				foreach (IDiagnostic diagnostic in info.Diagnostics)
 				{
-					TextFragmentLine line = PrepareAnnotationMessage(annotation, false, indent);
+					TextFragmentLine line = PrepareShortLine(diagnostic, false, indent);
 					lines.Add(line);
 				}
 
@@ -205,7 +205,7 @@ public sealed class DiagnosticSourceDisplay
 			TextFragmentLine? target = output.TryGetLineAt(info.Line);
 			Debug.Assert(target is not null);
 
-			if (info.Annotations.Count is 1)
+			if (info.Annotations.Count is 1 && info.Diagnostics.Count is 0)
 			{
 				IDiagnosticAnnotation annotation = info.Annotations[0];
 				TextFragmentLine line = PrepareAnnotationMessage(annotation, true, null);

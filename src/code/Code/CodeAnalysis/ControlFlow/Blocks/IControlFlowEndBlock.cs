@@ -32,6 +32,8 @@ public sealed class ControlFlowEndBlock : IMutableControlFlowEndBlock
 	public int BlockNumber { get; set; }
 	public string Id => $"end_node#{BlockNumber}";
 	public IReadOnlyList<IMutableControlFlowIncomingBranch> Incoming => _incoming;
+	public bool IsReachable => Incoming.Count > 0 && Incoming.All(b => b.IsReachable);
+	public bool EndsWithReturn => Incoming.All(i => i.From.EndsWithReturn);
 	#endregion
 
 	#region Methods

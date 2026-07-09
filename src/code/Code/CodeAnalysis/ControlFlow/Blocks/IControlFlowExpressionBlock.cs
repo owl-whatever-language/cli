@@ -39,6 +39,7 @@ public sealed class ControlFlowExpressionBlock : MutableControlFlowBlock, IMutab
 	public string? ConstructName { get; }
 	public IAnnotatedExpressionSyntax Expression { get; }
 	public IReadOnlyList<IMutableControlFlowExpressionBlock> Blocks => _blocks;
+	public override bool EndsWithReturn => false;
 	#endregion
 
 	#region Constructors

@@ -3,26 +3,36 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.Passes.LocalCapture;
 public sealed class LocalCaptureAnalyser : AnalysisPass.PerTree, IDiagnosticProvider
 {
 	#region Nested types
-	private sealed class Instance : BaseAnnotatedVisitor
+	private sealed class Annotator : BaseAnnotatedVisitor
 	{
+		#region Nested types
+		private sealed class UsedLookup
+		{
+			#region Fields
+			private readonly Dictionary<ILocalVariable, UsedVariableInfo> _lookup = [];
+			#endregion
+
+			#region Methods
+			public IReadOnlyCollection<UsedVariableInfo> GetAll() => _lookup.Values.ToArray();
+			public void AddUse(ILocalVariable variable, IAnnotatedGetExpressionSyntax get)
+			{
+				if (_lookup.TryGetValue(variable, out UsedVariableInfo? info) is false)
+				{
+					info = new(variable);
+					_lookup.Add(variable, info);
+				}
+
+				info.Uses.Add(get);
+			}
+			public void Remove(ILocalVariable variable) => _lookup.Remove(variable);
+			#endregion
+		}
+		#endregion
+
 		#region Fields
 		private readonly HashSet<IAnnotatedFunctionDeclarationStatementSyntax> _seen = [];
-		private readonly Stack<Dictionary<ILocalVariable, List<IAnnotatedGetExpressionSyntax>>> _used = [];
+		private readonly Stack<UsedLookup> _used = [];
 		private readonly Stack<HashSet<ILocalVariable>> _declared = [];
-		#endregion
-
-		#region Properties
-		private LocalCaptureAnalyser Analyser { get; }
-		private ISourceFile Source { get; }
-		public DiagnosticBag Diagnostics { get; } = [];
-		#endregion
-
-		#region Constructors
-		public Instance(LocalCaptureAnalyser analyser, ISourceFile source)
-		{
-			Analyser = analyser;
-			Source = source;
-		}
 		#endregion
 
 		#region Methods
@@ -33,7 +43,7 @@ public sealed class LocalCaptureAnalyser : AnalysisPass.PerTree, IDiagnosticProv
 
 			_seen.Add(node);
 
-			Dictionary<ILocalVariable, List<IAnnotatedGetExpressionSyntax>> used = [];
+			UsedLookup used = new();
 			HashSet<ILocalVariable> declared = [];
 
 			_used.Push(used);
@@ -43,36 +53,56 @@ public sealed class LocalCaptureAnalyser : AnalysisPass.PerTree, IDiagnosticProv
 
 			// Note(Nightowl): We only care about the external variables that were used;
 			foreach (ILocalVariable variable in declared)
-				used.Remove(variable);
+			{
+				foreach (UsedLookup lookup in _used)
+					lookup.Remove(variable);
+			}
 
-			Dictionary<ILocalVariable, IReadOnlyCollection<IAnnotatedGetExpressionSyntax>> read = [];
-			foreach (var pair in used)
-				read.Add(pair.Key, pair.Value);
-
-			node.AddLocalCapture(read);
+			IReadOnlyCollection<IUsedVariableInfo> all = used.GetAll();
+			node.AddLocalCapture(all);
 
 			_used.Pop();
 			_declared.Pop();
 
 			return false;
 		}
-
 		protected override bool Visit(IAnnotatedGetExpressionSyntax node)
 		{
 			if (node.Symbol is ILocalVariable variable)
 			{
-				foreach (var use in _used)
-				{
-					if (use.TryGetValue(variable, out List<IAnnotatedGetExpressionSyntax>? uses) is false)
-					{
-						uses = [];
-						use.Add(variable, uses);
-					}
-
-					uses.Add(node);
-				}
+				foreach (UsedLookup lookup in _used)
+					lookup.AddUse(variable, node);
 			}
 
+			return false;
+		}
+
+		protected override bool Visit(IAnnotatedVariableDeclarationStatementSyntax node)
+		{
+			if (_declared.TryPeek(out HashSet<ILocalVariable>? declared))
+				declared.Add(node.Variable);
+
+			return true;
+		}
+		#endregion
+	}
+	private sealed class Checker : BaseAnnotatedVisitor
+	{
+		#region Properties
+		private LocalCaptureAnalyser Analyser { get; }
+		public DiagnosticBag Diagnostics { get; } = [];
+		#endregion
+
+		#region Constructors
+		public Checker(LocalCaptureAnalyser analyser)
+		{
+			Analyser = analyser;
+		}
+		#endregion
+
+		#region Methods
+		protected override bool Visit(IAnnotatedGetExpressionSyntax node)
+		{
 			if (node.Symbol is IDeclaredFunction function)
 			{
 				IAnnotatedFunctionDeclarationStatementSyntax declaration = (IAnnotatedFunctionDeclarationStatementSyntax)function.Declaration;
@@ -83,29 +113,23 @@ public sealed class LocalCaptureAnalyser : AnalysisPass.PerTree, IDiagnosticProv
 
 			return false;
 		}
-		protected override bool Visit(IAnnotatedVariableDeclarationStatementSyntax node)
-		{
-			if (_declared.TryPeek(out HashSet<ILocalVariable>? declared))
-				declared.Add(node.Variable);
 
-			return true;
-		}
 		private void CheckUse(IAnnotatedGetExpressionSyntax get, IAnnotatedFunctionDeclarationStatementSyntax function)
 		{
-			IReadOnlyDictionary<IDeclaredLocalVariable, IReadOnlyCollection<IAnnotatedGetExpressionSyntax>> GetInvalid()
+			IReadOnlyCollection<IUsedVariableInfo> GetInvalid()
 			{
-				Dictionary<IDeclaredLocalVariable, IReadOnlyCollection<IAnnotatedGetExpressionSyntax>> result = [];
+				List<IUsedVariableInfo> result = [];
 
 				foreach (var variable in function.GetLocalCapture().Variables)
 				{
 					// Note(Nightowl): It shouldn't be possible to have non-declared ones;
-					IDeclaredLocalVariable declared = (IDeclaredLocalVariable)variable.Key;
+					IDeclaredLocalVariable declared = (IDeclaredLocalVariable)variable.Variable;
 
 					IndexedLinePosition use = get.Name.Position.Start;
 					IndexedLinePosition declaration = declared.Declaration.Name.Position.Start;
 
 					if (declared.Declaration.Position.Start >= get.Position.Start)
-						result.Add(declared, variable.Value);
+						result.Add(variable);
 				}
 
 				return result;
@@ -127,12 +151,18 @@ public sealed class LocalCaptureAnalyser : AnalysisPass.PerTree, IDiagnosticProv
 					lines.AddLine($"The {called} function uses some variables that haven't been declared before this {call}.");
 				});
 
-			foreach (var variable in invalid)
+			foreach (IUsedVariableInfo variable in invalid)
 			{
-				diagnostic.Add(variable.Key.Declaration.Name, lines => lines.AddLine("Declared here, after the function is used."));
+				IDeclaredLocalVariable declared = (IDeclaredLocalVariable)variable.Variable;
 
-				foreach (var use in variable.Value)
-					diagnostic.Add(use.Name, lines => lines.AddLine("Used here, in the function."));
+				string? name = declared.Declaration.Name.Value as string;
+				Debug.Assert(name is not null, "A variable without a name can't be referenced.");
+				TextFragment nameFragment = new(name, ClassificationKind.Variable);
+
+				diagnostic.Add(declared.Declaration.Name, lines => lines.AddLine("This is where '", nameFragment, "' is declared, after the function is used."));
+
+				foreach (var use in variable.Uses)
+					diagnostic.Add(use.Name, lines => lines.AddLine("This is where '", nameFragment, "' is used in the function."));
 			}
 		}
 		#endregion
@@ -147,10 +177,13 @@ public sealed class LocalCaptureAnalyser : AnalysisPass.PerTree, IDiagnosticProv
 	#region Methods
 	protected override IDiagnosticBag Run(IAnalysisContext context, IAnnotatedSyntaxTree tree)
 	{
-		Instance instance = new(this, tree.Source);
-		instance.Visit(tree);
+		Annotator annotator = new();
+		annotator.Visit(tree);
 
-		return instance.Diagnostics;
+		Checker checker = new(this);
+		checker.Visit(tree);
+
+		return checker.Diagnostics;
 	}
 	#endregion
 }

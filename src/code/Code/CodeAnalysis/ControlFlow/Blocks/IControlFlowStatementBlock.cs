@@ -28,11 +28,29 @@ public sealed class ControlFlowStatementBlock : MutableControlFlowBlock, IMutabl
 	#region Properties
 	public override string Id => (_statements.FirstOrDefault()?.NodeKind.WithGroup ?? "block") + $"#{BlockNumber}";
 	public IReadOnlyList<IAnnotatedStatementSyntax> Statements => _statements;
+	public override bool EndsWithReturn => CalculateEndsWithReturn();
 	#endregion
 
 	#region Methods
 	public void Add(IAnnotatedStatementSyntax statement) => _statements.Add(statement);
 	public void AddRange(IEnumerable<IAnnotatedStatementSyntax> statements) => _statements.AddRange(statements);
+	private bool CalculateEndsWithReturn()
+	{
+		IAnnotatedStatementSyntax? last = _statements.LastOrDefault();
+		while (true)
+		{
+			// Note(Nightowl): We merge non-branching statements, so the last statement could be a container;
+			if (last is IAnnotatedBlockStatementSyntax block)
+			{
+				last = block.Statements.LastOrDefault();
+				continue;
+			}
+
+			break;
+		}
+
+		return last is IAnnotatedReturnStatementSyntax or IAnnotatedValueReturnStatementSyntax;
+	}
 	#endregion
 
 	#region Helpers

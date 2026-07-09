@@ -41,6 +41,8 @@ public sealed class ControlFlowStartBlock : IMutableControlFlowStartBlock
 	public IMutableControlFlowGraph Graph { get; }
 	public IReadOnlyList<IMutableControlFlowOutgoingBranch> Outgoing => _outgoing;
 	public int BlockNumber { get; set; }
+	public bool IsReachable => true;
+	public bool EndsWithReturn => false;
 	#endregion
 
 	#region Constructors

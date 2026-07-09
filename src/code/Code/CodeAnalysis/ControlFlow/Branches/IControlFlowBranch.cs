@@ -21,6 +21,7 @@ public sealed class ConditionalControlFlowBranch : IMutableControlFlowBidirectio
 	public bool IsNegated { get; }
 	public IMutableControlFlowBlock From { get; set; }
 	public IMutableControlFlowBlock To { get; set; }
+	public bool IsReachable => From.IsReachable; // Note(Nightowl): Currently just check the incoming block;
 	#endregion
 
 	#region Constructors
@@ -58,6 +59,7 @@ public sealed class UnconditionalControlFlowBranch : IMutableControlFlowBidirect
 
 	public IMutableControlFlowBlock From { get; set; }
 	public IMutableControlFlowBlock To { get; set; }
+	public bool IsReachable => From.IsReachable; // Note(Nightowl): Currently just check the incoming block;
 	#endregion
 
 	#region Constructors

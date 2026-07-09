@@ -3,9 +3,9 @@ namespace OwlDomain.ParsingTools.Text.Fragments;
 public readonly struct TextFragment
 {
 	#region Properties
-	public string Text { get; }
+	public string Text => field ?? "";
 	public ISyntaxPart? Syntax { get; }
-	public IReadOnlyList<ClassificationKind> Classifications { get; }
+	public IReadOnlyList<ClassificationKind> Classifications => field ?? [];
 	public ClassificationKind? Classification => Classifications.FirstOrDefault();
 	public bool IsWhitespace
 	{
