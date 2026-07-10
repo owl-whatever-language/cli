@@ -247,7 +247,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 
 			Diagnostics
 				.BuildError(this, "symbol_not_found")
-				.Add(token, lines => lines.AddLine($"No accessible symbol named '{name}' could be found."));
+				.Add(token, lines => lines.AddLine($"No accessible symbol named '", token, "' could be found."));
 		}
 
 		return group;

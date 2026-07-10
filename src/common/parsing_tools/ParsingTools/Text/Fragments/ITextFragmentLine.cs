@@ -60,6 +60,8 @@ public sealed class TextFragmentLine : TextFragmentCollection, ITextFragmentLine
 			}
 			else if (value is (char ch, ClassificationKind kind2))
 				l.Add(ch.ToString(), kind2);
+			else if (value is ISyntaxToken token && token.Lexeme is not null)
+				l.Add(token.Lexeme, token.Classification);
 			else if (value is IDebugNodeFactory<IDebugTreeText> factory)
 				l.AddRange(factory.GetDebugNode().Fragments);
 		}
