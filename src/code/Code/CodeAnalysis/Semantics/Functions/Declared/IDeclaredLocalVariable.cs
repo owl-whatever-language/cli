@@ -11,6 +11,7 @@ public interface IDeclaredLocalVariable : IDeclaredSymbol<IConcreteVariableDecla
 public sealed class DeclaredLocalVariable : IDeclaredLocalVariable
 {
 	#region Properties
+	public string Id { get; } = SymbolHelpers.GetNewId();
 	public IConcreteVariableDeclarationStatementSyntax Declaration
 	{
 		get;

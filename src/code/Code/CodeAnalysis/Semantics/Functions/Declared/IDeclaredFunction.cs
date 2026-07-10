@@ -15,6 +15,7 @@ public interface IDeclaredFunction : IDeclaredSymbol<IConcreteFunctionDeclaratio
 public sealed class DeclaredFunction : IDeclaredFunction
 {
 	#region Properties
+	public string Id { get; } = SymbolHelpers.GetNewId();
 	public IConcreteFunctionDeclarationStatementSyntax Declaration
 	{
 		get;

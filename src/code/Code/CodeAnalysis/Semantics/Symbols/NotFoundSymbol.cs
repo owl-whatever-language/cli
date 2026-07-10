@@ -3,6 +3,7 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols;
 public sealed class NotFoundSymbol : ISymbol
 {
 	#region Properties
+	public string Id { get; } = SymbolHelpers.GetNewId();
 	public static NotFoundSymbol Instance { get; } = new();
 	public string Name => "not_found";
 	#endregion

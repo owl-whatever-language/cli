@@ -3,6 +3,7 @@ namespace OwlDomain.Owl.Code.Execution.Builtins;
 internal class BuiltinType : INamedType
 {
 	#region Properties
+	public string Id { get; } = SymbolHelpers.GetNewId();
 	public string Name { get; }
 	public Type Type { get; }
 	public List<BuiltinFunction> Operations { get; } = [];

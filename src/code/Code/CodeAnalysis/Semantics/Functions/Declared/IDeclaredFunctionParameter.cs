@@ -10,6 +10,7 @@ public interface IDeclaredFunctionParameter : IDeclaredSymbol<IConcreteFunctionP
 public sealed class DeclaredFunctionParameter : IDeclaredFunctionParameter
 {
 	#region Properties
+	public string Id { get; } = SymbolHelpers.GetNewId();
 	public IConcreteFunctionParameterSyntax Declaration
 	{
 		get;

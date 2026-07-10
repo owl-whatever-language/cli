@@ -3,6 +3,13 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols;
 public interface ISymbol : IDebugTextFactory
 {
 	#region Properties
+	/// <summary>This is the id of the symbol, it is only guaranteed to be unique in this compilation context.</summary>
+	/// <remarks>
+	/// 	It is not guaranteed to stay the same even if logically it's the same symbol to a user.
+	/// 	It should NOT be used for equality checks.
+	/// </remarks>
+	string Id { get; }
+
 	/// <summary>The name of the symbol.</summary>
 	/// <exception cref="InvalidOperationException">
 	/// 	Thrown if the symbol didn't have a name.
@@ -68,6 +75,8 @@ public static class SymbolExtensions
 public static class SymbolHelpers
 {
 	#region Functions
+	public static string GetNewId() => Guid.NewGuid().ToString("N");
+
 	[DoesNotReturn]
 	public static void ThrowSymbolWithoutNameException()
 	{

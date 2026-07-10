@@ -5,6 +5,7 @@ namespace OwlDomain.Owl.Code.Execution.Builtins;
 internal sealed class BuiltinFunction : IFunction
 {
 	#region Properties
+	public string Id { get; } = SymbolHelpers.GetNewId();
 	public string Name { get; }
 	public MethodInfo Method { get; }
 	public bool TakesContext { get; }
@@ -74,6 +75,7 @@ internal sealed class BuiltinFunction : IFunction
 internal sealed class BuiltinFunctionParameter : IFunctionParameter
 {
 	#region Properties
+	public string Id { get; } = SymbolHelpers.GetNewId();
 	public int Index { get; }
 	public IType Type { get; }
 	public string Name { get; }

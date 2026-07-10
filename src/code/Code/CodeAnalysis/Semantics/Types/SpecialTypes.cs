@@ -3,6 +3,7 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 public abstract class SpecialType : INamedType
 {
 	#region Properties
+	public string Id { get; } = SymbolHelpers.GetNewId();
 	public abstract string Name { get; }
 	protected virtual ClassificationKind Classification => ClassificationKind.Type;
 	string ISymbol.Name => Name ?? SymbolHelpers.ThrowSymbolWithoutNameException<string>();

@@ -13,9 +13,8 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 	#region Properties
 	private static bool Optimise => true;
 	private static bool IncludeSourceReference => true;
-	private static bool IncludeSymbolId => false;
+	private static bool IncludeSymbolId => true;
 	public static MermaidControlFlowPrinter Instance => field ??= new(OwlStyling.Default);
-	private readonly ThreadLocal<Dictionary<ISymbol, int>> _symbolIds = new();
 	public IClassificationStyling Styling { get; }
 	#endregion
 
@@ -29,8 +28,6 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 	#region Methods
 	public string Print(IControlFlowGraph graph)
 	{
-		_symbolIds.Value = [];
-
 		using (StringWriter stringWriter = new())
 		using (IndentedTextWriter writer = new(stringWriter, "  "))
 		{
@@ -341,7 +338,8 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 
 		if (block.Graph is IFunctionControlFlowGraph function)
 		{
-			TextFragmentLineCollection lines = function.Node.Signature.GetLines().TrimLines().PrefixLineMargin();
+			TextFragmentLineCollection lines = function.Node.Signature.GetLines().TrimLines().TrimCommented().PrefixLineMargin();
+			writer.WriteLine();
 			PrintHtmlLines(writer, lines);
 		}
 
@@ -407,15 +405,7 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 		{
 			ISymbol? symbol = fragment.Symbol;
 			if (symbol is not null)
-			{
-				Debug.Assert(_symbolIds.Value is not null);
-				if (_symbolIds.Value.TryGetValue(symbol, out int id) is false)
-				{
-					id = _symbolIds.Value.Count + 1;
-					_symbolIds.Value.Add(symbol, id);
-				}
-				writer.Write($"data-symbol-id=\"{id}\" ");
-			}
+				writer.Write($"data-symbol-id=\"{symbol.Id}\" ");
 		}
 
 		writer.Write(style.ToHtmlStyle);
