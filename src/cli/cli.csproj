@@ -52,4 +52,9 @@
 		</ItemGroup>
 	</Target>
 
+	<!-- Copy examples -->
+	<ItemGroup Label="examples">
+		<None Include="../examples/*.owl" LinkBase="examples" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+	</ItemGroup>
+
 </Project>
