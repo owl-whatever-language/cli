@@ -125,8 +125,8 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		var semantic = base.ConvertCore(declared);
 		Update(semantic.Variable, semantic);
 
-		IType valueType = semantic.Value.ResultType;
 		IType variableType = semantic.Variable.Type;
+		IType valueType = semantic.Value.ResultType;
 
 		if (ShouldReportIncompatibleType(valueType, variableType))
 		{
@@ -409,14 +409,24 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 	protected override SemanticTernaryExpressionSyntax ConvertCore(IDeclaredTernaryExpressionSyntax declared) => throw new NotImplementedException();
 	protected override SemanticGroupedExpressionSyntax ConvertCore(IDeclaredGroupedExpressionSyntax declared) => throw new NotImplementedException();
-	protected override SemanticBooleanLiteralExpressionSyntax ConvertCore(IDeclaredBooleanLiteralExpressionSyntax declared) => throw new NotImplementedException();
+	protected override SemanticBooleanLiteralExpressionSyntax ConvertCore(IDeclaredBooleanLiteralExpressionSyntax declared)
+	{
+		IType? type = CoreScope.Bool;
+		if (type is null)
+		{
+			ReportCoreTypeNotFound(declared, "bool", "boolean literals");
+			type = SpecialTypes.Error;
+		}
+
+		var token = Convert(declared.Token);
+		return new(token, declared.Value, type);
+	}
 	protected override SemanticIntegerLiteralExpressionSyntax ConvertCore(IDeclaredIntegerLiteralExpressionSyntax declared)
 	{
 		IType? type = CoreScope.Int;
 		if (type is null)
 		{
-
-			ReportCoreTypeNotFound(declared, "int", "number literals.");
+			ReportCoreTypeNotFound(declared, "int", "number literals");
 			type = SpecialTypes.Error;
 		}
 
@@ -429,7 +439,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		IType? type = CoreScope.Int;
 		if (type is null)
 		{
-			ReportCoreTypeNotFound(declared, "int", "number literals.");
+			ReportCoreTypeNotFound(declared, "int", "number literals");
 			type = SpecialTypes.Error;
 		}
 
@@ -438,13 +448,27 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return new(@base, integer, (ulong?)integer.Value, type);
 	}
-	protected override SemanticDecimalLiteralExpressionSyntax ConvertCore(IDeclaredDecimalLiteralExpressionSyntax declared) => throw new NotImplementedException();
+	protected override SemanticDecimalLiteralExpressionSyntax ConvertCore(IDeclaredDecimalLiteralExpressionSyntax declared)
+	{
+		IType? type = CoreScope.Num;
+		if (type is null)
+		{
+			ReportCoreTypeNotFound(declared, "num", "decimal literals");
+			type = SpecialTypes.Error;
+		}
+
+		var integer = Convert(declared.Integer);
+		var dot = Convert(declared.Dot);
+		var @decimal = Convert(declared.Decimal);
+
+		return new(integer, dot, @decimal, declared.Value, type);
+	}
 	protected override SemanticInterpolatedStringExpressionSyntax ConvertCore(IDeclaredInterpolatedStringExpressionSyntax declared)
 	{
 		IType? type = CoreScope.Text;
 		if (type is null)
 		{
-			ReportCoreTypeNotFound(declared, "text", "string literals.");
+			ReportCoreTypeNotFound(declared, "text", "string literals");
 			type = SpecialTypes.Error;
 		}
 
@@ -459,7 +483,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		IType? type = CoreScope.Text;
 		if (type is null)
 		{
-			ReportCoreTypeNotFound(declared, "text", "string literals.");
+			ReportCoreTypeNotFound(declared, "text", "string literals");
 			type = SpecialTypes.Error;
 		}
 
@@ -789,7 +813,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return Diagnostics
 			.BuildError(this, "core_type_not_found")
-			.Add(node, lines => lines.AddLine($"The '", typeFragment, $"' core type was not defined, as such {missingFeature} are not allowed."));
+			.Add(node, lines => lines.AddLine($"The '", typeFragment, $"' core type was not defined, as such, {missingFeature} are not allowed."));
 	}
 	private void CheckConditionType(ISemanticExpressionSyntax condition)
 	{

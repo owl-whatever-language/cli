@@ -736,6 +736,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	private IConcreteExpressionSyntax? TryParseLiteral()
 	{
 		return
+			TryParseBooleanLiteral() ??
 			TryParseNumberLiteral() ??
 			TryParseString() ??
 			TryParseInterpolatedString() ??
@@ -867,6 +868,16 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		}
 
 		return null;
+	}
+	#endregion
+
+	#region Boolean expression methods
+	private IConcreteExpressionSyntax? TryParseBooleanLiteral()
+	{
+		if (Match(SyntaxKind.Boolean, ClassificationKind.Boolean, out IConcreteToken? token) is false)
+			return null;
+
+		return new ConcreteBooleanLiteralExpressionSyntax(token, (bool?)token.Value);
 	}
 	#endregion
 

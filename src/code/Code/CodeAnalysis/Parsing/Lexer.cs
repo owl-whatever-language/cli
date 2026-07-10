@@ -123,16 +123,27 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 		}
 
 		string lexeme = GetLexeme();
+		object? value = lexeme;
 
 		IndexedLinePosition end = Text.Position;
 		FinishFullToken(out TriviaList leading, out TriviaList trailing);
 
 		if (Keywords.TryGetValue(lexeme, out SyntaxKind kind))
 			lexeme = lexeme.TryIntern();
+		else if (lexeme is "true")
+		{
+			kind = SyntaxKind.Boolean;
+			value = true;
+		}
+		else if (lexeme is "false")
+		{
+			kind = SyntaxKind.Boolean;
+			value = false;
+		}
 		else
 			kind = SyntaxKind.Identifier;
 
-		SyntaxToken token = new(kind, new(start, end), lexeme, lexeme, leading, trailing);
+		SyntaxToken token = new(kind, new(start, end), lexeme, value, leading, trailing);
 		Tokens.Add(token);
 
 		return true;

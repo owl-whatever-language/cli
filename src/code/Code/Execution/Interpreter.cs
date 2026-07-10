@@ -204,6 +204,8 @@ public class Interpreter
 			IAnnotatedInterpolatedStringExpressionSyntax str => Evaluate(str),
 
 			IAnnotatedIntegerLiteralExpressionSyntax num => Evaluate(num),
+			IAnnotatedDecimalLiteralExpressionSyntax num => Evaluate(num),
+			IAnnotatedBooleanLiteralExpressionSyntax num => Evaluate(num),
 
 			IAnnotatedBinaryExpressionSyntax binary => Evaluate(binary),
 			IAnnotatedAssignmentExpressionSyntax assignment => Evaluate(assignment),
@@ -267,6 +269,26 @@ public class Interpreter
 		BuiltinType type = (BuiltinType)expression.ResultType;
 
 		long value = expression.Value.Value;
+		return type.CreateInstance(value);
+	}
+	private InterpreterValue Evaluate(IAnnotatedDecimalLiteralExpressionSyntax expression)
+	{
+		if (expression.Value is null)
+			ThrowHelper.ThrowInvalidOperationException("Expected the decimal literal to have a value.");
+
+		BuiltinType type = (BuiltinType)expression.ResultType;
+
+		decimal value = expression.Value.Value;
+		return type.CreateInstance(value);
+	}
+	private InterpreterValue Evaluate(IAnnotatedBooleanLiteralExpressionSyntax expression)
+	{
+		if (expression.Value is null)
+			ThrowHelper.ThrowInvalidOperationException("Expected the boolean literal to have a value.");
+
+		BuiltinType type = (BuiltinType)expression.ResultType;
+
+		bool value = expression.Value.Value;
 		return type.CreateInstance(value);
 	}
 

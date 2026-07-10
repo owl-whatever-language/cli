@@ -70,6 +70,10 @@ public static class SyntaxKindExtensions
 		public static SyntaxKind Integer => new("integer");
 		#endregion
 
+		#region Boolean literals
+		public static SyntaxKind Boolean => new("boolean");
+		#endregion
+
 		#region Punctuation
 		public static SyntaxKind EqualArrow => new("equal_arrow");
 		#endregion

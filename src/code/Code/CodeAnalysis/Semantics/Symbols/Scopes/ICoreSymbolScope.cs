@@ -6,6 +6,7 @@ public interface ICoreSymbolScope : ISymbolScope
 	INamedType? Bool { get; }
 	INamedType? Text { get; }
 	INamedType? Int { get; }
+	INamedType? Num { get; }
 	#endregion
 }
 
@@ -16,6 +17,7 @@ public sealed class CoreSymbolScope : SymbolScope, ICoreSymbolScope
 	public INamedType? Bool => field ??= GetCoreType("bool");
 	public INamedType? Text => field ??= GetCoreType("text");
 	public INamedType? Int => field ??= GetCoreType("int");
+	public INamedType? Num => field ??= GetCoreType("num");
 	#endregion
 
 	#region Constructors

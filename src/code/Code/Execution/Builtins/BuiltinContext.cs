@@ -149,6 +149,20 @@ internal sealed class BuiltinContext
 	#endregion
 
 	#region Return methods
+	public BuiltinFunction AddFunction<TOut>(string name, Func<TOut> callback)
+	{
+		IType resultType = _lookup[typeof(TOut)];
+
+		return AddFunction(
+			name,
+			[],
+			(c, p) =>
+			{
+				TOut result = callback.Invoke();
+
+				return new(resultType, result);
+			});
+	}
 	public BuiltinFunction AddFunction<T1, TOut>(string name, string param1, Func<T1, TOut> callback)
 	{
 		IType resultType = _lookup[typeof(TOut)];
@@ -180,6 +194,28 @@ internal sealed class BuiltinContext
 				TOut result = callback.Invoke(
 					(T1)p[0].Value!,
 					(T2)p[1].Value!
+				);
+
+				return new(resultType, result);
+			});
+	}
+	public BuiltinFunction AddFunction<T1, T2, T3, TOut>(string name, string param1, string param2, string param3, Func<T1, T2, T3, TOut> callback)
+	{
+		IType resultType = _lookup[typeof(TOut)];
+
+		return AddFunction(
+			name,
+			[
+				(typeof(T1), param1),
+				(typeof(T2), param2),
+				(typeof(T3), param3)
+			],
+			(c, p) =>
+			{
+				TOut result = callback.Invoke(
+					(T1)p[0].Value!,
+					(T2)p[1].Value!,
+					(T3)p[2].Value!
 				);
 
 				return new(resultType, result);

@@ -78,7 +78,7 @@ get expression        : token name
 get @ semantic        : ISymbol symbol
 
 ### Literals
-boolean_literal expression : token token
+boolean_literal expression : token token, bool? value
 
 #### Strings
 group string_fragment
