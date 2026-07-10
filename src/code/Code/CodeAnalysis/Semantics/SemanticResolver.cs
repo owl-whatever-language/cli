@@ -857,7 +857,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		if (operation is not null)
 			return false;
 
-		return types.Any(t => t.IsError is false);
+		return types.All(t => t.IsNotError);
 	}
 	private Diagnostic? TryReportUnknownOperator(string kind, ISyntaxToken op, IFunction? operation, params IReadOnlyList<IType> types)
 	{
@@ -874,7 +874,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			{
 				string typePlural = types.Count is 1 ? "type" : "types";
 
-				List<object?> values = [$"Unknown {kind} operator for the {typePlural}: "];
+				List<object?> values = [$"Unknown {kind} operator {op.Lexeme} for the {typePlural}: "];
 				for (int i = 0; i < types.Count; i++)
 				{
 					if (i > 0)

@@ -50,6 +50,7 @@ public static class SymbolExtensions
 					IFunctionParameter => ClassificationKind.Parameter,
 					ILocalVariable => ClassificationKind.Variable,
 
+					NotFoundSymbol => ClassificationKind.Identifier,
 					null => null,
 					_ => ThrowHelper.ThrowInvalidOperationException<ClassificationKind?>($"Unhandled symbol type ({symbol.GetType().Name}).")
 				};

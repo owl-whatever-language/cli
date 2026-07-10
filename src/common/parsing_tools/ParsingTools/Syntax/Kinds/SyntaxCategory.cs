@@ -34,9 +34,8 @@ public readonly struct SyntaxCategory :
 	public SyntaxCategory(string name)
 	{
 		Guard.IsNotEqualTo(name, "unknown");
-		Guard.IsInterned(name);
 
-		_name = name;
+		_name = name.TryIntern() ?? name;
 	}
 	#endregion
 

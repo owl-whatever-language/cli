@@ -37,10 +37,9 @@ public readonly partial struct SyntaxKind :
 	public SyntaxKind(string name, SyntaxCategory category)
 	{
 		Guard.IsNotEqualTo(name, "unknown");
-		Guard.IsInterned(name);
 		Guard.IsNotDefault(category);
 
-		_name = name;
+		_name = name.TryIntern() ?? name;
 		Category = category;
 	}
 

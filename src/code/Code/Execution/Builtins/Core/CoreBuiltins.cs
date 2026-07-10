@@ -70,14 +70,6 @@ internal partial class CoreBuiltins
 		#region Operators
 		[Ignore] private static int Compare(Int left, Int right) => ((IComparable)left.Value).CompareTo(right.Value);
 
-		[Operator]
-		public static Int Modulo(Int left, Int right)
-		{
-			long l = (long)left.Value;
-			long r = (long)right.Value;
-
-			return new(l % r);
-		}
 		[Operator] public static Bool Equal(Int left, Int right) => new(Compare(left, right) == 0);
 		[Operator] public static Bool NotEqual(Int left, Int right) => new(Compare(left, right) != 0);
 		[Operator] public static Bool LessThan(Int left, Int right) => new(Compare(left, right) < 0);
@@ -120,6 +112,46 @@ internal partial class CoreBuiltins
 
 			return new(l / r);
 		}
+
+		[Operator]
+		public static Int Modulo(Int left, Int right)
+		{
+			long l = (long)left.Value;
+			long r = (long)right.Value;
+
+			return new(l % r);
+		}
 		#endregion
 	}
+
+	#region Resolve functions
+	public static void Resolve(BuiltinContext context)
+	{
+		BuiltinType boolType = context.AddType<bool, Bool>("bool", b => new(b));
+		BuiltinType textType = context.AddType<string, Text>("text", b => new(b));
+		BuiltinType intType = context.AddType<object, Int>("int", b => new(b));
+
+		context.AddBinary<Bool, Bool, Bool>(boolType, OperatorKind.LogicalAnd, Bool.LogicalAnd);
+		context.AddBinary<Bool, Bool, Bool>(boolType, OperatorKind.LogicalOr, Bool.LogicalOr);
+		context.AddBinary<Bool, Bool, Bool>(boolType, OperatorKind.Equal, Bool.Equal);
+		context.AddBinary<Bool, Bool, Bool>(boolType, OperatorKind.NotEqual, Bool.NotEqual);
+
+		context.AddBinary<Text, Text, Bool>(textType, OperatorKind.Equal, Text.Equal);
+		context.AddBinary<Text, Text, Bool>(textType, OperatorKind.NotEqual, Text.NotEqual);
+		context.AddBinary<Text, Text, Text>(textType, OperatorKind.Add, Text.Add);
+
+		context.AddBinary<Int, Int, Bool>(intType, OperatorKind.Equal, Int.Equal);
+		context.AddBinary<Int, Int, Bool>(intType, OperatorKind.NotEqual, Int.NotEqual);
+		context.AddBinary<Int, Int, Bool>(intType, OperatorKind.LessThan, Int.LessThan);
+		context.AddBinary<Int, Int, Bool>(intType, OperatorKind.GreaterThan, Int.GreaterThan);
+		context.AddBinary<Int, Int, Bool>(intType, OperatorKind.LessThanOrEqual, Int.LessThanOrEqual);
+		context.AddBinary<Int, Int, Bool>(intType, OperatorKind.GreaterThanOrEqual, Int.GreaterThanOrEqual);
+
+		context.AddBinary<Int, Int, Int>(intType, OperatorKind.Add, Int.Add);
+		context.AddBinary<Int, Int, Int>(intType, OperatorKind.Subtract, Int.Subtract);
+		context.AddBinary<Int, Int, Int>(intType, OperatorKind.Multiply, Int.Multiply);
+		context.AddBinary<Int, Int, Int>(intType, OperatorKind.Divide, Int.Divide);
+		context.AddBinary<Int, Int, Int>(intType, OperatorKind.Modulo, Int.Modulo);
+	}
+	#endregion
 }

@@ -1,28 +1,27 @@
-using System.Reflection;
-
 namespace OwlDomain.Owl.Code.Execution.Builtins;
 
 internal sealed class BuiltinFunction : IFunction
 {
+	#region Nested types
+	public delegate InterpreterValue ExecuteDelegate(IExecutionContext context, IReadOnlyList<InterpreterValue> values);
+	#endregion
+
 	#region Properties
 	public string Id { get; } = SymbolHelpers.GetNewId();
 	public string Name { get; }
-	public MethodInfo Method { get; }
-	public bool TakesContext { get; }
 	public IReadOnlyList<IFunctionParameter> Parameters { get; }
 	public IFunctionReturn Return { get; }
 	public ICallableFunction AsCallable { get; }
+	public ExecuteDelegate ExecuteCallback { get; }
 	#endregion
 
 	#region Constructors
-	public BuiltinFunction(string name, MethodInfo method, IReadOnlyList<BuiltinFunctionParameter> parameters, BuiltinFunctionReturn @return)
+	public BuiltinFunction(string name, IReadOnlyList<BuiltinFunctionParameter> parameters, BuiltinFunctionReturn @return, ExecuteDelegate execute)
 	{
 		Name = name;
-		Method = method;
-		TakesContext = method.GetParameters().FirstOrDefault()?.ParameterType == typeof(IExecutionContext);
-
 		Parameters = parameters;
 		Return = @return;
+		ExecuteCallback = execute;
 
 		AsCallable = new CallableFunction(this);
 	}
@@ -31,17 +30,8 @@ internal sealed class BuiltinFunction : IFunction
 	#region Methods
 	public InterpreterValue Execute(IExecutionContext context, IReadOnlyList<InterpreterValue> values)
 	{
-		object?[] withContext = TakesContext ? [context] : [];
-
-		object?[] arguments =
-		[
-			..withContext,
-			.. values.Select(v => v.Value)
-		];
-
-		object? result = Method.Invoke(null, arguments);
-
-		return Return.Type == SpecialTypes.Void ? InterpreterValue.Void : new(Return.Type, result);
+		InterpreterValue result = ExecuteCallback.Invoke(context, values);
+		return result;
 	}
 
 	public TextFragmentCollection GetDebugText()

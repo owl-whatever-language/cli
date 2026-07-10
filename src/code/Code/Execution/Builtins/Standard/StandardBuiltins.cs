@@ -28,4 +28,18 @@ internal partial class StandardBuiltins
 		return new(input);
 	}
 	#endregion
+
+	#region Resolve functions
+	public static void Resolve(BuiltinContext context)
+	{
+		context.AddFunction<Text>("print", "value", Print);
+		context.AddFunction<Bool>("print", "value", Print);
+		context.AddFunction<Int>("print", "value", Print);
+
+		context.AddFunction<Text>("println", "value", Println);
+		context.AddFunction<Bool>("println", "value", Println);
+		context.AddFunction<Int>("println", "value", Println);
+		context.AddFunction("println", Println);
+	}
+	#endregion
 }

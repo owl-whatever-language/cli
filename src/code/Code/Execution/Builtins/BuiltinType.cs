@@ -2,18 +2,21 @@ namespace OwlDomain.Owl.Code.Execution.Builtins;
 
 internal class BuiltinType : INamedType
 {
+	#region Nested types
+	public delegate InterpreterValue BackingConstructorDelegate<in T>(T backing);
+	#endregion
+
 	#region Properties
 	public string Id { get; } = SymbolHelpers.GetNewId();
 	public string Name { get; }
-	public Type Type { get; }
 	public List<BuiltinFunction> Operations { get; } = [];
+	public BackingConstructorDelegate<object?>? BackingConstructor { get; set; }
 	#endregion
 
 	#region Constructors
-	public BuiltinType(string name, Type type)
+	public BuiltinType(string name)
 	{
 		Name = name;
-		Type = type;
 	}
 	#endregion
 
@@ -45,8 +48,11 @@ internal class BuiltinType : INamedType
 	}
 	public InterpreterValue CreateInstance(object? value)
 	{
-		object? instance = Activator.CreateInstance(Type, [value]);
-		return new(this, instance);
+		if (BackingConstructor is null)
+			ThrowHelper.ThrowInvalidOperationException($"The backing constructor for the type '{Name}' hasn't been set yet.");
+
+		InterpreterValue instance = BackingConstructor.Invoke(value);
+		return instance;
 	}
 	public bool CanAssignTo(IType target) => Equals(target);
 	public bool Equals(IType? other) => ReferenceEquals(this, other);
