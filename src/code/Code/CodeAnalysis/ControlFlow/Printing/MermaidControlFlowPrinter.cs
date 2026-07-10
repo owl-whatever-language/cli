@@ -10,10 +10,23 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.ControlFlow.Printing;
 
 public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 {
+	#region Constants
+	/// <summary>This is the maximum text size that Mermaid will allow.</summary>
+	/// <remarks>
+	/// 	It was picked from 
+	/// 	<see href="https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER">
+	/// 		<c>Number.MAX_SAFE_INTEGER</c>
+	/// 	</see>
+	/// 	from JavaScript, since that is what Mermaid uses.
+	/// </remarks>
+	public const long MaxTextSize = 9007199254740991;
+	#endregion
+
 	#region Properties
 	private static bool Optimise => true;
 	private static bool IncludeSourceReference => true;
-	private static bool IncludeSymbolId => true;
+	private static bool IncludeSymbolIds => true;
+	private static bool IncludeLineIds => true;
 	public static MermaidControlFlowPrinter Instance => field ??= new(OwlStyling.Default);
 	public IClassificationStyling Styling { get; }
 	#endregion
@@ -61,6 +74,7 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 		writer.WriteLine("config:");
 		using (writer.Indented())
 		{
+			writer.WriteLine($"maxTextSize: {MaxTextSize}");
 			writer.WriteLine("themeVariables:");
 			using (writer.Indented())
 			{
@@ -283,7 +297,7 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 			.TrimSharedIndent()
 			.PrefixLineMargin();
 
-		PrintHtmlLines(writer, lines);
+		PrintHtmlLines(writer, lines, isSource: true);
 
 		writer.WriteLine("\"]");
 	}
@@ -353,7 +367,7 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 		writer.WriteLine("\")))");
 	}
 
-	private void PrintHtmlLines(IndentedTextWriter writer, TextFragmentLineCollection lines, bool center = false)
+	private void PrintHtmlLines(IndentedTextWriter writer, TextFragmentLineCollection lines, bool center = false, bool isSource = false)
 	{
 		using (writer.NoIndent())
 		{
@@ -364,7 +378,7 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 				TextFragmentLine line = lines[i];
 
 				foreach (TextFragment fragment in line)
-					PrintHtml(writer, fragment);
+					PrintHtml(writer, fragment, isSource);
 
 				if (i + 1 < lines.Count)
 					writer.WriteLine();
@@ -381,10 +395,23 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 	{
 		writer.Write("</div>");
 	}
-	private void PrintHtml(IndentedTextWriter writer, TextFragment fragment)
+	private void PrintHtml(IndentedTextWriter writer, TextFragment fragment, bool isSource = false)
+	{
+		if (IncludeLineIds && fragment.Classification == ClassificationKind.LineNumber)
+		{
+			string type = isSource ? "use" : "source";
+			writer.Write($"<a style=\"text-decoration:none\" href=\"#line-{type}-{fragment.Text.Trim()}\">");
+			PrintHtmlCore(writer, fragment, isSource);
+			writer.Write("</a>");
+
+			return;
+		}
+
+		PrintHtmlCore(writer, fragment, isSource);
+	}
+	private void PrintHtmlCore(IndentedTextWriter writer, TextFragment fragment, bool isSource)
 	{
 		StyleInfo style = Styling.Get(fragment.Classification);
-
 		// Note(Nightowl): Because mermaid doesn't like semicolons;
 		string[] parts = fragment.Text.Split(';');
 		for (int i = 0; i < parts.Length; i++)
@@ -401,11 +428,20 @@ public sealed class MermaidControlFlowPrinter : IControlFlowPrinter<string>
 		}
 
 		writer.Write("<span ");
-		if (IncludeSymbolId)
+		if (IncludeSymbolIds)
 		{
 			ISymbol? symbol = fragment.Symbol;
 			if (symbol is not null)
 				writer.Write($"data-symbol-id=\"{symbol.Id}\" ");
+		}
+
+		if (IncludeLineIds && fragment.Classification == ClassificationKind.LineNumber)
+		{
+			string line = fragment.Text.Trim();
+			string type = isSource ? "source" : "use";
+
+			writer.Write($"data-line-number=\"{line}\" ");
+			writer.Write($"id=\"line-{type}-{line}\" ");
 		}
 
 		writer.Write(style.ToHtmlStyle);

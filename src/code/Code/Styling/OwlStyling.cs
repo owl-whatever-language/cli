@@ -39,6 +39,7 @@ public static class OwlStyling
 			.Add(ClassificationKind.Dim, StylingEffect.Dim)
 			.Add(ClassificationKind.Snipped, "#707070", StylingEffect.Italic | StylingEffect.Dim)
 			.Add(ClassificationKind.Unreachable, StylingEffect.Dim)
+			.Add(ClassificationKind.Focus, "#6cdcfe")
 
 			.AddSymbol(ClassificationKind.Message, "⯌")
 			.AddSymbol(ClassificationKind.Snipped, "✂")

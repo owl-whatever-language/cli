@@ -175,14 +175,15 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 		TextFragmentCollection GetPrefix(TextFragmentLine line)
 		{
 			string lineNumber = line.Line is null ? "" : line.Line.Value.ToString(numberFormat);
+			string padding = new(' ', maxNumberWidth - lineNumber.Length);
 
-			TextFragment number = new(lineNumber.PadLeft(maxNumberWidth), ClassificationKind.LineNumber);
+			TextFragment number = new(lineNumber, ClassificationKind.LineNumber);
 			TextFragment margin = new(marginText, ClassificationKind.Margin);
 			TextFragment space = new(" ", ClassificationKind.Whitespace);
 
 			return
 			[
-				//space,
+				new(padding, ClassificationKind.Whitespace),
 				number,
 				space,
 				margin,
