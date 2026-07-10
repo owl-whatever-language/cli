@@ -20,7 +20,19 @@ public readonly struct TextFragment
 				Classification == ClassificationKind.LineBreak;
 		}
 	}
+	public bool IsSourcePrefix
+	{
+		get
+		{
+			return
+				Classification == ClassificationKind.LineNumber ||
+				Classification == ClassificationKind.Margin;
+		}
+	}
+	public bool IsWhiteSpaceOrSourcePrefix => IsWhitespace || IsSourcePrefix;
 	public bool IsComment => Classification.IsMatch(ClassificationKind.Comment);
+	public bool IsDimmed => Classifications.Contains(ClassificationKind.Dim);
+	public bool IsSnipped => Classifications.Contains(ClassificationKind.Snipped);
 	#endregion
 
 	#region Constructors

@@ -29,16 +29,6 @@ public sealed class TextFragmentLine : TextFragmentCollection, ITextFragmentLine
 			return null;
 		}
 	}
-	public bool IsOnlyCommented
-	{
-		get
-		{
-			if (this.Any(f => f.IsComment))
-				return this.All(f => f.IsComment || f.IsWhitespace);
-
-			return false;
-		}
-	}
 	#endregion
 
 	#region Constructors
@@ -90,6 +80,16 @@ public sealed class TextFragmentLine : TextFragmentCollection, ITextFragmentLine
 	{
 		for (int i = 0; i < Count; i++)
 			this[i] = this[i].With(alternate);
+
+		return this;
+	}
+	public TextFragmentLine TrimEndComments()
+	{
+		if (Line is null || Count is 0 || IsOnlyCommented)
+			return this;
+
+		if (this[^1].Classification == ClassificationKind.SinglelineComment)
+			RemoveAt(Count - 1);
 
 		return this;
 	}
@@ -196,6 +196,14 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 	#endregion
 
 	#region Trim methods
+	public TextFragmentLineCollection TrimAll()
+	{
+		TrimComments();
+		TrimLines();
+		TrimSharedIndent();
+
+		return this;
+	}
 	public TextFragmentLineCollection TrimFirstLines()
 	{
 		while (true)
@@ -262,13 +270,27 @@ public sealed class TextFragmentLineCollection : List<TextFragmentLine>, ITextFr
 
 		return this;
 	}
-	public TextFragmentLineCollection TrimCommented()
+	public TextFragmentLineCollection TrimOnlyCommented()
 	{
 		for (int i = Count - 1; i >= 0; i--)
 		{
 			if (this[i].IsOnlyCommented)
 				RemoveAt(i);
 		}
+
+		return this;
+	}
+	public TextFragmentLineCollection TrimEndComments()
+	{
+		foreach (TextFragmentLine line in this)
+			line.TrimEndComments();
+
+		return this;
+	}
+	public TextFragmentLineCollection TrimComments()
+	{
+		TrimOnlyCommented();
+		TrimEndComments();
 
 		return this;
 	}

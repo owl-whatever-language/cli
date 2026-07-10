@@ -31,6 +31,7 @@ public sealed class DiagnosticSourceDisplay
 	private readonly IClassificationStyling _styling;
 	private readonly Dictionary<int, LineInfo> _lines = [];
 	private readonly List<IDiagnostic> _sourceDiagnostics = [];
+	private readonly TextFragmentLineCollection _output = [];
 	#endregion
 
 	#region Properties
@@ -49,11 +50,13 @@ public sealed class DiagnosticSourceDisplay
 		{
 			Debug.Assert(line.Line is not null);
 			_lines.Add(line.Line.Value, new(line, line.Line.Value));
+
+			_output.Add(line);
 		}
 	}
 	#endregion
 
-	#region Methods
+	#region Mark methods
 	public DiagnosticSourceDisplay MarkRelevant(int line, bool shouldDim)
 	{
 		if (_lines.TryGetValue(line, out LineInfo? info))
@@ -82,6 +85,9 @@ public sealed class DiagnosticSourceDisplay
 		return MarkRelevant(lines, shouldDim);
 	}
 	public DiagnosticSourceDisplay MarkRelevant(ISyntaxNode node, bool shouldDim) => MarkRelevant(node.Position.WithoutIndex, shouldDim: shouldDim);
+	#endregion
+
+	#region Add methods
 	public DiagnosticSourceDisplay Add(IDiagnostic diagnostic)
 	{
 		if (diagnostic.Source != Source)
@@ -115,50 +121,113 @@ public sealed class DiagnosticSourceDisplay
 
 		return this;
 	}
-	public TextFragmentLineCollection GetLines()
-	{
-		TextFragmentLineCollection output = [];
+	#endregion
 
+	#region Apply methods
+	public void ApplyTypicalTransformations()
+	{
+		ApplyDim();
+		TrimIrrelevant();
+		SnipIrrelevantGroups();
+		TrimEndComments();
+		AttachAnnotations();
+		AttachDiagnostics();
+		AttachSourceDiagnostics();
+	}
+	public void ApplyDim()
+	{
 		foreach (LineInfo info in GetOrdered())
 		{
 			if (info.ShouldDim)
 				info.Text.AddClassification(ClassificationKind.Dim);
-
-			output.Add(info.Text);
 		}
 
-		TrimIrrelevant(output);
-		SnipIrrelevantGroups(output);
-		TrimRemainingComments(output);
-		AttachAnnotations(output);
-		AttachDiagnostics(output);
-		AttachSourceDiagnostics(output);
-
-		return output;
+		foreach (TextFragmentLine line in _output)
+		{
+			if (line.IsSnipped)
+				line.AddClassification(ClassificationKind.Dim);
+		}
 	}
+	public TextFragmentLineCollection GetLines() => _output;
 	#endregion
 
-	#region Helpers
-	private TextFragmentLineCollection ToMutable(ITextFragmentLineCollection lines)
+	#region Trim methods
+	public void SnipIrrelevantGroups()
 	{
-		TextFragmentLineCollection output = [];
+		TextFragment snipFragment = GetSnipFragment();
+		IReadOnlyList<IrrelevantGroup> irrelevantGroups = GetIrrelevantGroups();
 
-		foreach (ITextFragmentLine line in lines)
+		foreach (IrrelevantGroup group in irrelevantGroups)
 		{
-			TextFragmentLine mutable = new(line.Line, line);
-			output.Add(mutable);
-		}
+			Debug.Assert(group.Count > 0);
 
-		return output;
+			if (group.Count is 1)
+			{
+				if (_output.TryGetLineAt(group.Start, out TextFragmentLine? line))
+					line.AddClassification(ClassificationKind.Dim);
+			}
+			else
+			{
+				int startIndex = _output.FindIndex(l => l.Line == group.Start);
+				if (startIndex < 0)
+					continue; // Note(Nightowl): First / last lines that got trimmed, no snip needed here;
+
+				for (int i = group.Start; i <= group.End; i++)
+				{
+					TextFragmentLine? toRemove = _output.TryGetLineAt(i);
+					if (toRemove is not null)
+						_output.Remove(toRemove);
+				}
+
+				TextFragmentLine? next = _output.TryGetLineAt(group.End + 1);
+				TextFragmentLine? previous = _output.TryGetLineAt(group.Start - 1);
+				TextFragment? indent = next?.Indentation ?? previous?.Indentation;
+
+				TextFragmentLine snipLine = new(null, snipFragment);
+				if (indent is not null)
+					snipLine.Insert(0, indent.Value);
+
+				_output.Insert(startIndex, snipLine);
+			}
+		}
 	}
-	private void AttachDiagnostics(TextFragmentLineCollection output)
+	public void TrimIrrelevant()
+	{
+		TrimEnd();
+		TrimStart();
+	}
+	public void TrimStart()
+	{
+		foreach (LineInfo line in GetOrdered())
+		{
+			if (line.IsRelevant)
+				break;
+
+			_output.Remove(line.Text);
+		}
+	}
+	public void TrimEnd()
+	{
+		foreach (LineInfo line in GetOrdered().Reverse())
+		{
+			if (line.IsRelevant)
+				break;
+
+			_output.Remove(line.Text);
+		}
+	}
+	public void TrimEndComments() => _output.TrimEndComments();
+	#endregion
+
+	#region Attach methods
+	public void AttachDiagnostics()
 	{
 		foreach (LineInfo info in _lines.Values)
 		{
 			if (info.Diagnostics.Count is 0)
 				continue;
 
-			TextFragmentLine? target = output.TryGetLineAt(info.Line);
+			TextFragmentLine? target = _output.TryGetLineAt(info.Line);
 			Debug.Assert(target is not null);
 
 			if (info.Diagnostics.Count is 1 && info.Annotations.Count is 0)
@@ -178,18 +247,18 @@ public sealed class DiagnosticSourceDisplay
 					lines.Add(line);
 				}
 
-				output.InsertRangeAfterLine(info.Line, lines);
+				_output.InsertRangeAfterLine(info.Line, lines);
 			}
 		}
 	}
-	private void AttachAnnotations(TextFragmentLineCollection output)
+	public void AttachAnnotations()
 	{
 		foreach (LineInfo info in _lines.Values)
 		{
 			if (info.Annotations.Count is 0)
 				continue;
 
-			TextFragmentLine? target = output.TryGetLineAt(info.Line);
+			TextFragmentLine? target = _output.TryGetLineAt(info.Line);
 			Debug.Assert(target is not null);
 
 			if (info.Annotations.Count is 1 && info.Diagnostics.Count is 0)
@@ -209,36 +278,28 @@ public sealed class DiagnosticSourceDisplay
 					lines.Add(line);
 				}
 
-				output.InsertRangeAfterLine(info.Line, lines);
+				_output.InsertRangeAfterLine(info.Line, lines);
 			}
 		}
 	}
-	private void AttachSourceDiagnostics(TextFragmentLineCollection output)
+	public void AttachSourceDiagnostics()
 	{
 		bool addedEmpty = false;
 		foreach (IDiagnostic diagnostic in _sourceDiagnostics)
 		{
 			if (addedEmpty is false)
 			{
-				output.Add(new(null));
+				_output.Add(new(null));
 				addedEmpty = true;
 			}
 
 			TextFragmentLine line = PrepareShortLine(diagnostic, false, null);
-			output.Add(line);
+			_output.Add(line);
 		}
 	}
-	private void TrimRemainingComments(TextFragmentLineCollection output)
-	{
-		foreach (TextFragmentLine line in output)
-		{
-			if (line.Line is null || line.Count is 0 || line.IsOnlyCommented)
-				continue;
+	#endregion
 
-			if (line[^1].Classification == ClassificationKind.SinglelineComment)
-				line.RemoveAt(line.Count - 1);
-		}
-	}
+	#region Helpers
 	private TextFragmentLine PrepareShortLine(IDiagnostic diagnostic, bool isSuffix, TextFragment? indent)
 	{
 		TextFragment prefix = GetDiagnosticFragment(diagnostic.Kind);
@@ -267,70 +328,6 @@ public sealed class DiagnosticSourceDisplay
 			line.Insert(0, indent.Value);
 
 		return line;
-	}
-	private void SnipIrrelevantGroups(TextFragmentLineCollection output)
-	{
-		TextFragment snipFragment = GetSnipFragment();
-		IReadOnlyList<IrrelevantGroup> irrelevantGroups = GetIrrelevantGroups();
-
-		foreach (IrrelevantGroup group in irrelevantGroups)
-		{
-			Debug.Assert(group.Count > 0);
-
-			if (group.Count is 1)
-			{
-				if (output.TryGetLineAt(group.Start, out TextFragmentLine? line))
-					line.AddClassification(ClassificationKind.Dim);
-			}
-			else
-			{
-				int startIndex = output.FindIndex(l => l.Line == group.Start);
-				if (startIndex < 0)
-					continue; // Note(Nightowl): First / last lines that got trimmed, no snip needed here;
-
-				for (int i = group.Start; i <= group.End; i++)
-				{
-					TextFragmentLine? toRemove = output.TryGetLineAt(i);
-					if (toRemove is not null)
-						output.Remove(toRemove);
-				}
-
-				TextFragmentLine? next = output.TryGetLineAt(group.End + 1);
-				TextFragmentLine? previous = output.TryGetLineAt(group.Start - 1);
-				TextFragment? indent = next?.Indentation ?? previous?.Indentation;
-
-				TextFragmentLine snipLine = new(null, snipFragment);
-				if (indent is not null)
-					snipLine.Insert(0, indent.Value);
-
-				output.Insert(startIndex, snipLine);
-			}
-		}
-	}
-	private void TrimIrrelevant(TextFragmentLineCollection output)
-	{
-		TrimEnd(output);
-		TrimStart(output);
-	}
-	private void TrimStart(TextFragmentLineCollection output)
-	{
-		foreach (LineInfo line in GetOrdered())
-		{
-			if (line.IsRelevant)
-				break;
-
-			output.RemoveAt(0);
-		}
-	}
-	private void TrimEnd(TextFragmentLineCollection output)
-	{
-		foreach (LineInfo line in GetOrdered().Reverse())
-		{
-			if (line.IsRelevant)
-				break;
-
-			output.RemoveAt(output.Count - 1);
-		}
 	}
 	private TextFragment GetSnipFragment()
 	{

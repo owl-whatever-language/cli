@@ -13,6 +13,20 @@ public class TextFragmentCollection : List<TextFragment>, ITextFragmentCollectio
 {
 	#region Properties
 	public bool IsWhitespace => this.All(static f => f.IsWhitespace);
+	public bool IsSourcePrefix => this.All(static f => f.IsSourcePrefix);
+	public bool IsWhiteSpaceOrSourcePrefix => this.All(static f => f.IsWhiteSpaceOrSourcePrefix);
+	public bool IsOnlyCommented
+	{
+		get
+		{
+			if (this.Any(f => f.IsComment))
+				return this.All(f => f.IsComment || f.IsWhitespace);
+
+			return false;
+		}
+	}
+	public bool IsDimmed => this.All(static f => f.IsDimmed);
+	public bool IsSnipped => this.All(static f => f.IsWhiteSpaceOrSourcePrefix || f.IsSnipped);
 	#endregion
 
 	#region Constructors

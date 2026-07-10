@@ -7,15 +7,26 @@ public static class StylingHtmlExtensions
 	extension(Color color)
 	{
 		#region Properties
+		public string ToHex
+		{
+			get
+			{
+				if (color.A is not 255)
+					return $"#{color.R:x2}{color.G:x2}{color.B:x2}{color.A:x2}";
+
+				return $"#{color.R:x2}{color.G:x2}{color.B:x2}";
+			}
+		}
+		public string ToRgb => $"rgb({color.R},{color.G},{color.B})";
 		public string ToHtml => ColorTranslator.ToHtml(color);
-		public string ToCss => $"color:{color.ToHtml}";
+		public string ToInlineCss => $"color:{color.ToRgb}";
 		#endregion
 	}
 
 	extension(StylingEffect effect)
 	{
 		#region Properties
-		public string ToCss
+		public string ToInlineCss
 		{
 			get
 			{
@@ -34,6 +45,9 @@ public static class StylingHtmlExtensions
 				else if (effect.HasFlag(StylingEffect.Underline))
 					parts.Add("text-decoration-line:underline");
 
+				if (effect.HasFlag(StylingEffect.Dim))
+					parts.Add("opacity:0.33");
+
 				return string.Join(";", parts);
 			}
 		}
@@ -47,22 +61,22 @@ public static class StylingHtmlExtensions
 		{
 			get
 			{
-				string css = style.ToCss;
+				string css = style.ToInlineCss;
 				if (string.IsNullOrEmpty(css))
 					return string.Empty;
 
 				return $"style=\"{css}\"";
 			}
 		}
-		public string ToCss
+		public string ToInlineCss
 		{
 			get
 			{
 				return (style.Color, style.Effect) switch
 				{
-					(Color color, StylingEffect effect) => string.Concat(color.ToCss, ";", effect.ToCss),
-					(_, StylingEffect effect) => effect.ToCss,
-					(Color color, _) => color.ToCss,
+					(Color color, StylingEffect effect) => string.Concat(color.ToInlineCss, ";", effect.ToInlineCss),
+					(_, StylingEffect effect) => effect.ToInlineCss,
+					(Color color, _) => color.ToInlineCss,
 					_ => ""
 				};
 			}
