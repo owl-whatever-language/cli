@@ -1,6 +1,6 @@
 namespace OwlDomain.Owl.Code.Execution.Builtins;
 
-public class BuiltinTypeProperty : ITypeProperty
+internal class BuiltinTypeProperty : ITypeProperty
 {
 	#region Nested types
 	public delegate InterpreterValue GetPropertyDelegate(InterpreterValue instance);

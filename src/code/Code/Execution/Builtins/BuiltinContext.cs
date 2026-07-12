@@ -250,22 +250,95 @@ internal sealed class BuiltinContext
 	#endregion
 
 	#region Property methods
-	public void AddProperty<TDeclaring, TValue>(string name, Func<TDeclaring, TValue> getter)
+	public void AddProperty<TDeclaring, TOut>(string name, Func<TDeclaring, TOut> getter)
 	{
 		BuiltinType declaringType = _lookup[typeof(TDeclaring)];
-		IType type = _lookup[typeof(TValue)];
+		IType resultType = _lookup[typeof(TOut)];
 
 		InterpreterValue Getter(InterpreterValue instance)
 		{
 			TDeclaring declaring = (TDeclaring)instance.Value!;
-			TValue value = getter.Invoke(declaring);
+			TOut value = getter.Invoke(declaring);
 
-			return new(type, value);
+			return new(resultType, value);
 		}
 
-		BuiltinTypeProperty property = new(declaringType, type, name, Getter);
+		BuiltinTypeProperty property = new(declaringType, resultType, name, Getter);
 		declaringType.Members.Add(property);
 	}
 	#endregion
 
+	#region Method methods
+	public void AddMethod<TDeclaring, TOut>(string name, Func<TDeclaring, TOut> callback)
+	{
+		BuiltinType declaringType = _lookup[typeof(TDeclaring)];
+		IType resultType = _lookup[typeof(TOut)];
+
+		InterpreterValue Callback(IExecutionContext context, IReadOnlyList<InterpreterValue> values)
+		{
+			TDeclaring instance = (TDeclaring)values[0].Value!;
+			TOut value = callback.Invoke(instance);
+
+			return new(resultType, value);
+		}
+
+		BuiltinFunction function = new(name, [], new(resultType), Callback);
+		BuiltinTypeMethod method = new(declaringType, function);
+
+		declaringType.Members.Add(method);
+	}
+	public void AddMethod<TDeclaring, T1, TOut>(string name, string param1, Func<TDeclaring, T1, TOut> callback)
+	{
+		BuiltinType declaringType = _lookup[typeof(TDeclaring)];
+		IType resultType = _lookup[typeof(TOut)];
+
+		InterpreterValue Callback(IExecutionContext context, IReadOnlyList<InterpreterValue> values)
+		{
+			TDeclaring instance = (TDeclaring)values[0].Value!;
+			TOut value = callback.Invoke(
+				instance,
+				(T1)values[1].Value!
+				);
+
+			return new(resultType, value);
+		}
+
+		IReadOnlyList<BuiltinFunctionParameter> parameters = Convert([
+			(typeof(T1), param1)
+		]);
+
+		BuiltinFunction function = new(name, parameters, new(resultType), Callback);
+		BuiltinTypeMethod method = new(declaringType, function);
+
+		declaringType.Members.Add(method);
+	}
+
+	public void AddMethod<TDeclaring, T1, T2, TOut>(string name, string param1, string param2, Func<TDeclaring, T1, T2, TOut> callback)
+	{
+		BuiltinType declaringType = _lookup[typeof(TDeclaring)];
+		IType resultType = _lookup[typeof(TOut)];
+
+		InterpreterValue Callback(IExecutionContext context, IReadOnlyList<InterpreterValue> values)
+		{
+			TDeclaring instance = (TDeclaring)values[0].Value!;
+			TOut value = callback.Invoke(
+				instance,
+				(T1)values[1].Value!,
+				(T2)values[2].Value!
+				);
+
+			return new(resultType, value);
+		}
+
+		IReadOnlyList<BuiltinFunctionParameter> parameters = Convert([
+			(typeof(T1), param1),
+			(typeof(T2), param2)
+		]);
+
+		BuiltinFunction function = new(name, parameters, new(resultType), Callback);
+		BuiltinTypeMethod method = new(declaringType, function);
+
+		declaringType.Members.Add(method);
+	}
+	#endregion
 }

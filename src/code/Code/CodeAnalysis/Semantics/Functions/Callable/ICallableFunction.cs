@@ -11,10 +11,13 @@ public interface ICallableFunction : ICallableType
 	ICallableTypeReturn ICallableType.Return => Return;
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	IReadOnlyCollection<ITypeMember> IType.Members => [];
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	IReadOnlyCollection<ITypeProperty> IType.Properties => [];
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	IReadOnlyCollection<ITypeMember> IType.Members => [];
+	IReadOnlyCollection<ITypeMethod> IType.Methods => [];
 	#endregion
 }
 

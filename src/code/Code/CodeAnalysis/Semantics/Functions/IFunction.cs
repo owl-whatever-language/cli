@@ -7,5 +7,7 @@ public interface IFunction : ISymbol
 	IReadOnlyList<IFunctionParameter> Parameters { get; }
 	IFunctionReturn Return { get; }
 	ICallableFunction AsCallable { get; }
+
+	string ISymbol.Name => Name ?? SymbolHelpers.ThrowSymbolWithoutNameException<string>();
 	#endregion
 }

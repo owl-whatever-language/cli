@@ -219,90 +219,6 @@ public class Interpreter
 			_ => ThrowHelper.ThrowInvalidOperationException<InterpreterValue>($"The expression type '{expression.GetType().Name}' is not supported by the interpreter.")
 		};
 	}
-	private InterpreterValue Evaluate(IAnnotatedGetExpressionSyntax expression)
-	{
-		return expression.Symbol switch
-		{
-			ILocalVariable or IFunctionParameter => Values.Get(expression.Symbol),
-			IFunction function => new(function.AsCallable, function),
-
-			_ => ThrowHelper.ThrowInvalidOperationException<InterpreterValue>($"The get expression's symbol '{expression.Symbol.GetType().Name}' is not supported by the interpreter.")
-		};
-	}
-	private InterpreterValue Evaluate(IAnnotatedMemberAccessExpressionSyntax expression)
-	{
-		return expression.Symbol switch
-		{
-			BuiltinTypeProperty property => property.Getter.Invoke(Evaluate(expression.Expression)),
-
-			_ => ThrowHelper.ThrowInvalidOperationException<InterpreterValue>($"The member access expression's symbol '{expression.Symbol.GetType().Name}' is not supported by the interpreter.")
-		};
-	}
-	private InterpreterValue Evaluate(IAnnotatedStringLiteralExpressionSyntax expression)
-	{
-		BuiltinType type = (BuiltinType)expression.ResultType;
-		string value = expression.Value;
-
-		return type.CreateInstance(value);
-	}
-	private InterpreterValue Evaluate(IAnnotatedInterpolatedStringExpressionSyntax expression)
-	{
-		BuiltinType type = (BuiltinType)expression.ResultType;
-
-		StringBuilder builder = new();
-
-		foreach (IAnnotatedStringFragmentSyntax fragment in expression.Fragments)
-		{
-			InterpreterValue value = fragment switch
-			{
-				IAnnotatedRegularStringFragmentSyntax regular => type.CreateInstance(regular.Text.Value),
-				IAnnotatedEscapedStringFragmentSyntax escaped => type.CreateInstance(escaped.Sequence.Value),
-				IAnnotatedEscapedHexStringFragmentSyntax escaped => type.CreateInstance(escaped.Sequence.Value),
-				IAnnotatedInterpolatedStringFragmentSyntax interpolated => Evaluate(interpolated.Value),
-
-				_ => ThrowHelper.ThrowInvalidOperationException<InterpreterValue>($"The string fragment type '{fragment.GetType().Name}' is not supported by the interpreter.")
-			};
-
-			// Todo(Nightowl): This should be handled through some built-in text conversation support;
-			string? textValue = value.Value?.ToString();
-			builder.Append(textValue);
-		}
-
-		string finalValue = builder.ToString();
-		return type.CreateInstance(finalValue);
-	}
-
-	private InterpreterValue Evaluate(IAnnotatedIntegerLiteralExpressionSyntax expression)
-	{
-		if (expression.Value is null)
-			ThrowHelper.ThrowInvalidOperationException("Expected the integer literal to have a value.");
-
-		BuiltinType type = (BuiltinType)expression.ResultType;
-
-		long value = expression.Value.Value;
-		return type.CreateInstance(value);
-	}
-	private InterpreterValue Evaluate(IAnnotatedDecimalLiteralExpressionSyntax expression)
-	{
-		if (expression.Value is null)
-			ThrowHelper.ThrowInvalidOperationException("Expected the decimal literal to have a value.");
-
-		BuiltinType type = (BuiltinType)expression.ResultType;
-
-		decimal value = expression.Value.Value;
-		return type.CreateInstance(value);
-	}
-	private InterpreterValue Evaluate(IAnnotatedBooleanLiteralExpressionSyntax expression)
-	{
-		if (expression.Value is null)
-			ThrowHelper.ThrowInvalidOperationException("Expected the boolean literal to have a value.");
-
-		BuiltinType type = (BuiltinType)expression.ResultType;
-
-		bool value = expression.Value.Value;
-		return type.CreateInstance(value);
-	}
-
 	private InterpreterValue Evaluate(IAnnotatedBinaryExpressionSyntax expression)
 	{
 		if (expression.Operation is null)
@@ -338,72 +254,147 @@ public class Interpreter
 
 		return value;
 	}
+	#endregion
 
-	private InterpreterValue Evaluate(IAnnotatedFunctionCallExpressionSyntax expression)
+	#region Access methods
+	private InterpreterValue Evaluate(IAnnotatedGetExpressionSyntax expression)
 	{
-		_ = Evaluate(expression.Expression);
-
-		// Note(Nightowl): This definitely feels hacky.;
-		return (expression.Callable as ICallableFunction)?.Function switch
+		return expression.Symbol switch
 		{
-			BuiltinFunction function => Evaluate(expression, function),
-			IDeclaredFunction function => Evaluate(expression, (IAnnotatedFunctionDeclarationStatementSyntax)function.Declaration),
+			ILocalVariable or IFunctionParameter => Values.Get(expression.Symbol),
+			IFunction function => new(function.AsCallable, function),
 
-			_ => ThrowHelper.ThrowInvalidOperationException<InterpreterValue>($"The type '{expression.Callable}' is not supported for calling by the interpreter.")
+			_ => ThrowHelper.ThrowInvalidOperationException<InterpreterValue>($"The get expression's symbol '{expression.Symbol.GetType().Name}' is not supported by the interpreter.")
 		};
 	}
-	private InterpreterValue Evaluate(IAnnotatedFunctionCallExpressionSyntax expression, IAnnotatedFunctionDeclarationStatementSyntax function)
+	private InterpreterValue Evaluate(IAnnotatedMemberAccessExpressionSyntax expression)
 	{
-		bool needsReturnValue = function.Function.Return.Type != SpecialTypes.Void;
-		IReadOnlyDictionary<IFunctionParameter, InterpreterValue> arguments = EvaluateArguments(expression, function.Function);
-
-		ValueScope oldValues = Values;
-		Values = new(Values);
-		try
+		return expression.Symbol switch
 		{
-			foreach (KeyValuePair<IFunctionParameter, InterpreterValue> pair in arguments)
-				Values.Declare(pair.Key, pair.Value);
+			BuiltinTypeProperty property => property.Getter.Invoke(Evaluate(expression.Expression)),
+			BuiltinTypeMethod => InterpreterValue.Void, // Note(Nightowl): Will be ignored by the interpreter right now anyway;
 
-			if (function.Body is IAnnotatedShortFunctionBodySyntax @short)
+			_ => ThrowHelper.ThrowInvalidOperationException<InterpreterValue>($"The member access expression's symbol '{expression.Symbol.GetType().Name}' is not supported by the interpreter.")
+		};
+	}
+	#endregion
+
+	#region Literal expression methods
+	private InterpreterValue Evaluate(IAnnotatedStringLiteralExpressionSyntax expression)
+	{
+		BuiltinType type = (BuiltinType)expression.ResultType;
+		string value = expression.Value;
+
+		return type.CreateInstance(value);
+	}
+	private InterpreterValue Evaluate(IAnnotatedInterpolatedStringExpressionSyntax expression)
+	{
+		BuiltinType type = (BuiltinType)expression.ResultType;
+
+		StringBuilder builder = new();
+
+		foreach (IAnnotatedStringFragmentSyntax fragment in expression.Fragments)
+		{
+			InterpreterValue value = fragment switch
 			{
-				InterpreterValue value = Evaluate(@short.Expression);
-				return value;
-			}
+				IAnnotatedRegularStringFragmentSyntax regular => type.CreateInstance(regular.Text.Value),
+				IAnnotatedEscapedStringFragmentSyntax escaped => type.CreateInstance(escaped.Sequence.Value),
+				IAnnotatedEscapedHexStringFragmentSyntax escaped => type.CreateInstance(escaped.Sequence.Value),
+				IAnnotatedInterpolatedStringFragmentSyntax interpolated => Evaluate(interpolated.Value),
 
-			if (function.Body is IAnnotatedBlockFunctionBodySyntax block)
-				Interpret(block.Block);
+				_ => ThrowHelper.ThrowInvalidOperationException<InterpreterValue>($"The string fragment type '{fragment.GetType().Name}' is not supported by the interpreter.")
+			};
 
-			if (needsReturnValue)
-				ThrowHelper.ThrowInvalidOperationException($"The function '{function.Function}' didn't return with a value.");
+			// Todo(Nightowl): This should be handled through some built-in text conversation support;
+			string? textValue = value.Value?.ToString();
+			builder.Append(textValue);
+		}
 
+		string finalValue = builder.ToString();
+		return type.CreateInstance(finalValue);
+	}
+	private InterpreterValue Evaluate(IAnnotatedIntegerLiteralExpressionSyntax expression)
+	{
+		if (expression.Value is null)
+			ThrowHelper.ThrowInvalidOperationException("Expected the integer literal to have a value.");
+
+		BuiltinType type = (BuiltinType)expression.ResultType;
+
+		long value = expression.Value.Value;
+		return type.CreateInstance(value);
+	}
+	private InterpreterValue Evaluate(IAnnotatedDecimalLiteralExpressionSyntax expression)
+	{
+		if (expression.Value is null)
+			ThrowHelper.ThrowInvalidOperationException("Expected the decimal literal to have a value.");
+
+		BuiltinType type = (BuiltinType)expression.ResultType;
+
+		decimal value = expression.Value.Value;
+		return type.CreateInstance(value);
+	}
+	private InterpreterValue Evaluate(IAnnotatedBooleanLiteralExpressionSyntax expression)
+	{
+		if (expression.Value is null)
+			ThrowHelper.ThrowInvalidOperationException("Expected the boolean literal to have a value.");
+
+		BuiltinType type = (BuiltinType)expression.ResultType;
+
+		bool value = expression.Value.Value;
+		return type.CreateInstance(value);
+	}
+	#endregion
+
+	#region Method call methods
+	private InterpreterValue Evaluate(
+		IAnnotatedFunctionCallExpressionSyntax call,
+		IAnnotatedMemberAccessExpressionSyntax access,
+		ITypeMethod target)
+	{
+		// Note(Nightowl): Later this value will actually have to be used;
+		_ = Evaluate(call.Expression);
+		InterpreterValue instance = Evaluate(access.Expression);
+
+		if (target is not BuiltinTypeMethod method)
+		{
+			ThrowHelper.ThrowInvalidOperationException($"Unsupported method type ({target.GetType().Name}).");
 			return default;
 		}
-		catch (ReturnControlException @return)
-		{
-			if (needsReturnValue && @return.Value.Type == SpecialTypes.Void)
-				ThrowHelper.ThrowInvalidOperationException($"The function '{function.Function}' didn't return with a value.");
 
-			return @return.Value;
-		}
-		finally
-		{
-			Values = oldValues;
-		}
-	}
-	private InterpreterValue Evaluate(IAnnotatedFunctionCallExpressionSyntax expression, BuiltinFunction function)
-	{
-		IReadOnlyDictionary<IFunctionParameter, InterpreterValue> byParameter = EvaluateArguments(expression, function);
+		IReadOnlyDictionary<IFunctionParameter, InterpreterValue> arguments = EvaluateArguments(call, method.Function);
 
-		InterpreterValue[] ordered = new InterpreterValue[function.Parameters.Count];
-		for (int i = 0; i < ordered.Length; i++)
+		InterpreterValue[] ordered = new InterpreterValue[arguments.Count + 1];
+		ordered[0] = instance;
+
+		for (int i = 1; i < ordered.Length; i++)
 		{
-			IFunctionParameter parameter = function.Parameters[i];
-			InterpreterValue value = byParameter[parameter];
+			IFunctionParameter parameter = method.Function.Parameters[i - 1];
+			InterpreterValue value = arguments[parameter];
 
 			ordered[i] = value;
 		}
 
-		InterpreterValue result = function.Execute(Context, ordered);
+		InterpreterValue result = method.Function.Execute(Context, ordered);
+		return result;
+	}
+	#endregion
+
+	#region Function call methods
+	private InterpreterValue Evaluate(IAnnotatedFunctionCallExpressionSyntax expression)
+	{
+		if (expression.Expression is IAnnotatedMemberAccessExpressionSyntax access && access.Symbol is ITypeMethod method)
+			return Evaluate(expression, access, method);
+
+		IFunction function = expression.Callable switch
+		{
+			ICallableFunction callable => callable.Function,
+
+			_ => ThrowHelper.ThrowInvalidOperationException<IFunction>($"Unknown callable type ({expression.Callable?.GetType().Name}).")
+		};
+
+		IReadOnlyDictionary<IFunctionParameter, InterpreterValue> arguments = EvaluateArguments(expression, function);
+		InterpreterValue result = Evaluate(function, arguments);
+
 		return result;
 	}
 	private IReadOnlyDictionary<IFunctionParameter, InterpreterValue> EvaluateArguments(IAnnotatedFunctionCallExpressionSyntax expression, IFunction function)
@@ -446,6 +437,67 @@ public class Interpreter
 		}
 
 		return arguments;
+	}
+	private InterpreterValue Evaluate(IFunction function, IReadOnlyDictionary<IFunctionParameter, InterpreterValue> values)
+	{
+		return function switch
+		{
+			BuiltinFunction builtin => Evaluate(builtin, values),
+			IDeclaredFunction declared => Evaluate((IAnnotatedFunctionDeclarationStatementSyntax)declared.Declaration, values),
+
+			_ => ThrowHelper.ThrowInvalidOperationException<InterpreterValue>($"Unknown function type ({function.GetType().Name}).")
+		};
+	}
+	private InterpreterValue Evaluate(BuiltinFunction function, IReadOnlyDictionary<IFunctionParameter, InterpreterValue> values)
+	{
+		InterpreterValue[] ordered = new InterpreterValue[function.Parameters.Count];
+		for (int i = 0; i < ordered.Length; i++)
+		{
+			IFunctionParameter parameter = function.Parameters[i];
+			InterpreterValue value = values[parameter];
+
+			ordered[i] = value;
+		}
+
+		InterpreterValue result = function.Execute(Context, ordered);
+		return result;
+	}
+	private InterpreterValue Evaluate(IAnnotatedFunctionDeclarationStatementSyntax function, IReadOnlyDictionary<IFunctionParameter, InterpreterValue> values)
+	{
+		bool needsReturnValue = function.Function.Return.Type.IsVoid is false;
+
+		ValueScope oldValues = Values;
+		Values = new(Values);
+		try
+		{
+			foreach (KeyValuePair<IFunctionParameter, InterpreterValue> pair in values)
+				Values.Declare(pair.Key, pair.Value);
+
+			if (function.Body is IAnnotatedShortFunctionBodySyntax @short)
+			{
+				InterpreterValue value = Evaluate(@short.Expression);
+				return value;
+			}
+
+			if (function.Body is IAnnotatedBlockFunctionBodySyntax block)
+				Interpret(block.Block);
+
+			if (needsReturnValue)
+				ThrowHelper.ThrowInvalidOperationException($"The function '{function.Function}' didn't return with a value.");
+
+			return default;
+		}
+		catch (ReturnControlException @return)
+		{
+			if (needsReturnValue && @return.Value.Type == SpecialTypes.Void)
+				ThrowHelper.ThrowInvalidOperationException($"The function '{function.Function}' didn't return with a value.");
+
+			return @return.Value;
+		}
+		finally
+		{
+			Values = oldValues;
+		}
 	}
 	#endregion
 }

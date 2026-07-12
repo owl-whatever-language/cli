@@ -11,6 +11,7 @@ internal class BuiltinType : INamedType
 	public string Name { get; }
 	public List<ITypeMember> Members { get; } = [];
 	public IReadOnlyCollection<ITypeProperty> Properties => Members.OfType<ITypeProperty>().ToArray();
+	public IReadOnlyCollection<ITypeMethod> Methods => Members.OfType<ITypeMethod>().ToArray();
 
 	public List<BuiltinFunction> Operations { get; } = [];
 	public BackingConstructorDelegate<object?>? BackingConstructor { get; set; }

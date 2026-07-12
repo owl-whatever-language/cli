@@ -3,8 +3,9 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 public interface IType : IEquatable<IType>, IDebugTextFactory
 {
 	#region Properties
-	IReadOnlyCollection<ITypeProperty> Properties { get; }
 	IReadOnlyCollection<ITypeMember> Members { get; }
+	IReadOnlyCollection<ITypeProperty> Properties { get; }
+	IReadOnlyCollection<ITypeMethod> Methods { get; }
 	#endregion
 
 	#region Methods

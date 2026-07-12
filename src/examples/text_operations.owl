@@ -5,7 +5,7 @@ if (data.Length > 0)
 	int i = 0;
 	while (i < data.Length)
 	{
-		text part = getAt(data, i);
+		text part = data.getAt(i);
 		println($"{i}: {part}");
 
 		i += 1;

@@ -46,7 +46,7 @@ public static class SymbolExtensions
 			{
 				return symbol switch
 				{
-					IFunction => ClassificationKind.Function,
+					IFunction or ITypeMethod => ClassificationKind.Function,
 					IFunctionParameter => ClassificationKind.Parameter,
 					ILocalVariable => ClassificationKind.Variable,
 					ITypeProperty => ClassificationKind.TypeProperty,

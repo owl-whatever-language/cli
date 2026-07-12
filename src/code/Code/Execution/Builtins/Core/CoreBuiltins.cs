@@ -44,6 +44,13 @@ internal partial class CoreBuiltins
 
 		#region Methods
 		[Ignore] public override string ToString() => Value;
+
+		[Method("getAt")]
+		public static Text GetAt(Text value, Int index)
+		{
+			TextElement element = value.Value.EnumerateTextElements().ElementAt((int)(long)index.Value);
+			return new(element.Value);
+		}
 		#endregion
 
 		#region Operators
@@ -219,13 +226,6 @@ internal partial class CoreBuiltins
 	#endregion
 
 	#region Text functions
-	[Name("getAt")]
-	public static Text GetAt(Text value, Int index)
-	{
-		TextElement element = value.Value.EnumerateTextElements().ElementAt((int)(long)index.Value);
-		return new(element.Value);
-	}
-
 	[Name("getPart")]
 	public static Text GetPart(Text value, Int index, Int amount)
 	{
@@ -269,8 +269,12 @@ internal partial class CoreBuiltins
 
 		#region Text stuff
 		context.AddProperty<Text, Int>("Length", static text => text.Length);
-		context.AddFunction<Text, Int, Text>("getAt", "value", "index", GetAt);
-		context.AddFunction<Text, Int, Int, Text>("getPart", "value", "index", "amount", GetPart);
+		context.AddMethod<Text, Int, Text>("getAt", "index", Text.GetAt);
+		context.AddMethod<Text, Int, Int, Text>("getPart", "index", "amount", GetPart);
+
+		context.AddBinary<Text, Text, Bool>(textType, OperatorKind.Equal, Text.Equal);
+		context.AddBinary<Text, Text, Bool>(textType, OperatorKind.NotEqual, Text.NotEqual);
+		context.AddBinary<Text, Text, Text>(textType, OperatorKind.Add, Text.Add);
 		#endregion
 
 		#region Bool
@@ -278,12 +282,6 @@ internal partial class CoreBuiltins
 		context.AddBinary<Bool, Bool, Bool>(boolType, OperatorKind.LogicalOr, Bool.LogicalOr);
 		context.AddBinary<Bool, Bool, Bool>(boolType, OperatorKind.Equal, Bool.Equal);
 		context.AddBinary<Bool, Bool, Bool>(boolType, OperatorKind.NotEqual, Bool.NotEqual);
-		#endregion
-
-		#region Text
-		context.AddBinary<Text, Text, Bool>(textType, OperatorKind.Equal, Text.Equal);
-		context.AddBinary<Text, Text, Bool>(textType, OperatorKind.NotEqual, Text.NotEqual);
-		context.AddBinary<Text, Text, Text>(textType, OperatorKind.Add, Text.Add);
 		#endregion
 
 		#region Int

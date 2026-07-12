@@ -61,7 +61,7 @@ public static class OwlStyling
 			.Add(ClassificationKind.Identifier, "#b2b2b2")
 			.Add(ClassificationKind.Keyword, "#3d8de9")
 			.Add(ClassificationKind.Type, "#00af87")
-			.Add(ClassificationKind.Variable, "#c3efff")
+			.Add(ClassificationKind.Variable, "#def7ff")
 			.Add(ClassificationKind.Function, "#8054af")
 			.Add(ClassificationKind.Parameter, "#fcffcc")
 			.Add(ClassificationKind.File, "#faffb0")

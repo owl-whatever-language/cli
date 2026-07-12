@@ -335,6 +335,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		IType resultType = symbol switch
 		{
 			ITypeProperty property => property.Type,
+			ITypeMethod method => method.Function.AsCallable,
 
 			null => SpecialTypes.Error,
 			_ => ThrowHelper.ThrowInvalidOperationException<IType>($"Unhandled type member symbol type ({symbol.GetType().Name}).")
