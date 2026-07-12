@@ -3,8 +3,16 @@ namespace OwlDomain.ParsingTools.Syntax;
 public interface ISyntaxToken : ISyntaxPart
 {
 	#region Properties
+	new ISyntaxToken? ShadowedBy { get; set; }
 	TriviaList LeadingTrivia { get; }
 	TriviaList TrailingTrivia { get; }
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	ISyntaxNode? ISyntaxNode.ShadowedBy
+	{
+		get => ShadowedBy;
+		set => ShadowedBy = (ISyntaxToken?)value;
+	}
 	#endregion
 }
 
@@ -12,6 +20,18 @@ public interface ISyntaxToken : ISyntaxPart
 public abstract class BaseSyntaxToken : ISyntaxToken
 {
 	#region Properties
+	public ISyntaxToken? ShadowedBy
+	{
+		get;
+		set
+		{
+			if (field is not null)
+				ThrowHelper.ThrowInvalidOperationException("The shadowed by token has already been set.");
+
+			field = value;
+		}
+	}
+
 	public SyntaxNodeKind NodeKind => new(TreeKind, Kind.Name, Kind.Category.Name);
 	protected abstract string? TreeKind { get; }
 	int ISyntaxNode.Level => LevelNumber;
@@ -79,6 +99,7 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 		object? value,
 		TriviaList leadingTrivia,
 		TriviaList trailingTrivia,
+		bool isFabricated,
 		ClassificationKind? classification)
 	{
 		Guard.IsOfCategory(kind, SyntaxCategory.Token);
@@ -90,7 +111,7 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 		LeadingTrivia = leadingTrivia;
 		TrailingTrivia = trailingTrivia;
 		Classification = classification;
-		IsFabricated = false;
+		IsFabricated = isFabricated;
 
 		AssignParentToChildren();
 	}
@@ -133,7 +154,13 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 	#endregion
 
 	#region Helpers
-	private string DebuggerDisplay() => $"Token {{ Kind = ({Kind}), Lexeme = ({Lexeme}) }}";
+	private string DebuggerDisplay()
+	{
+		if (IsFabricated)
+			return $"Token {{ Kind = ({Kind}), IsFabricated = (true) }}";
+
+		return $"Token {{ Kind = ({Kind}), Lexeme = ({Lexeme}) }}";
+	}
 	#endregion
 }
 
@@ -151,8 +178,9 @@ public sealed class SyntaxToken : BaseSyntaxToken
 		string? lexeme,
 		object? value,
 		TriviaList leadingTrivia,
-		TriviaList trailingTrivia)
-		: base(kind, position, lexeme, value, leadingTrivia, trailingTrivia, null)
+		TriviaList trailingTrivia,
+		bool isFabricated = false)
+		: base(kind, position, lexeme, value, leadingTrivia, trailingTrivia, isFabricated, null)
 	{
 	}
 
@@ -160,8 +188,9 @@ public sealed class SyntaxToken : BaseSyntaxToken
 		SyntaxKind kind,
 		IndexedPositionRange position,
 		string? lexeme,
-		object? value)
-		: base(kind, position, lexeme, value, TriviaList.Empty, TriviaList.Empty, null)
+		object? value,
+		bool isFabricated = false)
+		: base(kind, position, lexeme, value, TriviaList.Empty, TriviaList.Empty, isFabricated, null)
 	{
 	}
 
@@ -176,7 +205,7 @@ public sealed class SyntaxToken : BaseSyntaxToken
 	/// <returns>A duplicate of the current token with the <paramref name="newLeadingTrivia"/> list.</returns>
 	public SyntaxToken ReplaceLeadingTrivia(TriviaList newLeadingTrivia)
 	{
-		return new(Kind, Position, Lexeme, Value, newLeadingTrivia, TrailingTrivia);
+		return new(Kind, Position, Lexeme, Value, newLeadingTrivia, TrailingTrivia, IsFabricated);
 	}
 	#endregion
 }

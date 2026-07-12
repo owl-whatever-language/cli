@@ -1117,7 +1117,18 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 
 		classification ??= TryEstimateClassification(token);
 
-		return new ConcreteToken(token.Kind, token.Position, token.Lexeme, token.Value, token.LeadingTrivia, token.TrailingTrivia, classification);
+		ConcreteToken newToken = new(
+			token.Kind,
+			token.Position,
+			token.Lexeme,
+			token.Value,
+			token.LeadingTrivia,
+			token.TrailingTrivia,
+			token.IsFabricated,
+			classification);
+
+		token.ShadowedBy = newToken;
+		return newToken;
 	}
 	private ClassificationKind? TryEstimateClassification(ISyntaxToken token)
 	{

@@ -2,6 +2,12 @@ namespace OwlDomain.ParsingTools.Trivia;
 
 public interface ISyntaxTrivia : ISyntaxPart, IDebugObjectFactory
 {
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	ISyntaxNode? ISyntaxNode.ShadowedBy
+	{
+		get => null;
+		set => ThrowHelper.ThrowInvalidOperationException<ISyntaxNode>("Syntax trivia is never shadowed.");
+	}
 }
 
 public interface IBadSyntaxTrivia : ISyntaxTrivia
@@ -103,7 +109,7 @@ public sealed class BadSyntaxTrivia : IBadSyntaxTrivia
 	public int Level => 0;
 
 	/// <inheritdoc/>
-	public SyntaxKind Kind { get; }
+	public SyntaxKind Kind => SyntaxKind.BadSyntax;
 
 	/// <inheritdoc/>
 	[DisallowNull]
@@ -152,7 +158,8 @@ public sealed class BadSyntaxTrivia : IBadSyntaxTrivia
 	{
 		BadSyntax = badSyntax;
 
-		// Note(Nightowl): We purposefully don't assign the badSyntax's parent because we won't be able to replace it;
+		// Note(Nightowl): We can't (yet) replace it, however it's necessary for a lot of error reporting at the moment;
+		badSyntax.Parent = this;
 	}
 	#endregion
 

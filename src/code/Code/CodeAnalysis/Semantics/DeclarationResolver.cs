@@ -165,11 +165,11 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	protected override DeclaredFunctionDeclarationSignatureSyntax ConvertCore(IConcreteFunctionDeclarationSignatureSyntax concrete)
 	{
 		IDeclaredToken? keyword = Convert(concrete.Keyword);
-		IDeclaredToken name = ConvertCore(concrete.Name, _currentFunction);
-		IDeclaredToken start = ConvertCore(concrete.Start);
-		ISyntaxList<IDeclaredFunctionParameterSyntax, IDeclaredToken> parameters = ConvertCore(concrete.Parameters);
-		IDeclaredToken end = ConvertCore(concrete.End);
-		IDeclaredFunctionReturnSyntax @return = ConvertCore(concrete.Return);
+		IDeclaredToken name = Convert(concrete.Name, _currentFunction);
+		IDeclaredToken start = Convert(concrete.Start);
+		ISyntaxList<IDeclaredFunctionParameterSyntax, IDeclaredToken> parameters = Convert(concrete.Parameters);
+		IDeclaredToken end = Convert(concrete.End);
+		IDeclaredFunctionReturnSyntax @return = Convert(concrete.Return);
 
 		return new(
 			keyword,

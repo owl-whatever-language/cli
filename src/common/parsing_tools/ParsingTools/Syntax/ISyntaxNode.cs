@@ -3,6 +3,7 @@ namespace OwlDomain.ParsingTools.Syntax;
 public interface ISyntaxNode : IDebugNodeFactory
 {
 	#region Properties
+	ISyntaxNode? ShadowedBy { get; set; }
 	SyntaxNodeKind NodeKind { get; }
 	int Level { get; }
 
@@ -22,6 +23,17 @@ public interface ISyntaxNode : IDebugNodeFactory
 public abstract class BaseSyntaxNode : ISyntaxNode, IDebugObjectFactory
 {
 	#region Properties
+	public ISyntaxNode? ShadowedBy
+	{
+		get;
+		set
+		{
+			if (field is not null)
+				ThrowHelper.ThrowInvalidOperationException("The shadowed by node has already been set.");
+
+			field = value;
+		}
+	}
 	public abstract SyntaxNodeKind NodeKind { get; }
 	int ISyntaxNode.Level => LevelNumber;
 	protected abstract int LevelNumber { get; }
@@ -152,6 +164,20 @@ public static class ISyntaxNodeExtensions
 
 	extension(ISyntaxNode node)
 	{
+		#region Shadowing methods
+		public ISyntaxNode MostDetailed
+		{
+			get
+			{
+				ISyntaxNode current = node;
+				while (current.ShadowedBy is not null)
+					current = current.ShadowedBy;
+
+				return current;
+			}
+		}
+		#endregion
+
 		#region Parent methods
 		public T? GetParent<T>(bool includeSelf = true) where T : notnull, ISyntaxNode
 		{
@@ -188,10 +214,15 @@ public static class ISyntaxNodeExtensions
 
 			return node;
 		}
+		public ISyntaxDocument? TryGetDocument()
+		{
+			ISyntaxDocument? document = node.GetRoot() as ISyntaxDocument;
+			return document ??= node.MostDetailed.GetRoot() as ISyntaxDocument;
+		}
 		public ISyntaxDocument GetDocument()
 		{
-			ISyntaxNode root = node.GetRoot();
-			if (root is ISyntaxDocument document)
+			ISyntaxDocument? document = TryGetDocument(node);
+			if (document is not null)
 				return document;
 
 			ThrowHelper.ThrowInvalidOperationException($"Expected the root of the node to be a document, calling this method before the tree is build is not allowed.");

@@ -349,13 +349,14 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 						"object? value",
 						"TriviaList leadingTrivia",
 						"TriviaList trailingTrivia",
+						"bool isFabricated",
 						"ClassificationKind? classification",
 						..token.ClassMembers.Select(m => $"{m.Type.TypeName} {m.Name.Camel}")
 					]);
 					writer.WriteLine(")");
 
 					using (writer.Indented())
-						writer.WriteLine(": base(kind, position, lexeme, value, leadingTrivia, trailingTrivia, classification)");
+						writer.WriteLine(": base(kind, position, lexeme, value, leadingTrivia, trailingTrivia, isFabricated, classification)");
 
 					using (writer.Braced())
 						writer.WriteConstructorAssignments(token.ClassMembers);
@@ -620,15 +621,24 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 		#region Generate node conversion
 		static void Generate(IndentedTextWriter writer, StructuredNodeInfo from, StructuredNodeInfo to, bool canAutoImplement)
 		{
-
 			string variable = from.Kind.Camel;
+			string targetVariable = to.Kind.Camel;
 			IReadOnlyList<StructuredMemberInfo> toMembers = to.ClassMembers.ToArray();
 			IReadOnlyList<StructuredMemberInfo> fromMembers = from.ClassMembers.ToArray();
 
 			if (toMembers.Count is 0 && fromMembers.Count is 0)
 			{
 				writer.NotNullIfNotNullReturn(variable);
-				writer.WriteLine($"protected {to.Class.Name}? Convert({from.Interface.Name}? {variable}) => {variable} is null ? null : new();");
+				writer.WriteLine($"protected {to.Class.Name}? Convert({from.Interface.Name}? {variable})");
+				using (writer.Braced())
+				{
+					writer.ReturnNullIfNull(variable);
+					writer.WriteLine($"{to.Class.Name} {targetVariable} = ConvertCore({variable});");
+					writer.WriteLine($"{variable}.ShadowedBy = {targetVariable};");
+					writer.WriteLine();
+					writer.WriteLine($"return {targetVariable};");
+				}
+
 				writer.WriteLine($"protected virtual {to.Class.Name} ConvertCore({from.Interface.Name} {variable}) => new();");
 				return;
 			}
@@ -636,19 +646,23 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			if (canAutoImplement && toMembers.Count == fromMembers.Count)
 			{
 				writer.NotNullIfNotNullReturn(variable);
-				writer.WriteLine($"protected {to.Class.Name}? Convert({from.Interface.Name}? {variable}) => {variable} is null ? null : ConvertCore({variable});");
+				writer.WriteLine($"protected {to.Class.Name}? Convert({from.Interface.Name}? {variable})");
+				using (writer.Braced())
+				{
+					writer.ReturnNullIfNull(variable);
+					writer.WriteLine($"{to.Class.Name} {targetVariable} = ConvertCore({variable});");
+					writer.WriteLine($"{variable}.ShadowedBy = {targetVariable};");
+					writer.WriteLine();
+					writer.WriteLine($"return {targetVariable};");
+				}
+
 				writer.WriteLine($"protected virtual {to.Class.Name} ConvertCore({from.Interface.Name} {variable})");
 				using (writer.Braced())
 				{
 					foreach (StructuredMemberInfo member in to.ClassMembers)
 					{
 						if (member.Type is IStructuredSyntaxTypeInfo type)
-						{
-							if (type.IsNullable)
-								writer.WriteLine($"{member.Type.TypeName} {member.Name.Camel} = Convert({variable}.{member.Name.Pascal});");
-							else
-								writer.WriteLine($"{member.Type.TypeName} {member.Name.Camel} = ConvertCore({variable}.{member.Name.Pascal});");
-						}
+							writer.WriteLine($"{member.Type.TypeName} {member.Name.Camel} = Convert({variable}.{member.Name.Pascal});");
 						else
 							writer.WriteLine($"{member.Type.TypeName} {member.Name.Camel} = {variable}.{member.Name.Pascal};");
 					}
@@ -663,7 +677,16 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 			}
 
 			writer.NotNullIfNotNullReturn(variable);
-			writer.WriteLine($"protected {to.Class.Name}? Convert({from.Interface.Name}? {variable}) => {variable} is null ? null : ConvertCore({variable});");
+			writer.WriteLine($"protected {to.Class.Name}? Convert({from.Interface.Name}? {variable})");
+			using (writer.Braced())
+			{
+				writer.ReturnNullIfNull(variable);
+				writer.WriteLine($"{to.Class.Name} {targetVariable} = ConvertCore({variable});");
+				writer.WriteLine($"{variable}.ShadowedBy = {targetVariable};");
+				writer.WriteLine();
+				writer.WriteLine($"return {targetVariable};");
+			}
+
 			writer.WriteLine($"protected abstract {to.Class.Name} ConvertCore({from.Interface.Name} {variable});");
 		}
 		#endregion
@@ -731,13 +754,22 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 						writer.WriteLine(")");
 						using (writer.Braced())
 						{
-							writer.Write("return new(");
+							writer.Write($"{target.Token.Class.Name} newToken = new(");
 							writer.WriteSeparated([
-								"token.Kind","token.Position","token.Lexeme","token.Value","token.LeadingTrivia","token.TrailingTrivia",
+								"token.Kind",
+								"token.Position",
+								"token.Lexeme",
+								"token.Value",
+								"token.LeadingTrivia",
+								"token.TrailingTrivia",
+								"token.IsFabricated",
 								"classification",
 								.. target.Token.ClassMembers.Select(m => m.Name.Camel)
 							]);
 							writer.WriteLine(");");
+							writer.WriteLine();
+							writer.WriteLine("token.ShadowedBy = newToken;");
+							writer.WriteLine("return newToken;");
 						}
 						#endregion
 
@@ -809,6 +841,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 							Debug.Assert(group is not null);
 
 							string groupKind = group!.Kind.Camel;
+							string targetVariable = targetGroup.Kind.Camel;
 							string lastName = new Name(group!.Name.Parts.Last()).Camel;
 
 							using (writer.Region($"{targetGroup.Name.Natural} methods"))
@@ -824,7 +857,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 										foreach (StructuredNodeInfo node in targetGroup.Nodes.OrderBy(n => n.ClassMembers.Count()))
 										{
 											Debug.Assert(node.Shadows is not null);
-											writer.WriteLine($"{node.Shadows!.Interface.Name} {lastName} => ConvertCore({lastName}),");
+											writer.WriteLine($"{node.Shadows!.Interface.Name} {lastName} => Convert({lastName}),");
 										}
 
 										writer.WriteLine();

@@ -104,7 +104,7 @@ public abstract class BaseLexer
 	/// <param name="leading">The list of the leading trivia nodes.</param>
 	protected void LexEndOfInput(TriviaList leading)
 	{
-		SyntaxToken token = new(SyntaxKind.EndOfInput, new(Text.Position, Text.Position), lexeme: null, value: null, leading, TriviaList.Empty);
+		SyntaxToken token = new(SyntaxKind.EndOfInput, new(Text.Position, Text.Position), lexeme: null, value: null, leading, TriviaList.Empty, false);
 		Tokens.Add(token);
 	}
 
@@ -150,7 +150,7 @@ public abstract class BaseLexer
 		IndexedLinePosition end = Text.Position;
 
 		FinishFullToken(out TriviaList leading, out TriviaList trailing);
-		SyntaxToken token = new(kind, new(start, end), sequence, value: null, leading, trailing);
+		SyntaxToken token = new(kind, new(start, end), sequence, value: null, leading, trailing, false);
 		Tokens.Add(token);
 
 		return true;

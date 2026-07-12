@@ -3,6 +3,14 @@ namespace OwlDomain.ParsingTools.Syntax;
 public interface ISyntaxList<out TValue> : ISyntaxNode, IReadOnlyList<TValue>, IDebugListFactory
 	where TValue : class, ISyntaxNode
 {
+	#region Properties
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	ISyntaxNode? ISyntaxNode.ShadowedBy
+	{
+		get => null;
+		set => ThrowHelper.ThrowInvalidOperationException<ISyntaxNode>("Syntax lists are never shadowed.");
+	}
+	#endregion
 }
 
 public interface ISyntaxList<out TValue, out TSeparator> : ISyntaxNode, IDebugListFactory
@@ -10,6 +18,13 @@ public interface ISyntaxList<out TValue, out TSeparator> : ISyntaxNode, IDebugLi
 	where TSeparator : class, ISyntaxNode
 {
 	#region Properties
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	ISyntaxNode? ISyntaxNode.ShadowedBy
+	{
+		get => null;
+		set => ThrowHelper.ThrowInvalidOperationException<ISyntaxNode>("Syntax lists are never shadowed.");
+	}
+
 	IReadOnlyList<ISyntaxNode> Nodes { get; }
 	IReadOnlyList<TValue> Values { get; }
 	IReadOnlyList<TSeparator> Separators { get; }

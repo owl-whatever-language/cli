@@ -51,6 +51,7 @@ public interface IDiagnostic
 /// <summary>
 /// 	Represents diagnostic information.
 /// </summary>
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 public sealed class Diagnostic : IDiagnostic
 {
 	#region Properties
@@ -178,5 +179,6 @@ public sealed class Diagnostic : IDiagnostic
 
 		return this;
 	}
+	private string DebuggerDisplay() => $"{nameof(Diagnostic)} {{ Message = ({ShortMessage.ToPlainText()}) }}";
 	#endregion
 }
