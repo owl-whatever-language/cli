@@ -11,7 +11,10 @@ public abstract class SpecialType : INamedType
 	string ISymbol.Name => Name ?? SymbolHelpers.ThrowSymbolWithoutNameException<string>();
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	IReadOnlyList<ITypeProperty> IType.Properties => [];
+	IReadOnlyCollection<ITypeProperty> IType.Properties => [];
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	IReadOnlyCollection<ITypeMember> IType.Members => [];
 	#endregion
 
 	#region Constructors

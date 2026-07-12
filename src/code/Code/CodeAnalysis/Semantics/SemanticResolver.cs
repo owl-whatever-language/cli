@@ -321,7 +321,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		ISymbol? symbol = null;
 		if (expression.ResultType.IsNotError && declared.Name.Value is string name)
 		{
-			symbol = expression.ResultType.Properties.FirstOrDefault(p => p.Name == name);
+			symbol = expression.ResultType.Members.FirstOrDefault(p => p.Name == name);
 			if (symbol is null)
 			{
 				Diagnostics

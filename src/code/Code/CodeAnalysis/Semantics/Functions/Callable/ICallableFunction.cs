@@ -9,6 +9,12 @@ public interface ICallableFunction : ICallableType
 
 	IReadOnlyList<ICallableTypeParameter> ICallableType.Parameters => Parameters;
 	ICallableTypeReturn ICallableType.Return => Return;
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	IReadOnlyCollection<ITypeProperty> IType.Properties => [];
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	IReadOnlyCollection<ITypeMember> IType.Members => [];
 	#endregion
 }
 
@@ -18,9 +24,6 @@ public sealed class CallableFunction : ICallableFunction
 	public IFunction Function { get; }
 	public IReadOnlyList<ICallableFunctionParameter> Parameters { get; }
 	public ICallableFunctionReturn Return { get; }
-
-	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	IReadOnlyList<ITypeProperty> IType.Properties => [];
 	#endregion
 
 	#region Constructors

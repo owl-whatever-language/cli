@@ -264,7 +264,7 @@ internal sealed class BuiltinContext
 		}
 
 		BuiltinTypeProperty property = new(declaringType, type, name, Getter);
-		declaringType.Properties.Add(property);
+		declaringType.Members.Add(property);
 	}
 	#endregion
 
