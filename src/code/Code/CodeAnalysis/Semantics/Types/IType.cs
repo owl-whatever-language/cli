@@ -2,6 +2,10 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 
 public interface IType : IEquatable<IType>, IDebugTextFactory
 {
+	#region Properties
+	IReadOnlyList<ITypeProperty> Properties { get; }
+	#endregion
+
 	#region Methods
 	/// <summary>Checks whether the current type can be assigned to the given <paramref name="target"/> type.</summary>
 	/// <param name="target">The target type to check against.</param>

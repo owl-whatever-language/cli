@@ -35,6 +35,7 @@ internal partial class CoreBuiltins
 	{
 		#region Properties
 		[Ignore] public string Value { get; }
+		[Property("Length")] public Int Length => new(Value.EnumerateTextElements().Count());
 		#endregion
 
 		#region Constructors
@@ -217,14 +218,7 @@ internal partial class CoreBuiltins
 	[Name("toBool")] public static Bool ToBool(Text value) => new(bool.Parse(value.Value));
 	#endregion
 
-	#region String functions
-	[Name("getLength")]
-	public static Int GetLength(Text value)
-	{
-		long count = value.Value.EnumerateTextElements().Count();
-		return new(count);
-	}
-
+	#region Text functions
 	[Name("getAt")]
 	public static Text GetAt(Text value, Int index)
 	{
@@ -273,8 +267,8 @@ internal partial class CoreBuiltins
 		context.AddFunction<Text, Bool>("toBool", "value", ToBool);
 		#endregion
 
-		#region String functions
-		context.AddFunction<Text, Int>("getLength", "value", GetLength);
+		#region Text stuff
+		context.AddProperty<Text, Int>("Length", static text => text.Length);
 		context.AddFunction<Text, Int, Text>("getAt", "value", "index", GetAt);
 		context.AddFunction<Text, Int, Int, Text>("getPart", "value", "index", "amount", GetPart);
 		#endregion

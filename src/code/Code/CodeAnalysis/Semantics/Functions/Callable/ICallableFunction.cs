@@ -18,6 +18,9 @@ public sealed class CallableFunction : ICallableFunction
 	public IFunction Function { get; }
 	public IReadOnlyList<ICallableFunctionParameter> Parameters { get; }
 	public ICallableFunctionReturn Return { get; }
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	IReadOnlyList<ITypeProperty> IType.Properties => [];
 	#endregion
 
 	#region Constructors

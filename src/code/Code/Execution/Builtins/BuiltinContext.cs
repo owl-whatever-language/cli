@@ -245,5 +245,22 @@ internal sealed class BuiltinContext
 	}
 	#endregion
 
+	#region Property methods
+	public void AddProperty<TDeclaring, TValue>(string name, Func<TDeclaring, TValue> getter)
+	{
+		BuiltinType declaringType = _lookup[typeof(TDeclaring)];
+		IType type = _lookup[typeof(TValue)];
+
+		InterpreterValue Getter(InterpreterValue instance)
+		{
+			TDeclaring declaring = (TDeclaring)instance.Value!;
+			TValue value = getter.Invoke(declaring);
+
+			return new(type, value);
+		}
+
+		BuiltinTypeProperty property = new(declaringType, type, name, Getter);
+	}
+	#endregion
 
 }

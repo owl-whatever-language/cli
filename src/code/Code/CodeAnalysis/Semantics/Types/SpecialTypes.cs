@@ -6,7 +6,12 @@ public abstract class SpecialType : INamedType
 	public string Id { get; } = SymbolHelpers.GetNewId();
 	public abstract string Name { get; }
 	protected virtual ClassificationKind Classification => ClassificationKind.Type;
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	string ISymbol.Name => Name ?? SymbolHelpers.ThrowSymbolWithoutNameException<string>();
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	IReadOnlyList<ITypeProperty> IType.Properties => [];
 	#endregion
 
 	#region Constructors

@@ -9,8 +9,12 @@ internal class BuiltinType : INamedType
 	#region Properties
 	public string Id { get; } = SymbolHelpers.GetNewId();
 	public string Name { get; }
+	public List<ITypeProperty> Properties { get; } = [];
 	public List<BuiltinFunction> Operations { get; } = [];
 	public BackingConstructorDelegate<object?>? BackingConstructor { get; set; }
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	IReadOnlyList<ITypeProperty> IType.Properties => Properties;
 	#endregion
 
 	#region Constructors
