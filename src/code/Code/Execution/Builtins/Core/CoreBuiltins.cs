@@ -51,6 +51,23 @@ internal partial class CoreBuiltins
 			TextElement element = value.Value.EnumerateTextElements().ElementAt((int)(long)index.Value);
 			return new(element.Value);
 		}
+
+		[Method("getPart")]
+		public static Text GetPart(Text value, Int index, Int amount)
+		{
+			StringBuilder builder = new();
+
+			IEnumerable<TextElement> elements = value.Value
+				.EnumerateTextElements()
+				.Skip((int)index.Value)
+				.Take((int)amount.Value);
+
+			foreach (TextElement element in elements)
+				builder.Append(element.Value);
+
+			string result = builder.ToString();
+			return new(result);
+		}
 		#endregion
 
 		#region Operators
@@ -211,39 +228,6 @@ internal partial class CoreBuiltins
 		#endregion
 	}
 
-	#region Conversion functions
-	[Name("toInt")] public static Int ToInt(Num value) => new((long)value.Value);
-	[Name("toInt")] public static Int ToInt(Bool value) => new(value.Value ? 1 : 0);
-
-	[Name("toNum")] public static Num ToNum(Int value) => new((long)value.Value);
-	[Name("toNum")] public static Num ToNum(Bool value) => new(value.Value ? 1 : 0);
-	#endregion
-
-	#region Parse functions
-	[Name("toInt")] public static Int ToInt(Text value) => new(long.Parse(value.Value));
-	[Name("toNum")] public static Num ToNum(Text value) => new(decimal.Parse(value.Value));
-	[Name("toBool")] public static Bool ToBool(Text value) => new(bool.Parse(value.Value));
-	#endregion
-
-	#region Text functions
-	[Name("getPart")]
-	public static Text GetPart(Text value, Int index, Int amount)
-	{
-		StringBuilder builder = new();
-
-		IEnumerable<TextElement> elements = value.Value
-			.EnumerateTextElements()
-			.Skip((int)index.Value)
-			.Take((int)amount.Value);
-
-		foreach (TextElement element in elements)
-			builder.Append(element.Value);
-
-		string result = builder.ToString();
-		return new(result);
-	}
-	#endregion
-
 	#region Resolve functions
 	[Ignore]
 	public static void Resolve(BuiltinContext context)
@@ -253,24 +237,10 @@ internal partial class CoreBuiltins
 		BuiltinType intType = context.AddType<object, Int>("int", b => b is long l ? new(l) : new((ulong)b));
 		BuiltinType numType = context.AddType<decimal, Num>("num", b => new(b));
 
-		#region Conversion functions
-		context.AddFunction<Num, Int>("toInt", "value", ToInt);
-		context.AddFunction<Bool, Int>("toInt", "value", ToInt);
-
-		context.AddFunction<Int, Num>("toNum", "value", ToNum);
-		context.AddFunction<Bool, Num>("toNum", "value", ToNum);
-		#endregion
-
-		#region Parse functions
-		context.AddFunction<Text, Int>("toInt", "value", ToInt);
-		context.AddFunction<Text, Num>("toNum", "value", ToNum);
-		context.AddFunction<Text, Bool>("toBool", "value", ToBool);
-		#endregion
-
-		#region Text stuff
+		#region Text
 		context.AddProperty<Text, Int>("Length", static text => text.Length);
 		context.AddMethod<Text, Int, Text>("getAt", "index", Text.GetAt);
-		context.AddMethod<Text, Int, Int, Text>("getPart", "index", "amount", GetPart);
+		context.AddMethod<Text, Int, Int, Text>("getPart", "index", "amount", Text.GetPart);
 
 		context.AddBinary<Text, Text, Bool>(textType, OperatorKind.Equal, Text.Equal);
 		context.AddBinary<Text, Text, Bool>(textType, OperatorKind.NotEqual, Text.NotEqual);
@@ -297,6 +267,19 @@ internal partial class CoreBuiltins
 		context.AddBinary<Int, Int, Int>(intType, OperatorKind.Multiply, Int.Multiply);
 		context.AddBinary<Int, Int, Num>(intType, OperatorKind.Divide, Int.Divide);
 		context.AddBinary<Int, Int, Int>(intType, OperatorKind.Modulo, Int.Modulo);
+
+		context.AddBinary<Int, Num, Bool>(intType, OperatorKind.Equal, Int.Equal);
+		context.AddBinary<Int, Num, Bool>(intType, OperatorKind.NotEqual, Int.NotEqual);
+		context.AddBinary<Int, Num, Bool>(intType, OperatorKind.LessThan, Int.LessThan);
+		context.AddBinary<Int, Num, Bool>(intType, OperatorKind.GreaterThan, Int.GreaterThan);
+		context.AddBinary<Int, Num, Bool>(intType, OperatorKind.LessThanOrEqual, Int.LessThanOrEqual);
+		context.AddBinary<Int, Num, Bool>(intType, OperatorKind.GreaterThanOrEqual, Int.GreaterThanOrEqual);
+
+		context.AddBinary<Int, Num, Num>(intType, OperatorKind.Add, Int.Add);
+		context.AddBinary<Int, Num, Num>(intType, OperatorKind.Subtract, Int.Subtract);
+		context.AddBinary<Int, Num, Num>(intType, OperatorKind.Multiply, Int.Multiply);
+		context.AddBinary<Int, Num, Num>(intType, OperatorKind.Divide, Int.Divide);
+		context.AddBinary<Int, Num, Num>(intType, OperatorKind.Modulo, Int.Modulo);
 		#endregion
 
 		#region Num
@@ -312,24 +295,7 @@ internal partial class CoreBuiltins
 		context.AddBinary<Num, Num, Num>(numType, OperatorKind.Multiply, Num.Multiply);
 		context.AddBinary<Num, Num, Num>(numType, OperatorKind.Divide, Num.Divide);
 		context.AddBinary<Num, Num, Num>(numType, OperatorKind.Modulo, Num.Modulo);
-		#endregion
 
-		#region Int - Num
-		context.AddBinary<Int, Num, Bool>(intType, OperatorKind.Equal, Int.Equal);
-		context.AddBinary<Int, Num, Bool>(intType, OperatorKind.NotEqual, Int.NotEqual);
-		context.AddBinary<Int, Num, Bool>(intType, OperatorKind.LessThan, Int.LessThan);
-		context.AddBinary<Int, Num, Bool>(intType, OperatorKind.GreaterThan, Int.GreaterThan);
-		context.AddBinary<Int, Num, Bool>(intType, OperatorKind.LessThanOrEqual, Int.LessThanOrEqual);
-		context.AddBinary<Int, Num, Bool>(intType, OperatorKind.GreaterThanOrEqual, Int.GreaterThanOrEqual);
-
-		context.AddBinary<Int, Num, Num>(intType, OperatorKind.Add, Int.Add);
-		context.AddBinary<Int, Num, Num>(intType, OperatorKind.Subtract, Int.Subtract);
-		context.AddBinary<Int, Num, Num>(intType, OperatorKind.Multiply, Int.Multiply);
-		context.AddBinary<Int, Num, Num>(intType, OperatorKind.Divide, Int.Divide);
-		context.AddBinary<Int, Num, Num>(intType, OperatorKind.Modulo, Int.Modulo);
-		#endregion
-
-		#region Num - Int
 		context.AddBinary<Num, Int, Bool>(numType, OperatorKind.Equal, Num.Equal);
 		context.AddBinary<Num, Int, Bool>(numType, OperatorKind.NotEqual, Num.NotEqual);
 		context.AddBinary<Num, Int, Bool>(numType, OperatorKind.LessThan, Num.LessThan);

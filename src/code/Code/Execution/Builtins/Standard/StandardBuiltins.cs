@@ -1,6 +1,5 @@
 namespace OwlDomain.Owl.Code.Execution.Builtins.Standard;
 
-using System.IO;
 using OwlDomain.Owl.Code.Execution.Builtins.Attributes;
 using static Core.CoreBuiltins;
 
@@ -33,37 +32,6 @@ internal partial class StandardBuiltins
 	[Name("input")] public static Text Input() => Input(new(string.Empty));
 	#endregion
 
-	#region IO
-	[Name("readFile")]
-	public static Text ReadFile(Text path)
-	{
-		string contents = File.ReadAllText(path.Value);
-		return new(contents);
-	}
-
-	[Name("writeFile")] public static void WriteFile(Text path, Text value) => File.WriteAllText(path.Value, value.Value);
-	[Name("appendFile")] public static void AppendFile(Text path, Text value) => File.AppendAllText(path.Value, value.Value);
-
-	[Name("pathAppend")]
-	public static Text PathGetParent(Text path)
-	{
-		string? parent = Path.GetDirectoryName(path.Value);
-		return new(parent ?? string.Empty);
-	}
-
-	[Name("pathAppend")]
-	public static Text PathAppend(Text path, Text item)
-	{
-		string trimmed = item.Value
-			.Trim(Path.DirectorySeparatorChar)
-			.Trim(Path.AltDirectorySeparatorChar);
-
-		string result = Path.Combine(path.Value, trimmed);
-
-		return new(result);
-	}
-	#endregion
-
 	#region Resolve functions
 	[Ignore]
 	public static void Resolve(BuiltinContext context)
@@ -79,15 +47,8 @@ internal partial class StandardBuiltins
 		context.AddFunction<Num>("println", "value", Println);
 		context.AddFunction("println", Println);
 
-		context.AddFunction<Text>("input", Input);
+		context.AddFunction("input", Input);
 		context.AddFunction<Text, Text>("input", "value", Input);
-
-		context.AddFunction<Text, Text>("writeFile", "path", "value", WriteFile);
-		context.AddFunction<Text, Text>("appendFile", "path", "value", AppendFile);
-		context.AddFunction<Text, Text>("readFile", "path", ReadFile);
-
-		context.AddFunction<Text, Text>("pathGetParent", "path", PathGetParent);
-		context.AddFunction<Text, Text, Text>("pathAppend", "path", "value", PathAppend);
 	}
 	#endregion
 }
