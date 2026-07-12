@@ -97,16 +97,16 @@ internal sealed class BuiltinContext
 		TargetScope.Add(function);
 		return function;
 	}
-	public BuiltinFunction AddFunction(string name, IReadOnlyList<(Type, string)> parameters, Func<IReadOnlyList<InterpreterValue>, InterpreterValue> callback)
+	public BuiltinFunction AddFunction(string name, IReadOnlyList<(Type, string)> parameters, IType returnType, Func<IReadOnlyList<InterpreterValue>, InterpreterValue> callback)
 	{
-		BuiltinFunction function = new(name, Convert(parameters), new(SpecialTypes.Void), (c, p) => callback.Invoke(p));
+		BuiltinFunction function = new(name, Convert(parameters), new(returnType), (c, p) => callback.Invoke(p));
 
 		TargetScope.Add(function);
 		return function;
 	}
-	public BuiltinFunction AddFunction(string name, IReadOnlyList<(Type, string)> parameters, Func<IExecutionContext, IReadOnlyList<InterpreterValue>, InterpreterValue> callback)
+	public BuiltinFunction AddFunction(string name, IReadOnlyList<(Type, string)> parameters, IType returnType, Func<IExecutionContext, IReadOnlyList<InterpreterValue>, InterpreterValue> callback)
 	{
-		BuiltinFunction function = new(name, Convert(parameters), new(SpecialTypes.Void), callback.Invoke);
+		BuiltinFunction function = new(name, Convert(parameters), new(returnType), callback.Invoke);
 
 		TargetScope.Add(function);
 		return function;
@@ -156,6 +156,7 @@ internal sealed class BuiltinContext
 		return AddFunction(
 			name,
 			[],
+			resultType,
 			(c, p) =>
 			{
 				TOut result = callback.Invoke();
@@ -172,6 +173,7 @@ internal sealed class BuiltinContext
 			[
 				(typeof(T1), param1)
 			],
+			resultType,
 			(c, p) =>
 			{
 				TOut result = callback.Invoke((T1)p[0].Value!);
@@ -189,6 +191,7 @@ internal sealed class BuiltinContext
 				(typeof(T1), param1),
 				(typeof(T2), param2)
 			],
+			resultType,
 			(c, p) =>
 			{
 				TOut result = callback.Invoke(
@@ -210,6 +213,7 @@ internal sealed class BuiltinContext
 				(typeof(T2), param2),
 				(typeof(T3), param3)
 			],
+			resultType,
 			(c, p) =>
 			{
 				TOut result = callback.Invoke(
@@ -260,6 +264,7 @@ internal sealed class BuiltinContext
 		}
 
 		BuiltinTypeProperty property = new(declaringType, type, name, Getter);
+		declaringType.Properties.Add(property);
 	}
 	#endregion
 

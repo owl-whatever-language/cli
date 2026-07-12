@@ -714,8 +714,9 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 
 				if (Match(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, out IConcreteToken? openBracket))
 					expression = ParseFunctionCallExpression(expression, openBracket);
-
-				if (MatchAny(out IConcreteToken? @operator, ClassificationKind.Operator, SyntaxKind.BinaryOperators))
+				else if (Match(SyntaxKind.Period, ClassificationKind.Punctuation, out IConcreteToken? dot))
+					expression = ParseMemberAccess(expression, dot);
+				else if (MatchAny(out IConcreteToken? @operator, ClassificationKind.Operator, SyntaxKind.BinaryOperators))
 				{
 					IConcreteExpressionSyntax right = ParseExpression(power);
 
@@ -748,6 +749,11 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			return null;
 
 		return new ConcreteGetExpressionSyntax(name);
+	}
+	private IConcreteExpressionSyntax ParseMemberAccess(IConcreteExpressionSyntax expression, IConcreteToken dot)
+	{
+		IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Identifier, token => ReportExpectedSimple(token, "member_name", "Expected the name of member you're trying to access."));
+		return new ConcreteMemberAccessExpressionSyntax(expression, dot, name);
 	}
 	#endregion
 
@@ -1277,5 +1283,4 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			.Add(token, lines => lines.AddLine("The parser got stuck in an infinite loop without me accounting for it. I'd appreciate it if you told me that it happened."));
 	}
 	#endregion
-
 }

@@ -49,6 +49,7 @@ public static class SymbolExtensions
 					IFunction => ClassificationKind.Function,
 					IFunctionParameter => ClassificationKind.Parameter,
 					ILocalVariable => ClassificationKind.Variable,
+					ITypeProperty => ClassificationKind.TypeProperty,
 
 					NotFoundSymbol => ClassificationKind.Identifier,
 					null => null,

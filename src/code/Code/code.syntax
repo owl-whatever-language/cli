@@ -76,6 +76,8 @@ ternary expression    : expression condition, token question, expression true_cl
 grouped expression    : token start, expression value, token end
 get expression        : token name
 get @ semantic        : ISymbol symbol
+member_access expression : expression expression, token dot, token name
+member_access @ semantic : ISymbol symbol
 
 ### Literals
 boolean_literal expression : token token, bool? value

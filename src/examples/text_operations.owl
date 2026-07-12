@@ -1,0 +1,15 @@
+text data = input("Message: ");
+
+if (data.Length > 0)
+{
+	int i = 0;
+	while (i < data.Length)
+	{
+		text part = getAt(data, i);
+		println($"{i}: {part}");
+
+		i += 1;
+	}
+}
+else
+	println("You didn't type in anything!");

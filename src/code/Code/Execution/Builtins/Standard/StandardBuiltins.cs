@@ -79,7 +79,7 @@ internal partial class StandardBuiltins
 		context.AddFunction<Num>("println", "value", Println);
 		context.AddFunction("println", Println);
 
-		context.AddFunction("input", Input);
+		context.AddFunction<Text>("input", Input);
 		context.AddFunction<Text, Text>("input", "value", Input);
 
 		context.AddFunction<Text, Text>("writeFile", "path", "value", WriteFile);

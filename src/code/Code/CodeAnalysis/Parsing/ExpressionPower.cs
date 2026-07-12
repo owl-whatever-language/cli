@@ -5,18 +5,19 @@ public enum ExpressionPrecedence
 	Zero = 0,
 
 	#region Order
-	Suffix,
 	LogicalAnd,
 	LogicalOr,
 	Equality,
 	Multiplication,
 	Addition,
+	Suffix,
 	#endregion
 
 	#region Aliases
 	Modulo = Multiplication,
 	Call = Suffix,
 	Assignment = Suffix,
+	MemberAccess = Suffix,
 	#endregion
 }
 
@@ -32,6 +33,7 @@ public readonly record struct ExpressionPower(ExpressionPrecedence Precedence, E
 	private static IReadOnlyDictionary<SyntaxKind, ExpressionPower> Powers { get; } = new Dictionary<SyntaxKind, ExpressionPower>()
 	{
 		{ SyntaxKind.OpenBracket, ExpressionPrecedence.Call },
+		{ SyntaxKind.Period, ExpressionPrecedence.MemberAccess },
 
 		{ SyntaxKind.Divide, ExpressionPrecedence.Addition },
 		{ SyntaxKind.Star, ExpressionPrecedence.Addition },

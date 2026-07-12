@@ -1,17 +1,19 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Annotation;
 
-public sealed class AnnotationPreparingResult : ISourceStageResult, IStageResultPerformance
+public sealed class AnnotationPreparingResult : ISourceStageResult, IStageResultDiagnostics, IStageResultPerformance
 {
 	#region Properties
 	public string Stage => "annotation_preparing";
 	public ISourceFile Source => Tree.Source;
+	public IDiagnosticBag Diagnostics { get; }
 	public IPerformanceResult Performance { get; }
 	public IAnnotatedSyntaxTree Tree { get; }
 	#endregion
 
 	#region Constructors
-	public AnnotationPreparingResult(IPerformanceResult performance, IAnnotatedSyntaxTree tree)
+	public AnnotationPreparingResult(IDiagnosticBag diagnostics, IPerformanceResult performance, IAnnotatedSyntaxTree tree)
 	{
+		Diagnostics = diagnostics;
 		Performance = performance;
 		Tree = tree;
 	}
@@ -36,7 +38,7 @@ public sealed class ParallelAnnotationPreparingResult : IParallelStageResult<Ann
 	#endregion
 }
 
-public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter
+public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, IDiagnosticProvider
 {
 	#region Nested types
 	private readonly struct Scope(AnnotationPreparer resolver) : IDisposable
@@ -64,7 +66,9 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter
 	#endregion
 
 	#region Properties
+	public string Name => "annotation_preparer";
 	private ISourceFile Source { get; }
+	private DiagnosticBag Diagnostics { get; } = [];
 	private ISymbolScope BaseScope { get; }
 	private ISymbolScope CurrentScope { get; set; }
 	#endregion
@@ -86,7 +90,7 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter
 			AnnotationPreparer preparer = new(semantic.Source, baseScope);
 			IAnnotatedSyntaxTree annotated = preparer.Convert(semantic);
 
-			return new(performance, annotated);
+			return new(preparer.Diagnostics, performance, annotated);
 		}
 	}
 	public static ParallelAnnotationPreparingResult Prepare(ISymbolScope baseScope, IReadOnlyCollection<ISemanticSyntaxTree> trees)
@@ -139,7 +143,14 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter
 	{
 		using (WithValue(ref _currentCallableParameterIndex, 0))
 		using (WithValue(ref _currentCallable, semantic.Callable))
-			return base.ConvertCore(semantic);
+		{
+			AnnotatedFunctionCallExpressionSyntax call = base.ConvertCore(semantic);
+
+			foreach (IAnnotatedFunctionArgumentSyntax argument in call.Arguments.Values)
+				Validate(argument);
+
+			return call;
+		}
 	}
 	protected override AnnotatedRegularFunctionArgumentSyntax ConvertCore(ISemanticRegularFunctionArgumentSyntax semantic)
 	{
@@ -160,6 +171,40 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter
 			_currentCallableParameterIndex++;
 
 		return new(name, separator, value, parameter);
+	}
+	#endregion
+
+	#region Function validation methods
+	private void Validate(IAnnotatedFunctionArgumentSyntax argument)
+	{
+		if (argument is IAnnotatedRegularFunctionArgumentSyntax regular)
+			Validate(regular);
+		else if (argument is IAnnotatedNamedFunctionArgumentSyntax named)
+			Validate(named);
+		else
+			ThrowHelper.ThrowArgumentException(nameof(argument), $"Unknown function argument type ({argument.GetType().Name}).");
+	}
+	private void Validate(IAnnotatedRegularFunctionArgumentSyntax argument)
+	{
+		if (argument.Parameter is null)
+			return;
+
+		IType valueType = argument.Value.ResultType;
+		IType targetType = argument.Parameter.Type;
+
+		if (ShouldReportIncompatibleType(valueType, targetType))
+			ReportIncompatibleParameterType(argument.Value, argument.Parameter);
+	}
+	private void Validate(IAnnotatedNamedFunctionArgumentSyntax argument)
+	{
+		if (argument.Parameter is null)
+			return;
+
+		IType valueType = argument.Value.ResultType;
+		IType targetType = argument.Parameter.Type;
+
+		if (ShouldReportIncompatibleType(valueType, targetType))
+			ReportIncompatibleParameterType(argument.Value, argument.Parameter);
 	}
 	#endregion
 
@@ -200,6 +245,64 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter
 	private void Update(ISemanticSyntaxNode oldDeclaration, IAnnotatedSyntaxNode newDeclaration)
 	{
 		CurrentScope.UpdateChild(oldDeclaration, newDeclaration);
+	}
+	#endregion
+
+	#region Diagnostic helpers
+	private bool ShouldReportIncompatibleType(IType valueType, IType targetType)
+	{
+		if (valueType.IsError || targetType.IsError)
+			return false; // Note(Nightowl): This would just result in cascade errors;
+
+		return valueType.CanAssignTo(targetType) is false;
+	}
+	private Diagnostic ReportIncompatibleParameterType(IAnnotatedExpressionSyntax value, ICallableTypeParameter parameter)
+	{
+		Diagnostic diagnostic = ReportIncompatibleType(value, $"An argument value of the type '", value.ResultType, "' cannot be assigned to the '", parameter, "' parameter.");
+		TryAddDeclaration(diagnostic, value);
+		TryAddDeclaration(diagnostic, parameter);
+
+		return diagnostic;
+	}
+	private Diagnostic ReportIncompatibleType(ISyntaxNode node, params IEnumerable<object?> message)
+	{
+		return Diagnostics
+			.BuildError(this, "incompatible_type")
+			.Add(node, lines => lines.AddLine(message));
+	}
+	private Diagnostic TryAddDeclaration(Diagnostic diagnostic, ISemanticExpressionSyntax value)
+	{
+		if (value is not ISemanticGetExpressionSyntax get)
+			return diagnostic;
+
+		ISyntaxNode? position = get.Symbol switch
+		{
+			IDeclaredFunctionParameter parameter => parameter.Declaration,
+			IDeclaredLocalVariable variable => variable.Declaration.Name,
+			IDeclaredFunction function => function.Declaration.Signature,
+
+			_ => null
+		};
+
+		ClassificationKind classification = get.Symbol.Classification ?? ClassificationKind.Identifier;
+
+		if (position is null)
+			return diagnostic;
+
+		diagnostic.Add(position, lines => lines.AddLine("This is where '", (get.Symbol.Name, classification), "' is declared."));
+
+		return diagnostic;
+	}
+	private Diagnostic TryAddDeclaration(Diagnostic diagnostic, ICallableTypeParameter parameter)
+	{
+		if (parameter is not ICallableFunctionParameter functionParameter)
+			return diagnostic;
+
+		if (functionParameter is not IDeclaredFunctionParameter declared)
+			return diagnostic;
+
+		diagnostic.Add(declared.Declaration, lines => lines.AddLine("This is where '", parameter, "' is declared."));
+		return diagnostic;
 	}
 	#endregion
 }

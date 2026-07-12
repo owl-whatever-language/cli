@@ -212,6 +212,7 @@ public class Interpreter
 			IAnnotatedCompoundAssignmentExpressionSyntax assignment => Evaluate(assignment),
 
 			IAnnotatedGetExpressionSyntax get => Evaluate(get),
+			IAnnotatedMemberAccessExpressionSyntax member => Evaluate(member),
 			IAnnotatedFunctionCallExpressionSyntax call => Evaluate(call),
 
 			_ => ThrowHelper.ThrowInvalidOperationException<InterpreterValue>($"The expression type '{expression.GetType().Name}' is not supported by the interpreter.")
@@ -225,6 +226,15 @@ public class Interpreter
 			IFunction function => new(function.AsCallable, function),
 
 			_ => ThrowHelper.ThrowInvalidOperationException<InterpreterValue>($"The get expression's symbol '{expression.Symbol.GetType().Name}' is not supported by the interpreter.")
+		};
+	}
+	private InterpreterValue Evaluate(IAnnotatedMemberAccessExpressionSyntax expression)
+	{
+		return expression.Symbol switch
+		{
+			BuiltinTypeProperty property => property.Getter.Invoke(Evaluate(expression.Expression)),
+
+			_ => ThrowHelper.ThrowInvalidOperationException<InterpreterValue>($"The member access expression's symbol '{expression.Symbol.GetType().Name}' is not supported by the interpreter.")
 		};
 	}
 	private InterpreterValue Evaluate(IAnnotatedStringLiteralExpressionSyntax expression)

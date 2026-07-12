@@ -1,5 +1,6 @@
 namespace OwlDomain.Owl.Code.Execution.Builtins;
 
+[DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
 internal sealed class BuiltinFunction : IFunction
 {
 	#region Nested types
@@ -59,6 +60,10 @@ internal sealed class BuiltinFunction : IFunction
 
 		return fragments;
 	}
+	#endregion
+
+	#region Helpers
+	private string DebuggerDisplay() => $"{nameof(BuiltinFunction)} {{ Name = ({Name}) }}";
 	#endregion
 }
 

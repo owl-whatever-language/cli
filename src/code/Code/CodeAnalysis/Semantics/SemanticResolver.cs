@@ -313,6 +313,36 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 	#region Expression methods
 	protected override SemanticEmptyExpressionSyntax ConvertCore(IDeclaredEmptyExpressionSyntax declared) => new(SpecialTypes.Error);
+	protected override SemanticMemberAccessExpressionSyntax ConvertCore(IDeclaredMemberAccessExpressionSyntax declared)
+	{
+		var expression = Convert(declared.Expression);
+		var dot = Convert(declared.Dot);
+
+		ISymbol? symbol = null;
+		if (expression.ResultType.IsNotError && declared.Name.Value is string name)
+		{
+			symbol = expression.ResultType.Properties.FirstOrDefault(p => p.Name == name);
+			if (symbol is null)
+			{
+				Diagnostics
+					.BuildError(this, "type_member_not_found")
+					.Add(declared.Name, lines => lines.AddLine("No member named '", declared.Name, "' could be found on the type '", expression.ResultType, "'."));
+			}
+		}
+
+		ClassificationKind? classification = symbol?.Classification ?? ClassificationKind.Identifier;
+
+		IType resultType = symbol switch
+		{
+			ITypeProperty property => property.Type,
+
+			null => SpecialTypes.Error,
+			_ => ThrowHelper.ThrowInvalidOperationException<IType>($"Unhandled type member symbol type ({symbol.GetType().Name}).")
+		};
+
+		var nameToken = Convert(declared.Name, classification, symbol);
+		return new(expression, dot, nameToken, symbol ?? SpecialSymbols.NotFound, resultType);
+	}
 	protected override SemanticBinaryExpressionSyntax ConvertCore(IDeclaredBinaryExpressionSyntax declared)
 	{
 		var left = Convert(declared.Left);
@@ -515,8 +545,14 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	#region Function call methods
 	protected override SemanticFunctionCallExpressionSyntax ConvertCore(IDeclaredFunctionCallExpressionSyntax declared)
 	{
+		SemanticFunctionCallExpressionSyntax call;
 		if (declared.Expression is IDeclaredGetExpressionSyntax get)
-			return ConvertFromGet(declared, get);
+		{
+			call = ConvertFromGet(declared, get);
+			ValidateArguments(call);
+
+			return call;
+		}
 
 		var expression = Convert(declared.Expression);
 		var start = Convert(declared.Start);
@@ -531,7 +567,10 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 				.Add(declared.Start, lines => lines.AddLine("The result type of the expression '", expression.ResultType, "' is not a type that can be called."));
 		}
 
-		return new(expression, start, arguments, end, callable, callable?.Return.Type ?? SpecialTypes.Error);
+		call = new(expression, start, arguments, end, callable, callable?.Return.Type ?? SpecialTypes.Error);
+		ValidateArguments(call);
+
+		return call;
 	}
 	private SemanticFunctionCallExpressionSyntax ConvertFromGet(IDeclaredFunctionCallExpressionSyntax declared, IDeclaredGetExpressionSyntax get)
 	{
@@ -575,6 +614,38 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		}
 
 		return Create(null, null);
+	}
+	private void ValidateArguments(SemanticFunctionCallExpressionSyntax call)
+	{
+		if (call.Callable is null)
+			return;
+
+		IReadOnlyList<ICallableTypeParameter> parameters = call.Callable.Parameters;
+		IReadOnlyList<ISemanticFunctionArgumentSyntax> arguments = call.Arguments.Values;
+
+		int min = Math.Min(parameters.Count, arguments.Count);
+		if (parameters.Count != arguments.Count)
+		{
+			ISyntaxNode node = arguments.ElementAtOrDefault(min + 1) ?? (ISyntaxNode)call.End;
+			string parameterPlural = parameters.Count is 1 ? "parameter" : "parameters";
+
+			if (call.Callable is ICallableFunction function)
+			{
+				Diagnostics
+					.BuildError(this, "argument_count_mismatch")
+					.Add(node, lines => lines.AddLine("The called function '", function.Function, $"' specifies {parameters.Count} {parameterPlural}, but only {arguments.Count} were provided."));
+			}
+			else
+			{
+				Diagnostics
+					.BuildError(this, "argument_count_mismatch")
+					.Add(node, lines => lines.AddLine("The called type '", call.Callable, $"' specifies {parameters.Count} {parameterPlural}, but only {arguments.Count} were provided."));
+			}
+		}
+
+		// Note(Nightowl):
+		// The rest of the validation is done in the annotation preparer.
+		// This is because the annotation preparer is what assigns which parameter the argument is for.
 	}
 	private IReadOnlyDictionary<ISymbol, ICallableType> GetCandidates(
 		IReadOnlyDictionary<ISymbol, ICallableType> allCallable,
