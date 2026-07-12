@@ -741,7 +741,18 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			TryParseNumberLiteral() ??
 			TryParseString() ??
 			TryParseInterpolatedString() ??
+			TryParseGroupedExpression() ??
 			TryParseGetExpression();
+	}
+	private IConcreteExpressionSyntax? TryParseGroupedExpression()
+	{
+		if (Match(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, out IConcreteToken? start) is false)
+			return null;
+
+		IConcreteExpressionSyntax expression = ParseExpression();
+		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, start, token => ReportExpectedMatchingBracket(token, start, "end the grouped expression"));
+
+		return new ConcreteGroupedExpressionSyntax(start, expression, end);
 	}
 	private IConcreteExpressionSyntax? TryParseGetExpression()
 	{

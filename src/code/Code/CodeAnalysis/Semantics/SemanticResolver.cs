@@ -438,7 +438,14 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	}
 
 	protected override SemanticTernaryExpressionSyntax ConvertCore(IDeclaredTernaryExpressionSyntax declared) => throw new NotImplementedException();
-	protected override SemanticGroupedExpressionSyntax ConvertCore(IDeclaredGroupedExpressionSyntax declared) => throw new NotImplementedException();
+	protected override SemanticGroupedExpressionSyntax ConvertCore(IDeclaredGroupedExpressionSyntax declared)
+	{
+		var start = Convert(declared.Start);
+		var expression = Convert(declared.Expression);
+		var end = Convert(declared.End);
+
+		return new(start, expression, end, expression.ResultType);
+	}
 	protected override SemanticBooleanLiteralExpressionSyntax ConvertCore(IDeclaredBooleanLiteralExpressionSyntax declared)
 	{
 		IType? type = CoreScope.Bool;

@@ -212,6 +212,7 @@ public class Interpreter
 			IAnnotatedCompoundAssignmentExpressionSyntax assignment => Evaluate(assignment),
 
 			IAnnotatedGetExpressionSyntax get => Evaluate(get),
+			IAnnotatedGroupedExpressionSyntax grouped => Evaluate(grouped.Expression),
 			IAnnotatedMemberAccessExpressionSyntax member => Evaluate(member),
 			IAnnotatedFunctionCallExpressionSyntax call => Evaluate(call),
 
