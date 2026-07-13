@@ -227,6 +227,19 @@ public class Interpreter
 		BuiltinFunction operation = (BuiltinFunction)expression.Operation;
 
 		InterpreterValue left = Evaluate(expression.Left);
+
+		// Note(Nightowl): A little cheat-y for short-circuiting;
+		if (expression.Operator.Kind == SyntaxKind.DoubleAmpersand) // and
+		{
+			if (left.Value is CoreBuiltins.Bool l && l.Value is false)
+				return left;
+		}
+		else if (expression.Operator.Kind == SyntaxKind.DoublePipe) // or
+		{
+			if (left.Value is CoreBuiltins.Bool l && l.Value)
+				return left;
+		}
+
 		InterpreterValue right = Evaluate(expression.Right);
 
 		InterpreterValue result = operation.Execute(Context, [left, right]);

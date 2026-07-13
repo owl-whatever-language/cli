@@ -9,6 +9,7 @@ internal partial class StandardBuiltins
 	[Name("print")] public static void Print(Text value) => Console.Write(value.ToString());
 	[Name("print")] public static void Print(Bool value) => Console.Write(value.ToString());
 	[Name("print")] public static void Print(Int value) => Console.Write(value.ToString());
+	[Name("print")] public static void Print(UInt value) => Console.Write(value.ToString());
 	[Name("print")] public static void Print(Num value) => Console.Write(value.ToString());
 	#endregion
 
@@ -16,6 +17,7 @@ internal partial class StandardBuiltins
 	[Name("println")] public static void Println(Text value) => Console.WriteLine(value.ToString());
 	[Name("println")] public static void Println(Bool value) => Console.WriteLine(value.ToString());
 	[Name("println")] public static void Println(Int value) => Console.WriteLine(value.ToString());
+	[Name("println")] public static void Println(UInt value) => Console.Write(value.ToString());
 	[Name("println")] public static void Println(Num value) => Console.WriteLine(value.ToString());
 	[Name("println")] public static void Println() => Console.WriteLine();
 	#endregion
@@ -39,11 +41,13 @@ internal partial class StandardBuiltins
 		context.AddFunction<Text>("print", "value", Print);
 		context.AddFunction<Bool>("print", "value", Print);
 		context.AddFunction<Int>("print", "value", Print);
+		context.AddFunction<UInt>("print", "value", Print);
 		context.AddFunction<Num>("print", "value", Print);
 
 		context.AddFunction<Text>("println", "value", Println);
 		context.AddFunction<Bool>("println", "value", Println);
 		context.AddFunction<Int>("println", "value", Println);
+		context.AddFunction<UInt>("println", "value", Println);
 		context.AddFunction<Num>("println", "value", Println);
 		context.AddFunction("println", Println);
 

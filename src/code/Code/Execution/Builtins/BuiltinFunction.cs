@@ -19,6 +19,10 @@ internal sealed class BuiltinFunction : IFunction
 	#region Constructors
 	public BuiltinFunction(string name, IReadOnlyList<BuiltinFunctionParameter> parameters, BuiltinFunctionReturn @return, ExecuteDelegate execute)
 	{
+		char first = name.First();
+		if (first == char.ToUpper(first) && Enum.TryParse<OperatorKind>(name, out _) is false)
+			ThrowHelper.ThrowInvalidOperationException($"Functions should be camelCase, but instead got ({name}).");
+
 		Name = name;
 		Parameters = parameters;
 		Return = @return;

@@ -18,6 +18,10 @@ internal class BuiltinTypeProperty : ITypeProperty
 	#region Constructors
 	public BuiltinTypeProperty(IType declaringType, IType type, string name, GetPropertyDelegate getter)
 	{
+		char first = name.First();
+		if (first != char.ToUpper(first))
+			ThrowHelper.ThrowInvalidOperationException($"Properties should be PascalCase, but instead got ({name}).");
+
 		DeclaringType = declaringType;
 		Type = type;
 		Name = name;

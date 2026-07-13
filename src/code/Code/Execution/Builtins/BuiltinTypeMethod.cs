@@ -14,6 +14,10 @@ internal class BuiltinTypeMethod : ITypeMethod
 	#region Constructors
 	public BuiltinTypeMethod(IType declaringType, BuiltinFunction function)
 	{
+		char first = function.Name.First();
+		if (first == char.ToUpper(first))
+			ThrowHelper.ThrowInvalidOperationException($"Methods should be camelCase, but instead got ({function.Name}).");
+
 		DeclaringType = declaringType;
 		Function = function;
 	}
