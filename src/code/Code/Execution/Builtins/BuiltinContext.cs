@@ -269,6 +269,48 @@ internal sealed class BuiltinContext
 	#endregion
 
 	#region Method methods
+	public void AddMethod<TDeclaring>(string name, Action<TDeclaring> callback)
+	{
+		BuiltinType declaringType = _lookup[typeof(TDeclaring)];
+
+		InterpreterValue Callback(IExecutionContext context, IReadOnlyList<InterpreterValue> values)
+		{
+			TDeclaring instance = (TDeclaring)values[0].Value!;
+			callback.Invoke(instance);
+
+			return InterpreterValue.Void;
+		}
+
+		BuiltinFunction function = new(name, [], new(SpecialTypes.Void), Callback);
+		BuiltinTypeMethod method = new(declaringType, function);
+
+		declaringType.Members.Add(method);
+	}
+	public void AddMethod<TDeclaring, T1>(string name, string param1, Action<TDeclaring, T1> callback)
+	{
+		BuiltinType declaringType = _lookup[typeof(TDeclaring)];
+
+		InterpreterValue Callback(IExecutionContext context, IReadOnlyList<InterpreterValue> values)
+		{
+			TDeclaring instance = (TDeclaring)values[0].Value!;
+			callback.Invoke(
+				instance,
+				(T1)values[1].Value!
+			);
+
+			return InterpreterValue.Void;
+		}
+
+		IReadOnlyList<BuiltinFunctionParameter> parameters = Convert([
+			(typeof(T1), param1)
+		]);
+
+		BuiltinFunction function = new(name, parameters, new(SpecialTypes.Void), Callback);
+		BuiltinTypeMethod method = new(declaringType, function);
+
+		declaringType.Members.Add(method);
+	}
+
 	public void AddMethod<TDeclaring, TOut>(string name, Func<TDeclaring, TOut> callback)
 	{
 		BuiltinType declaringType = _lookup[typeof(TDeclaring)];
