@@ -1,0 +1,33 @@
+// This is an example of how to use OWL's *temporary* file IO.
+// This IO system is definitely going to change, it was only implemented
+// temporarily to have something to mess around with for the v0.0.1 release.
+
+// Create a new temporary directory
+Path temp = newTempDirectory();
+
+// Create a sub-directory called test.
+Path test = temp.createDirectory("test");
+
+// Let's see what the directory path actually is.
+println($"Test directory: {test}");
+
+// Get a new path pointing to a specific child in the directory.
+// Path file1 = test.getChild("file1.txt"); would also work.
+Path file1 = test / "file1.txt";
+
+println($"Writing to: {file1}");
+println(); // Just some nice spacing in the output.
+
+// Replace the entire file with the given text.
+file1.writeText("Hello there!");
+
+// Let's read it back now.
+text contents = file1.readText();
+
+// Remember OWL treats text as grapheme clusters.
+// If you modify the example to have emojis and such, the length may surprise you a little.
+println($"Length: {contents.Length}");
+println($"Content: {contents}");
+
+// We should clean up out temp directory here just to be nice.
+// However I felt a bit scared about adding a delete function right now xD.

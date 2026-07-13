@@ -562,6 +562,14 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			return call;
 		}
 
+		if (declared.Expression is IDeclaredMemberAccessExpressionSyntax access)
+		{
+			call = ConvertFromMemberAccess(declared, access);
+			ValidateArguments(call);
+
+			return call;
+		}
+
 		var expression = Convert(declared.Expression);
 		var start = Convert(declared.Start);
 		var arguments = Convert(declared.Arguments);
@@ -580,48 +588,87 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return call;
 	}
+	private SemanticFunctionCallExpressionSyntax ConvertFromMemberAccess(IDeclaredFunctionCallExpressionSyntax declared, IDeclaredMemberAccessExpressionSyntax access)
+	{
+		var start = Convert(declared.Start);
+		var arguments = Convert(declared.Arguments);
+		var end = Convert(declared.End);
+
+		ISemanticExpressionSyntax expression = Convert(access.Expression);
+		var dot = Convert(access.Dot);
+
+		ISymbol? symbol = null;
+		ICallableType? callable = null;
+
+		if (expression.ResultType.IsNotError)
+		{
+			ISymbolGroup symbols = GetAll(expression.ResultType, access.Name);
+			(symbol, callable) = SelectFunction(arguments.Values, symbols, start);
+		}
+
+		var name = Convert(access.Name, symbol?.Classification ?? ClassificationKind.Identifier, symbol);
+		var semanticAccess = new SemanticMemberAccessExpressionSyntax(
+			expression,
+			dot,
+			name,
+			symbol ?? SpecialSymbols.NotFound,
+			callable ?? (IType)SpecialTypes.Error);
+
+		return new(semanticAccess, start, arguments, end, callable, callable?.Return.Type ?? SpecialTypes.Error);
+	}
 	private SemanticFunctionCallExpressionSyntax ConvertFromGet(IDeclaredFunctionCallExpressionSyntax declared, IDeclaredGetExpressionSyntax get)
 	{
 		var start = Convert(declared.Start);
 		var arguments = Convert(declared.Arguments);
 		var end = Convert(declared.End);
 
-		SemanticFunctionCallExpressionSyntax CreateFromPair(KeyValuePair<ISymbol, ICallableType> pair) => Create(pair.Key, pair.Value);
-		SemanticFunctionCallExpressionSyntax Create(ISymbol? symbol, ICallableType? callable)
-		{
-			symbol ??= SpecialSymbols.NotFound;
-
-			var name = Convert(get.Name, symbol.Classification ?? ClassificationKind.Identifier, symbol);
-			SemanticGetExpressionSyntax semanticGet = new(name, symbol, callable ?? (IType)SpecialTypes.Error);
-			return new(semanticGet, start, arguments, end, callable, callable?.Return.Type ?? SpecialTypes.Error);
-		}
-
 		ISymbolGroup symbols = GetAll(get.Name);
-		if (symbols.Count is 0) // Note(Nightowl): Error reported by GetAll;
-			return Create(null, null);
+		(ISymbol? symbol, ICallableType? callable) = SelectFunction(arguments.Values, symbols, start);
+
+		var name = Convert(get.Name, symbol?.Classification ?? ClassificationKind.Identifier, symbol);
+		SemanticGetExpressionSyntax semanticGet = new(name, symbol ?? SpecialSymbols.NotFound, callable ?? (IType)SpecialTypes.Error);
+
+		return new(semanticGet, start, arguments, end, callable, callable?.Return.Type ?? SpecialTypes.Error);
+	}
+	private (ISymbol? symbol, ICallableType? callable) SelectFunction(
+		IReadOnlyList<ISemanticFunctionArgumentSyntax> arguments,
+		ISymbolGroup symbols,
+		ISemanticSyntaxNode errorOn)
+	{
+		if (symbols.Count is 0)
+		{
+			// Note(Nightowl): Already reported when grabbing the symbols;
+			return (null, null);
+		}
 
 		IReadOnlyDictionary<ISymbol, ICallableType> allCallable = GetCallable(symbols);
 		if (allCallable.Count is 1)
-			return CreateFromPair(allCallable.First());
+		{
+			var first = allCallable.Single();
+			return (first.Key, first.Value);
+		}
 
-		IReadOnlyDictionary<ISymbol, ICallableType> candidates = GetCandidates(allCallable, arguments.Values);
+		IReadOnlyDictionary<ISymbol, ICallableType> candidates = GetCandidates(allCallable, arguments);
 		if (candidates.Count is 1)
-			return CreateFromPair(candidates.First());
+		{
+			var first = candidates.Single();
+			return (first.Key, first.Value);
+		}
 
 		if (candidates.Count is 0)
 		{
 			Diagnostics
 				.BuildError(this, "no_suitable_callable")
-				.Add(start, lines => lines.AddLine("Couldn't figure out a suitable target to call."));
+				.Add(errorOn, lines => lines.AddLine("Couldn't figure out a suitable target to call."));
 		}
 		else
 		{
 			Diagnostics
 				.BuildError(this, "callable_ambiguity")
-				.Add(start, lines => lines.AddLine("There were several suitable targets to call, but they couldn't be disambiguated."));
+				.Add(errorOn, lines => lines.AddLine("There were several suitable targets to call, but they couldn't be disambiguated."));
 		}
 
-		return Create(null, null);
+		return (null, null);
 	}
 	private void ValidateArguments(SemanticFunctionCallExpressionSyntax call)
 	{
@@ -726,6 +773,9 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 				ILocalVariable variable => variable.Type as ICallableType,
 				IFunctionParameter parameter => parameter.Type as ICallableType,
 
+				ITypeProperty property => property.Type as ICallableType,
+				ITypeMethod method => method.Function.AsCallable,
+
 				_ => null
 			};
 
@@ -791,8 +841,24 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		ISymbolGroup group = CurrentScope.GetAll(name);
 		if (group.Count is 0)
-		{// Note(Nightowl): Could maybe do name similarity checking here to make suggestions as extra lines;
+		{
+			// Note(Nightowl): Could maybe do name similarity checking here to make suggestions as extra lines;
+			Diagnostics
+				.BuildError(this, "type_member_not_found")
+				.Add(token, lines => lines.AddLine($"No accessible type member named '", token, "' could be found."));
+		}
 
+		return group;
+	}
+	private ISymbolGroup GetAll(IType type, ISyntaxToken token)
+	{
+		if (token.Value is not string name) // Note(Nightowl): Invalid names will have already been reported during parsing;
+			return new SymbolGroup();
+
+		ISymbolGroup group = type.Members.Where(m => m.Name == name).ToGroup();
+		if (group.Count is 0)
+		{
+			// Note(Nightowl): Could maybe do name similarity checking here to make suggestions as extra lines;
 			Diagnostics
 				.BuildError(this, "symbol_not_found")
 				.Add(token, lines => lines.AddLine($"No accessible symbol named '", token, "' could be found."));

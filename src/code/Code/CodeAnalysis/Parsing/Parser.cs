@@ -295,20 +295,9 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	}
 	private IConcreteStatementSyntax? TryParseVariableDeclaration()
 	{
-		bool isNextOperator;
-		if (Next is not null)
-		{
-			SyntaxKind kind = Next.Kind;
-			isNextOperator =
-				kind == SyntaxKind.OpenBracket || // call
-				SyntaxKind.BinaryOperators.Contains(kind)
-			;
-		}
-		else
-			isNextOperator = false;
-
-		if (Current?.Kind == SyntaxKind.Identifier && isNextOperator)
-			return TryParseExpressionStatement();
+		// Todo(Nightowl): Currently this is the easiest approach, but parser needs to be able to distinguish handle the ambiguity better;
+		if ((Current?.Kind == SyntaxKind.Identifier && Next?.Kind == SyntaxKind.Identifier) is false)
+			return null;
 
 		if (TryParseType(out IConcreteTypeSyntax? type) is false)
 			return null;
@@ -660,12 +649,18 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	}
 	private IConcreteTypeSyntax? TryParseNestedType(IConcreteTypeSyntax type)
 	{
-		if (Match(SyntaxKind.Period, ClassificationKind.Punctuation, out IConcreteToken? period) is false)
-			return null;
+		return null;
 
-		IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Type, token => ReportExpectedSimple(token, "type_name", "Expected the name of the nested type here."));
+		// Note(Nightowl): Nested types are not yet a thing because the parser is ambiguous for them;
 
-		return new ConcreteNestedTypeSyntax(type, period, name);
+		/*
+			if (Match(SyntaxKind.Period, ClassificationKind.Punctuation, out IConcreteToken? period) is false)
+				return null;
+
+			IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Type, token => ReportExpectedSimple(token, "type_name", "Expected the name of the nested type here."));
+
+			return new ConcreteNestedTypeSyntax(type, period, name);
+		*/
 	}
 	private IConcreteTypeSyntax? TryParseRegularType()
 	{

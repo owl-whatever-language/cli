@@ -21,6 +21,10 @@ internal partial class StandardBuiltins
 		public Path(string value) => Value = TrimEnd(value);
 		#endregion
 
+		#region Methods
+		public override string ToString() => Value;
+		#endregion
+
 		#region Helpers
 		[Ignore]
 		private static string TrimEnd(string value)
@@ -51,7 +55,24 @@ internal partial class StandardBuiltins
 			return new(left + right);
 		}
 
-		public static Path Divide(Path value, Text child)
+		public static Path Divide(Path value, Text child) => GetChild(value, child);
+		#endregion
+
+		#region Functions
+		[Name("createPath")] public static Path PathFrom(Text value) => new(TrimEnd(value.Value));
+		[Name("getCurrentDirectory")] public static Path GetCurrentDirectory() => new(Environment.CurrentDirectory);
+		[Name("newTempDirectory")]
+		public static Path NewTempDirectory()
+		{
+			DirectoryInfo directory = Directory.CreateTempSubdirectory("owl.interpreter.");
+			return new(directory.FullName);
+		}
+		#endregion
+
+		#region Methods
+		[Method("toText")] public static Text ToText(Path value) => new(value.Value);
+		[Method("getChild")]
+		public static Path GetChild(Path value, Text child)
 		{
 			string left = TrimEnd(value.Value);
 			string right = Trim(child.Value);
@@ -59,15 +80,6 @@ internal partial class StandardBuiltins
 			string result = IOPath.Combine(left, right);
 			return new(result);
 		}
-		#endregion
-
-		#region Functions
-		[Name("createPath")] public static Path PathFrom(Text value) => new(TrimEnd(value.Value));
-		[Name("getCurrentPath")] public static Path GetCurrentPath() => new(Environment.CurrentDirectory);
-		#endregion
-
-		#region Methods
-		[Method("toText")] public static Text ToText(Path value) => new(value.Value);
 		[Method("getFull")] public static Path GetFull(Path value) => new(IOPath.GetFullPath(value.Value));
 		[Method("getFull")] public static Path GetFull(Path value, Path @base) => new(IOPath.GetFullPath(value.Value, @base.Value));
 		[Method("getRelative")] public static Path GetRelative(Path value, Path @base) => new(IOPath.GetRelativePath(@base.Value, value.Value));
@@ -100,7 +112,23 @@ internal partial class StandardBuiltins
 			CreateDirectory(parent);
 		}
 		[Method("createDirectory")] public static void CreateDirectory(Path value) => Directory.CreateDirectory(value.Value);
+		[Method("createDirectory")]
+		public static Path CreateDirectory(Path value, Text child)
+		{
+			Path path = Divide(value, child);
+			CreateDirectory(path);
+
+			return path;
+		}
 		[Method("createFile")] public static void CreateFile(Path value) => WriteText(value, new(string.Empty));
+		[Method("createFile")]
+		public static Path CreateFile(Path value, Text child)
+		{
+			Path path = Divide(value, child);
+			CreateFile(path);
+
+			return path;
+		}
 		#endregion
 
 		#region Properties
@@ -152,7 +180,7 @@ internal partial class StandardBuiltins
 	[Ignore]
 	public static void Resolve(BuiltinContext context)
 	{
-		context.AddType<string, Path>("path", b => new(b));
+		context.AddType<string, Path>("Path", b => new(b));
 
 		ResolveFunctions(context);
 
@@ -199,11 +227,13 @@ internal partial class StandardBuiltins
 
 		#region Functions
 		context.AddFunction<Text, Path>("createPath", "value", Path.PathFrom);
-		context.AddFunction("getCurrentPath", Path.GetCurrentPath);
+		context.AddFunction("getCurrentDirectory", Path.GetCurrentDirectory);
+		context.AddFunction("newTempDirectory", Path.NewTempDirectory);
 		#endregion
 
 		#region Methods
 		context.AddMethod<Path, Text>("toText", Path.ToText);
+		context.AddMethod<Path, Text, Path>("getChild", "child", Path.GetChild);
 		context.AddMethod<Path, Path>("getFull", Path.GetFull);
 		context.AddMethod<Path, Path, Path>("getFull", "base", Path.GetFull);
 		context.AddMethod<Path, Path>("getParent", Path.GetParent);
@@ -213,7 +243,9 @@ internal partial class StandardBuiltins
 		context.AddMethod<Path, Text>("appendText", "contents", Path.AppendText);
 		context.AddMethod<Path>("ensureParentExists", Path.EnsureParentExists);
 		context.AddMethod<Path>("createDirectory", Path.CreateDirectory);
+		context.AddMethod<Path, Text, Path>("createDirectory", "child", Path.CreateDirectory);
 		context.AddMethod<Path>("createFile", Path.CreateFile);
+		context.AddMethod<Path, Text, Path>("createFile", "child", Path.CreateFile);
 		#endregion
 
 		#region Properties

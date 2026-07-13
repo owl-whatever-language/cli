@@ -30,7 +30,7 @@ partial class MermaidControlFlow
 		#region Methods
 		public void Print(string outputPath)
 		{
-			DirectoryInfo temp = Directory.CreateTempSubdirectory("owl.mermaid.cfg");
+			DirectoryInfo temp = Directory.CreateTempSubdirectory("owl.mermaid.cfg.");
 
 
 			List<string> args =
