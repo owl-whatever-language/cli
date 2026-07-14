@@ -148,3 +148,31 @@ public sealed class DiagnosticAnnotationCollection : List<IDiagnosticAnnotation>
 	public DiagnosticAnnotationCollection(IEnumerable<IDiagnosticAnnotation> annotations) : base(annotations) { }
 	#endregion
 }
+
+public static class IDiagnosticAnnotationExtensions
+{
+	extension(IDiagnosticAnnotation annotation)
+	{
+		#region Properties
+		public bool IsPositionSpecific
+		{
+			get
+			{
+				if (annotation.Position == default)
+					return false;
+
+				if (annotation.Node is null or ISyntaxToken)
+					return true;
+
+				if (annotation.Position.Start == annotation.Position.End)
+				{
+					// Note(Nightowl): Pretty much exclusively used for reporting missing syntax, which is position specific;
+					return true;
+				}
+
+				return false;
+			}
+		}
+		#endregion
+	}
+}

@@ -130,8 +130,9 @@ public sealed class DiagnosticSourceDisplay
 		TrimIrrelevant();
 		SnipIrrelevantGroups();
 		TrimEndComments();
-		AttachAnnotations();
-		AttachDiagnostics();
+		//AttachAnnotations();
+		//AttachDiagnostics();
+		AttachLineAnnotations();
 		AttachSourceDiagnostics();
 	}
 	public void ApplyDim()
@@ -144,8 +145,24 @@ public sealed class DiagnosticSourceDisplay
 
 		foreach (TextFragmentLine line in _output)
 		{
+			// Todo(Nightowl): Only just noticed this again, does this actually need to be .Dim or should it be .Snipped?
+
 			if (line.IsSnipped)
 				line.AddClassification(ClassificationKind.Dim);
+		}
+
+		foreach (TextFragmentLine line in _output)
+		{
+			if (line.Line is not null)
+				continue;
+
+			line.Replace(f =>
+			{
+				if (f.Classifications.Any(c => c == ClassificationKind.Margin))
+					return f.With(ClassificationKind.Dim);
+
+				return f;
+			});
 		}
 	}
 	public TextFragmentLineCollection GetLines() => _output;
@@ -220,6 +237,199 @@ public sealed class DiagnosticSourceDisplay
 	#endregion
 
 	#region Attach methods
+	public void AttachLineAnnotations()
+	{
+		foreach (LineInfo info in _lines.Values)
+		{
+			if (info.Diagnostics.Count is 0 && info.Annotations.Count is 0)
+				continue;
+
+			AttachLineAnnotations(info);
+		}
+	}
+	private void AttachLineAnnotations(LineInfo info)
+	{
+		TextFragmentLine? target = _output.TryGetLineAt(info.Line);
+		Debug.Assert(target is not null);
+
+		int diagnosticCount = info.Diagnostics.Count;
+		int annotationCount = info.Annotations.Count;
+		Debug.Assert(diagnosticCount > 0 || annotationCount > 0);
+
+		if (diagnosticCount is 1 && annotationCount is 0 && info.Diagnostics[0].IsPositionSpecific is false)
+		{
+			IDiagnostic diagnostic = info.Diagnostics[0];
+			TextFragmentLine line = PrepareShortLine(diagnostic, true, null);
+			target.AddRange(line);
+
+			return;
+		}
+
+		if (annotationCount is 1 && diagnosticCount is 0 && info.Annotations[0].IsPositionSpecific is false)
+		{
+			IDiagnosticAnnotation annotation = info.Annotations[0];
+			TextFragmentLine line = PrepareAnnotationMessage(annotation, true, null);
+			target.AddRange(line);
+
+			return;
+		}
+
+		if (diagnosticCount is 1 && info.Diagnostics[0].IsPositionSpecific is false)
+		{
+			IDiagnostic diagnostic = info.Diagnostics[0];
+			TextFragmentLine line = PrepareShortLine(diagnostic, true, null);
+			target.AddRange(line);
+		}
+
+		Dictionary<IDiagnosticAnnotation, TextFragmentLineCollection> messages = GetLineMessages(info);
+		IDiagnosticAnnotation[] order = messages.Keys.OrderByDescending(a => a.Position.Start).ToArray();
+
+		Dictionary<IDiagnosticAnnotation, TextFragmentCollection> prefixes = [];
+
+		foreach (IDiagnosticAnnotation annotation in order)
+			prefixes.Add(annotation, []);
+
+		int column = 1;
+
+		TextFragment? indent = target.Indentation;
+		if (indent is not null)
+		{
+			foreach (TextFragmentCollection prefix in prefixes.Values)
+				prefix.Add(indent.Value);
+
+			column += indent.Value.Text.Length;
+		}
+
+		for (int i = order.Length - 1; i >= 0; i--)
+		{
+			IDiagnosticAnnotation annotation = order[i];
+
+			ClassificationKind? classification = annotation.Message.SelectMany(l => l).Select(f => f.Classification).FirstOrDefault();
+			classification ??= ClassificationKind.Message;
+
+			Debug.Assert(annotation.Position.IsMultiline is false);
+
+			int toStart = annotation.Position.Start.Column - column;
+			int mid = (annotation.Position.End.Column - annotation.Position.Start.Column) / 2;
+			toStart += mid;
+
+			TextFragment space = new(" ", ClassificationKind.Whitespace);
+			TextFragment alignment = new(new(' ', toStart), ClassificationKind.Whitespace);
+			TextFragment underline = new("└", classification);
+			TextFragment pipe = new("│", classification);
+			column = annotation.Position.Start.Column + 1;
+
+			prefixes[annotation].AddRange(alignment, underline, space);
+
+			for (int j = i - 1; j >= 0; j--)
+				prefixes[order[j]].AddRange(alignment, pipe);
+		}
+
+		foreach (var pair in prefixes)
+			messages[pair.Key].Prefix(p => pair.Value);
+
+		int targetIndex = _output.IndexOf(target);
+
+		if (targetIndex < _output.Count - 1)
+		{
+			int nextLineLength = _output[targetIndex + 1].ToPlainText().Length;
+			int annotationPosition = order.Last().Position.Start.Column;
+
+			if (annotationPosition < nextLineLength)
+				_output.InsertAfterLine(info.Line, new(null));
+		}
+
+		foreach (IDiagnosticAnnotation annotation in order.Reverse())
+		{
+			TextFragmentLineCollection message = messages[annotation];
+			_output.InsertRangeAfterLine(info.Line, message);
+		}
+
+		TextFragmentLine overline = GetOverline(info, target);
+		_output.InsertAfterLine(info.Line, overline);
+	}
+	private Dictionary<IDiagnosticAnnotation, TextFragmentLineCollection> GetLineMessages(LineInfo info)
+	{
+		Dictionary<IDiagnosticAnnotation, TextFragmentLineCollection> messages = [];
+
+		foreach (IDiagnostic diagnostic in info.Diagnostics)
+		{
+			TextFragmentLineCollection message = PrepareMessage(diagnostic.Annotations[0], diagnostic.Kind);
+			messages.Add(diagnostic.Annotations[0], message);
+		}
+
+		foreach (IDiagnosticAnnotation annotation in info.Annotations)
+		{
+			if (messages.ContainsKey(annotation))
+				continue;
+
+			TextFragmentLineCollection message = PrepareMessage(annotation, null);
+			messages.Add(annotation, message);
+		}
+
+		return messages;
+	}
+	private TextFragmentLine GetOverline(LineInfo info, TextFragmentLine target)
+	{
+		PositionRange[] diagnosticPositions = info.Diagnostics
+			.Where(d => d.IsPositionSpecific)
+			.Select(d => d.Position)
+			.OrderBy(d => d.Start)
+			.ToArray();
+
+		PositionRange[] annotationPositions = info.Annotations
+			.Where(d => d.IsPositionSpecific)
+			.Select(d => d.Position)
+			.OrderBy(d => d.Start)
+			.ToArray();
+
+		PositionRange[] allPositions = diagnosticPositions
+			.Concat(annotationPositions)
+			.OrderBy(d => d.Start)
+			.ToArray();
+
+		List<TextFragment> fragments = [];
+
+		int column = 1;
+
+		if (target.Indentation is not null)
+		{
+			fragments.Add(target.Indentation.Value);
+			column += target.Indentation.Value.Text.Length;
+		}
+
+		foreach (PositionRange current in allPositions)
+		{
+			Debug.Assert(current.IsMultiline is false);
+
+			if (column < current.Start.Column)
+			{
+				TextFragment spacer = new(new(' ', current.Start.Column - column), ClassificationKind.Whitespace);
+				fragments.Add(spacer);
+				column = current.Start.Column;
+			}
+
+			IDiagnostic? diagnostic = info.Diagnostics.FirstOrDefault(d => d.Position == current);
+			ClassificationKind classification = diagnostic?.Kind.ToClassification() ?? ClassificationKind.Message;
+
+			string character = "─"; //diagnostic is not null ? Wavy : Underline;
+			Debug.Assert(character.Length is 1);
+
+			int length = Math.Max(1, current.End.Column - current.Start.Column);
+			char[] text = new char[length];
+			for (int i = 0; i < length; i++)
+				text[i] = character[0];
+
+			text[length / 2] = '┬';
+
+			column += text.Length;
+
+			TextFragment fragment = new(new(text), classification);
+			fragments.Add(fragment);
+		}
+
+		return new(null, fragments);
+	}
 	public void AttachDiagnostics()
 	{
 		foreach (LineInfo info in _lines.Values)
@@ -300,6 +510,32 @@ public sealed class DiagnosticSourceDisplay
 	#endregion
 
 	#region Helpers
+	private TextFragmentLineCollection PrepareMessage(IDiagnosticAnnotation annotation, DiagnosticKind? kind)
+	{
+		string symbolText =
+			(kind is null ? null : _styling.GetSymbol(kind.Value)) ??
+			_styling.GetSymbol(ClassificationKind.Diagnostic) ??
+			_styling.GetSymbol(ClassificationKind.Message) ?? "⯌";
+
+		TextFragment symbol = kind is null
+			? new($" {symbolText}", null, [ClassificationKind.Diagnostic, ClassificationKind.Message])
+			: new($" {symbolText}", null, kind.Value.ToClassification());
+
+		TextFragmentLineCollection lines = [];
+
+		foreach (ITextFragmentLine line in annotation.Message)
+		{
+			Debug.Assert(line.Line is null);
+
+			TextFragmentLine newLine = new(null);
+			newLine.AddRange(line);
+			newLine.Add(symbol);
+
+			lines.Add(newLine);
+		}
+
+		return lines;
+	}
 	private TextFragmentLine PrepareShortLine(IDiagnostic diagnostic, bool isSuffix, TextFragment? indent)
 	{
 		TextFragment prefix = GetDiagnosticFragment(diagnostic.Kind);
@@ -345,7 +581,7 @@ public sealed class DiagnosticSourceDisplay
 		string symbol =
 			_styling.GetSymbol(kind) ??
 			_styling.GetSymbol(ClassificationKind.Diagnostic) ??
-			_styling.GetSymbol(ClassificationKind.Message) ?? "//";
+			_styling.GetSymbol(ClassificationKind.Message) ?? "⯌";
 
 		TextFragment fragment = new($"{symbol} ", null, kind.ToClassification());
 		return fragment;
@@ -354,7 +590,7 @@ public sealed class DiagnosticSourceDisplay
 	{
 		string symbol =
 			_styling.GetSymbol(ClassificationKind.Diagnostic) ??
-			_styling.GetSymbol(ClassificationKind.Message) ?? "//";
+			_styling.GetSymbol(ClassificationKind.Message) ?? "/⯌";
 
 		TextFragment fragment = new($"{symbol} ", null, [ClassificationKind.Diagnostic, ClassificationKind.Message]);
 		return fragment;

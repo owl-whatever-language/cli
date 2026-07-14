@@ -21,7 +21,7 @@ public static class OwlStyling
 		styling
 			// Diagnostics
 			.Add(ClassificationKind.Diagnostic, StylingEffect.Italic)
-			.Add(ClassificationKind.Error, "#ff0000", StylingEffect.Italic | StylingEffect.Wavy)
+			.Add(ClassificationKind.Error, "#ff4747", StylingEffect.Italic | StylingEffect.Wavy)
 			.Add(ClassificationKind.Warning, "#ffaf00", StylingEffect.Italic | StylingEffect.Wavy)
 			.Add(ClassificationKind.Suggestion, "#a0a0a0", StylingEffect.Italic | StylingEffect.Dotted)
 			.Add(ClassificationKind.Hint, "#a0a0a0", StylingEffect.Italic)

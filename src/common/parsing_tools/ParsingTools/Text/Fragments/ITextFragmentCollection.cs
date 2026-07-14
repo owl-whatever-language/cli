@@ -31,7 +31,7 @@ public class TextFragmentCollection : List<TextFragment>, ITextFragmentCollectio
 
 	#region Constructors
 	public TextFragmentCollection() { }
-	public TextFragmentCollection(IEnumerable<TextFragment> collection) : base(collection) { }
+	public TextFragmentCollection(params IEnumerable<TextFragment> collection) : base(collection) { }
 	public TextFragmentCollection(int capacity) : base(capacity) { }
 	#endregion
 

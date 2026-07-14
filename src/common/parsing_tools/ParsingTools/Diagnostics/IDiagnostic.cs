@@ -182,3 +182,13 @@ public sealed class Diagnostic : IDiagnostic
 	private string DebuggerDisplay() => $"{nameof(Diagnostic)} {{ Message = ({ShortMessage.ToPlainText()}) }}";
 	#endregion
 }
+
+public static class IDiagnosticExtensions
+{
+	extension(IDiagnostic diagnostic)
+	{
+		#region Properties
+		public bool IsPositionSpecific => diagnostic.Annotations.FirstOrDefault()?.IsPositionSpecific ?? false;
+		#endregion
+	}
+}
