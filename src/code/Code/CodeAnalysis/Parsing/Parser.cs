@@ -226,10 +226,21 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	#endregion
 
 	#region Statement methods
-	private IConcreteToken ExpectStatementTerminator()
+	private IConcreteToken ExpectStatementTerminator(IConcreteSyntaxNode? value)
 	{
 		if (Match(SyntaxKind.Semicolon, ClassificationKind.Punctuation, out IConcreteToken? terminator))
 			return terminator;
+
+		if (value is not null && Previous?.Kind == SyntaxKind.StringText && value.Flatten().Any(t => t.IsFabricated))
+		{
+			// Note(Nightowl):
+			// Special handling for errors in interpolated strings;
+			// The fact that something was fabricated means we don't have to cascade with an error.
+
+			if (Previous.Value is string str && str.EndsWith(';'))
+				return Fabricate(SyntaxKind.Semicolon, ClassificationKind.Punctuation);
+
+		}
 
 		terminator = Fabricate(SyntaxKind.Semicolon, ClassificationKind.Punctuation);
 
@@ -290,7 +301,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			return null;
 
 
-		IConcreteToken terminator = ExpectStatementTerminator();
+		IConcreteToken terminator = ExpectStatementTerminator(expression);
 		return new ConcreteExpressionStatementSyntax(expression, terminator);
 	}
 	private IConcreteStatementSyntax? TryParseVariableDeclaration()
@@ -307,7 +318,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			ReportExpectedSimple(token, "equal_sign", "Expect an equal sign '", EqualSignFragment, "' between the variable name and its value."));
 
 		IConcreteExpressionSyntax value = ParseExpression();
-		IConcreteToken terminator = ExpectStatementTerminator();
+		IConcreteToken terminator = ExpectStatementTerminator(value);
 
 		return new ConcreteVariableDeclarationStatementSyntax(type, name, assignment, value, terminator);
 	}
@@ -333,12 +344,12 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		if (Current?.Kind != SyntaxKind.Semicolon)
 		{
 			IConcreteExpressionSyntax value = ParseExpression();
-			terminator = ExpectStatementTerminator();
+			terminator = ExpectStatementTerminator(value);
 
 			return new ConcreteValueReturnStatementSyntax(keyword, value, terminator);
 		}
 
-		terminator = ExpectStatementTerminator();
+		terminator = ExpectStatementTerminator(null);
 		return new ConcreteReturnStatementSyntax(keyword, terminator);
 	}
 	private IConcreteStatementSyntax? TryParseIfStatement()

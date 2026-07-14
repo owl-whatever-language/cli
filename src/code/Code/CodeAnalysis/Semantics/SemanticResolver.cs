@@ -1043,7 +1043,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			{
 				string typePlural = types.Count is 1 ? "type" : "types";
 
-				List<object?> values = [$"Unknown {kind} operator {op.Lexeme} for the {typePlural}: "];
+				List<object?> values = [$"Unknown {kind} operator ", op, $" for the {typePlural}: "];
 				for (int i = 0; i < types.Count; i++)
 				{
 					if (i > 0)

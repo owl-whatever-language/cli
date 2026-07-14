@@ -30,6 +30,23 @@ public sealed class LexingResult : ISourceStageResult, IStageResultDiagnostics, 
 
 public sealed class Lexer : BaseLexer, IDiagnosticProvider
 {
+	#region Nested types
+	private readonly struct StringErrorScope(Lexer lexer, bool set) : IDisposable
+	{
+		#region Methods
+		public void Dispose()
+		{
+			if (set)
+				lexer._stringErrors = null;
+		}
+		#endregion
+	}
+	#endregion
+
+	#region Fields
+	private int? _stringErrors;
+	#endregion
+
 	#region Properties
 	private static IReadOnlyDictionary<string, SyntaxKind> Keywords { get; } = SyntaxKind.AllKeywords.ToDictionary(s => s.Name);
 	public string Name => "lexer";
@@ -322,22 +339,30 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 		if (TryLexStringStart(out SyntaxToken? start) is false)
 			return false;
 
-		while (Text.HasRemaining)
+		using (StringScope())
 		{
-			if (Text.Current.IsLineBreak)
-				break;
+			while (Text.HasRemaining)
+			{
+				if (Text.Current.IsLineBreak)
+					break;
 
-			if (TryLexStringEnd())
-				return true;
+				if (TryLexStringEnd())
+					return true;
 
-			if (TryLexStringEscape() || TryLexStringText(false, '"', '\\'))
-				continue;
+				if (TryLexStringEscape() || TryLexStringText(false, '"', '\\'))
+					continue;
+			}
+
+			if (_stringErrors is 0)
+			{
+				_stringErrors++;
+
+				Diagnostics
+					.BuildError(this, "unclosed_string")
+					.Add(Source, Text.Position, lines => lines.AddLine("Line breaks are not allowed in string fragments. Use a quote mark '", ('"', ClassificationKind.String), "' to close the string."))
+					.Add(start, lines => lines.AddLine("Need to match this quote mark '", ('"', ClassificationKind.String), "'."));
+			}
 		}
-
-		Diagnostics
-			.BuildError(this, "unclosed_string")
-			.Add(Source, Text.Position, lines => lines.AddLine("Line breaks are not allowed in string fragments. Use a quote mark '", ('"', ClassificationKind.String), "' to close the string."))
-			.Add(start, lines => lines.AddLine("Need to match this quote mark '", ('"', ClassificationKind.String), "'."));
 
 		return true;
 	}
@@ -346,23 +371,29 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 		if (TryLexInterpolatedStringStart(out SyntaxToken? start) is false)
 			return false;
 
-		while (Text.HasRemaining)
+		using (StringScope())
 		{
-			if (Text.Current.IsLineBreak)
-				break;
+			while (Text.HasRemaining)
+			{
+				if (Text.Current.IsLineBreak)
+					break;
 
-			if (TryLexStringEnd())
-				return true;
+				if (TryLexStringEnd())
+					return true;
 
-			if (TryLexStringInterpolation() || TryLexStringEscape() || TryLexStringText(false, '"', '\\', '{'))
-				continue;
+				if (TryLexStringInterpolation() || TryLexStringEscape() || TryLexStringText(false, '"', '\\', '{'))
+					continue;
+			}
+
+			if (_stringErrors is 0)
+			{
+				_stringErrors++;
+				Diagnostics
+					.BuildError(this, "unclosed_string")
+					.Add(Source, Tokens.Last().Position.End, lines => lines.AddLine("Line breaks are not allowed in string fragments. Use a quote mark '", ('"', ClassificationKind.String), "' to close the string."))
+					.Add(start, lines => lines.AddLine("Need to match this quote mark '", ('"', ClassificationKind.String), "'."));
+			}
 		}
-
-		Diagnostics
-			.BuildError(this, "unclosed_string")
-			.Add(Source, Text.Position, lines => lines.AddLine("Line breaks are not allowed in string fragments. Use a quote mark '", ('"', ClassificationKind.String), "' to close the string."))
-			.Add(start, lines => lines.AddLine("Need to match this quote mark '", ('"', ClassificationKind.String), "'."));
-
 		return true;
 	}
 
@@ -504,6 +535,8 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 	}
 	private bool TryLexStringInterpolation()
 	{
+		Debug.Assert(_stringErrors is not null);
+
 		if (TryLexStringInterpolationStart(out SyntaxToken? start) is false)
 			return false;
 
@@ -518,10 +551,14 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 			LexTokenSequence();
 		}
 
-		Diagnostics
-			.BuildError(this, "unclosed_string_interpolation")
-			.Add(Source, Text.Position, lines => lines.AddLine("String value interpolation was not closed. Use a closing brace '", ("}", ClassificationKind.Punctuation), "' to end the interpolation."))
-			.Add(start, lines => lines.AddLine("Need to match this opening brace '", ("{", ClassificationKind.Punctuation), "'."));
+		if (_stringErrors is 0)
+		{
+			_stringErrors++;
+			Diagnostics
+				.BuildError(this, "unclosed_string_interpolation")
+				.Add(Source, Tokens.Last().Position.End, lines => lines.AddLine("String value interpolation was not closed. Use a closing brace '", ("}", ClassificationKind.Punctuation), "' to end the interpolation."))
+				.Add(start, lines => lines.AddLine("Need to match this opening brace '", ("{", ClassificationKind.Punctuation), "'."));
+		}
 
 		return true;
 	}
@@ -606,6 +643,19 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 		string value = GetValue().Trim();
 
 		return new SyntaxTrivia(SyntaxKind.Comment, new(start, Text.Position), lexeme, ClassificationKind.SinglelineComment, value);
+	}
+	#endregion
+
+	#region Helpers
+	private StringErrorScope StringScope()
+	{
+		if (_stringErrors is null)
+		{
+			_stringErrors = 0;
+			return new(this, true);
+		}
+
+		return new(this, false);
 	}
 	#endregion
 }
