@@ -1,5 +1,7 @@
 ﻿using System.CommandLine.Help;
+using OwlDomain.Owl.CLI.Actions.List;
 using OwlDomain.Owl.CLI.Actions.Meta;
+using OwlDomain.Owl.CLI.Actions.Run;
 
 RootCommand root = new("the OWL toolkit command line interface.");
 
@@ -19,7 +21,17 @@ root.CustomiseOption<HelpOption>(o =>
 
 root.SetAction(result =>
 {
-	return root.Parse("--help").Invoke();
+	return root.Parse([.. args, "--help"]).Invoke();
+});
+
+root.AddGroup(args, new Command("run", "General verb action for running things, such as examples.")
+{
+	new RunExample()
+});
+
+root.AddGroup(args, new Command("list", "General verb action for listing things, such as examples.")
+{
+	new ListExamples()
 });
 
 ParseResult result = root.Parse(args);

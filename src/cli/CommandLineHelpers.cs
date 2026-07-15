@@ -11,6 +11,16 @@ public static class CommandLineHelpers
 			foreach (T option in command.Options.OfType<T>())
 				callback.Invoke(option);
 		}
+
+		public void AddGroup(string[] args, Command group)
+		{
+			group.SetAction(parsing =>
+			{
+				command.Parse([.. args, "--help"]).Invoke();
+			});
+
+			command.Add(group);
+		}
 		#endregion
 	}
 }
