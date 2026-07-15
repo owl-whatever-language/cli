@@ -1,20 +1,26 @@
-﻿CommandApp app = new();
+﻿using System.CommandLine.Help;
+using OwlDomain.Owl.CLI.Actions.Meta;
 
-app.Configure(config =>
+RootCommand root = new("the OWL toolkit command line interface.");
+
+root.CustomiseOption<VersionOption>(o =>
 {
-	if (GitInfo.Version is not null)
-		config.SetApplicationVersion(GitInfo.Version);
-
-	config
-		.SetApplicationName("owl")
-		.AddCommandWithMeta<VersionCommand>()
-		.AddCommandWithMeta<RunCommand>();
-
-#if DEBUG
-	config
-		.PropagateExceptions()
-		.ValidateExamples();
-#endif
+	o.Aliases.Add("-v");
+	o.Description += ".";
+	o.Action = new CustomVersionAction();
 });
 
-return await app.RunAsync(args);
+root.CustomiseOption<HelpOption>(o =>
+{
+	o.Description += ".";
+	if (o.Action is HelpAction defaultHelp)
+		o.Action = new CustomHelpAction(defaultHelp);
+});
+
+root.SetAction(result =>
+{
+	return root.Parse("--help").Invoke();
+});
+
+ParseResult result = root.Parse(args);
+return result.Invoke();

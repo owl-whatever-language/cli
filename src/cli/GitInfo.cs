@@ -1,3 +1,5 @@
+using System.Reflection;
+
 namespace OwlDomain.Owl.CLI;
 
 public static class GitInfo
@@ -22,7 +24,7 @@ public static class GitInfo
 				.GetExecutingAssembly()
 				.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
 
-		Version = version?.InformationalVersion.Split('+').FirstOrDefault();
+		Version = "v" + version?.InformationalVersion.Split('+').FirstOrDefault();
 
 		Dictionary<string, string?> metadata = Assembly
 			.GetExecutingAssembly()

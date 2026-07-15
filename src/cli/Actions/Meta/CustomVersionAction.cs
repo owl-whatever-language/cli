@@ -1,20 +1,21 @@
-namespace OwlDomain.Owl.CLI.Commands.Meta;
+namespace OwlDomain.Owl.CLI.Actions.Meta;
 
-[DisplayName("version")]
-[Description("Provides more detailed version information than --version")]
-public sealed class VersionCommand : Command
+public class CustomVersionAction : SynchronousCommandLineAction
 {
 	#region Methods
-	protected override int Execute(CommandContext context, CancellationToken cancellationToken)
+	public override int Invoke(ParseResult parseResult)
 	{
-		AnsiConsole.MarkupLineInterpolated($"[gray]Version[/]: {GitInfo.Version ?? "<missing>"}");
+		AnsiConsole.WriteLine(GitInfo.Version ?? "<missing>");
+		AnsiConsole.WriteLine();
 
 		if (GitInfo.IsAvailable is false)
 		{
-			AnsiConsole.WriteLine();
 			AnsiConsole.MarkupLine("[italic bold]More detailed git information is unavailable.[/]");
 			return 0;
 		}
+
+		if (GitInfo.Version.IsWhiteSpace() is false)
+			AnsiConsole.MarkupLineInterpolated($"[gray]Version[/]: {GitInfo.Version}");
 
 		if (GitInfo.Branch.IsWhiteSpace() is false)
 			AnsiConsole.MarkupLineInterpolated($"[gray]Branch[/]: {GitInfo.Branch}");
@@ -22,9 +23,9 @@ public sealed class VersionCommand : Command
 		if (GitInfo.HashShort.IsWhiteSpace() is false)
 		{
 			if (GitInfo.HasChanges)
-				AnsiConsole.MarkupLineInterpolated($"[gray]Hash[/]: {GitInfo.HashShort} [italic gray](with local changes)[/]");
+				AnsiConsole.MarkupLineInterpolated($"[gray]Commit[/]: {GitInfo.HashShort} [italic gray](with local changes)[/]");
 			else
-				AnsiConsole.MarkupLineInterpolated($"[gray]Hash[/]: {GitInfo.HashShort}");
+				AnsiConsole.MarkupLineInterpolated($"[gray]Commit[/]: {GitInfo.HashShort}");
 		}
 
 		if (GitInfo.Date is not null)

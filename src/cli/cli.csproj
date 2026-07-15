@@ -17,6 +17,11 @@
 
 		<EnableNETAnalyzers>true</EnableNETAnalyzers>
 		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+		<PublishAot>true</PublishAot>
+
+		<IsAotCompatible Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net7.0'))">true</IsAotCompatible>
+		<IsTrimmable Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0'))">true</IsTrimmable>
 	</PropertyGroup>
 
 	<!-- Project references -->
@@ -28,7 +33,8 @@
 
 	<!-- Package references -->
 	<ItemGroup Label="packages">
-		<PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
+		<PackageReference Include="Spectre.Console" Version="0.57.2" />
+		<PackageReference Include="System.CommandLine" Version="2.0.10" />
 	</ItemGroup>
 
 	<!-- Embed git information -->
