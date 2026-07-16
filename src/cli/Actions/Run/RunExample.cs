@@ -31,14 +31,14 @@ public class RunExample : Command
 			if (Directory.Exists(directory) is false)
 			{
 				parsing.CommandResult.AddError("The example directory didn't exist.");
-				return;
+				return -1;
 			}
 
 			string? file = GetExampleFile(directory, name);
 			if (file is null)
 			{
 				parsing.CommandResult.AddError($"No example named '{name}' could be found.");
-				return;
+				return -1;
 			}
 
 			FileSystemSourceFile source = new(file);
@@ -73,17 +73,19 @@ public class RunExample : Command
 			IDiagnosticBag allDiagnostics = results.GetAllDiagnostics();
 			PrintDiagnosticCounts(allDiagnostics);
 
-			if (allDiagnostics.Count is 0)
-			{
-				AnsiConsole.MarkupLineInterpolated($"[grey italic]// Starting to interpret: {tree.Source.SimpleName}[/]");
-				Console.WriteLine();
+			if (allDiagnostics.HasErrors)
+				return -1;
 
-				InterpretingResult interpretingResult = Interpreter.Interpret(tree);
+			AnsiConsole.MarkupLineInterpolated($"[grey italic]// Starting to interpret: {tree.Source.SimpleName}[/]");
+			Console.WriteLine();
 
-				Console.WriteLine();
-				AnsiConsole.MarkupLine($"[grey italic]// Interpretation finished[/]");
-				Console.WriteLine();
-			}
+			InterpretingResult interpretingResult = Interpreter.Interpret(tree);
+
+			Console.WriteLine();
+			AnsiConsole.MarkupLine($"[grey italic]// Interpretation finished[/]");
+			Console.WriteLine();
+
+			return 0;
 		});
 	}
 	#endregion

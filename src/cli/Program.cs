@@ -24,7 +24,7 @@ root.SetAction(result =>
 	return root.Parse([.. args, "--help"]).Invoke();
 });
 
-root.AddGroup(args, new Command("run", "General verb action for running things, such as examples.")
+root.Add(new GeneralRunCommand()
 {
 	new RunExample()
 });
