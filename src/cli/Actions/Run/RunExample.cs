@@ -63,12 +63,7 @@ public class RunExample : Command
 			AnsiConsole.Write(panel);
 			AnsiConsole.WriteLine();
 
-			IRenderable? diagnosticExplanations = DiagnosticExplainer.Explain(context, results);
-			if (diagnosticExplanations is not null)
-			{
-				AnsiConsole.Write(diagnosticExplanations);
-				AnsiConsole.WriteLine();
-			}
+			Explain(context, results);
 
 			IDiagnosticBag allDiagnostics = results.GetAllDiagnostics();
 			PrintDiagnosticCounts(allDiagnostics);
@@ -85,12 +80,29 @@ public class RunExample : Command
 			AnsiConsole.MarkupLine($"[grey italic]// Interpretation finished[/]");
 			Console.WriteLine();
 
+			if (interpretingResult.Diagnostics.HasErrors)
+			{
+				Explain(context, interpretingResult);
+				PrintDiagnosticCounts(interpretingResult.Diagnostics);
+
+				return -1;
+			}
+
 			return 0;
 		});
 	}
 	#endregion
 
 	#region Helpers
+	private static void Explain(IAnalysisContext context, params IReadOnlyCollection<IStageResult> results)
+	{
+		IRenderable? explanations = DiagnosticExplainer.Explain(context, results);
+		if (explanations is not null)
+		{
+			AnsiConsole.Write(explanations);
+			AnsiConsole.WriteLine();
+		}
+	}
 	private static void PrintDiagnosticCounts(IDiagnosticBag diagnostics)
 	{
 		if (diagnostics.Count is 0)

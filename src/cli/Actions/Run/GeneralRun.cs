@@ -39,13 +39,7 @@ public class GeneralRunCommand : Command
 			AnalysisUpdateResult analysis = context.Update(added: [source]);
 
 			List<IStageResult> results = [builtinResult, analysis];
-
-			IRenderable? diagnosticExplanations = DiagnosticExplainer.Explain(context, results);
-			if (diagnosticExplanations is not null)
-			{
-				AnsiConsole.Write(diagnosticExplanations);
-				AnsiConsole.WriteLine();
-			}
+			Explain(context, results);
 
 			IDiagnosticBag allDiagnostics = results.GetAllDiagnostics();
 			PrintDiagnosticCounts(allDiagnostics);
@@ -58,7 +52,14 @@ public class GeneralRunCommand : Command
 			Debug.Assert(tree is not null);
 
 
-			_ = Interpreter.Interpret(tree);
+			InterpretingResult interpreting = Interpreter.Interpret(tree);
+			if (interpreting.Diagnostics.HasErrors)
+			{
+				Explain(context, interpreting);
+				PrintDiagnosticCounts(interpreting.Diagnostics);
+
+				return -1;
+			}
 
 			return 0;
 		});
@@ -66,6 +67,15 @@ public class GeneralRunCommand : Command
 	#endregion
 
 	#region Helpers
+	private static void Explain(IAnalysisContext context, params IReadOnlyCollection<IStageResult> results)
+	{
+		IRenderable? explanations = DiagnosticExplainer.Explain(context, results);
+		if (explanations is not null)
+		{
+			AnsiConsole.Write(explanations);
+			AnsiConsole.WriteLine();
+		}
+	}
 	private static void PrintDiagnosticCounts(IDiagnosticBag diagnostics)
 	{
 		if (diagnostics.Count is 0)

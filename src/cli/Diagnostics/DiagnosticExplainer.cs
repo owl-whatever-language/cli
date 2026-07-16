@@ -9,7 +9,7 @@ namespace OwlDomain.Owl.CLI.Diagnostics;
 public static class DiagnosticExplainer
 {
 	#region Functions
-	public static IRenderable? Explain(AnalysisContext context, IReadOnlyCollection<IStageResult> results)
+	public static IRenderable? Explain(IAnalysisContext context, params IReadOnlyCollection<IStageResult> results)
 	{
 		List<IRenderable> renderable = [];
 

@@ -21,7 +21,7 @@ public sealed class InterpretingResult : IStageResultPerformance, IStageResultDi
 	#endregion
 }
 
-public class Interpreter
+public class Interpreter : IDiagnosticProvider
 {
 	#region Nested types
 	private sealed class ExecutionContext : IExecutionContext { }
@@ -89,16 +89,31 @@ public class Interpreter
 		public InterpreterValue Value { get; } = value;
 		#endregion
 	}
+	private sealed class InterpreterException : Exception
+	{
+		#region Properties
+		public IAnnotatedSyntaxNode Node { get; }
+		#endregion
+
+		#region Constructors
+		public InterpreterException(IAnnotatedSyntaxNode node, Exception inner) : base(null, inner)
+		{
+			Node = node;
+		}
+		#endregion
+	}
 	#endregion
 
 	#region Properties
+	public string Name => "interpreter";
 	private DiagnosticBag Diagnostics { get; } = [];
 	private ValueScope Values { get; set; } = new(null);
 	private ExecutionContext Context { get; } = new();
+	private IAnnotatedSyntaxNode Node { get; set; }
 	#endregion
 
 	#region Constructors
-	private Interpreter() { }
+	private Interpreter(IAnnotatedSyntaxNode node) => Node = node;
 	#endregion
 
 	#region Functions
@@ -106,7 +121,7 @@ public class Interpreter
 	{
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
-			Interpreter interpreter = new();
+			Interpreter interpreter = new(tree.Document);
 			interpreter.InterpretTree(tree);
 
 			return new(interpreter.Diagnostics, performance);
@@ -117,7 +132,28 @@ public class Interpreter
 	#region Methods
 	private void InterpretTree(IAnnotatedSyntaxTree tree)
 	{
-		Interpret(tree.Document.Statements);
+		if (Debugger.IsAttached)
+		{
+			Interpret(tree.Document.Statements);
+			return;
+		}
+
+		try
+		{
+			Interpret(tree.Document.Statements);
+		}
+		catch (InterpreterException exception)
+		{
+			Diagnostics
+				.BuildError(this, "runtime_exception")
+				.Add(exception.Node, lines => lines.AddLine(exception.InnerException?.Message));
+		}
+		catch (Exception exception)
+		{
+			Diagnostics
+				.BuildError(this, "interpreter_exception")
+				.Add(Node, lines => lines.AddLine(exception.InnerException?.Message));
+		}
 	}
 	private void Interpret(IReadOnlyList<IAnnotatedStatementSyntax> statements)
 	{
@@ -141,6 +177,8 @@ public class Interpreter
 	{
 		if (statement.IsExecutable is false)
 			return;
+
+		Node = statement;
 
 		if (statement is IAnnotatedExpressionStatementSyntax expression)
 			_ = Evaluate(expression.Expression);
@@ -198,6 +236,8 @@ public class Interpreter
 	}
 	private InterpreterValue Evaluate(IAnnotatedExpressionSyntax expression)
 	{
+		Node = expression;
+
 		return expression switch
 		{
 			IAnnotatedStringLiteralExpressionSyntax str => Evaluate(str),
@@ -386,9 +426,15 @@ public class Interpreter
 
 			ordered[i] = value;
 		}
-
-		InterpreterValue result = method.Function.Execute(Context, ordered);
-		return result;
+		try
+		{
+			InterpreterValue result = method.Function.Execute(Context, ordered);
+			return result;
+		}
+		catch (Exception exception) when (exception is not InterpreterException)
+		{
+			throw new InterpreterException(Node, exception);
+		}
 	}
 	#endregion
 
@@ -406,8 +452,8 @@ public class Interpreter
 		};
 
 		IReadOnlyDictionary<IFunctionParameter, InterpreterValue> arguments = EvaluateArguments(expression, function);
-		InterpreterValue result = Evaluate(function, arguments);
 
+		InterpreterValue result = Evaluate(function, arguments);
 		return result;
 	}
 	private IReadOnlyDictionary<IFunctionParameter, InterpreterValue> EvaluateArguments(IAnnotatedFunctionCallExpressionSyntax expression, IFunction function)
@@ -472,8 +518,15 @@ public class Interpreter
 			ordered[i] = value;
 		}
 
-		InterpreterValue result = function.Execute(Context, ordered);
-		return result;
+		try
+		{
+			InterpreterValue result = function.Execute(Context, ordered);
+			return result;
+		}
+		catch (Exception exception) when (exception is not InterpreterException)
+		{
+			throw new InterpreterException(Node, exception);
+		}
 	}
 	private InterpreterValue Evaluate(IAnnotatedFunctionDeclarationStatementSyntax function, IReadOnlyDictionary<IFunctionParameter, InterpreterValue> values)
 	{
