@@ -244,8 +244,12 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 
 		terminator = Fabricate(SyntaxKind.Semicolon, ClassificationKind.Punctuation);
 
-		IndexedPositionRange position = Previous?.Position ?? terminator.Position;
-		ReportExpectedSimple(terminator, "terminator", "Expected a semi-colon '", SemicolonFragment, "' here to end the statement.");
+		ISyntaxToken position =
+			Previous ??
+			value?.Flatten()?.LastOrDefault() ??
+			terminator;
+
+		ReportExpectedSimple(position, "terminator", "Expected a semi-colon '", SemicolonFragment, "' here to end the statement.");
 
 		return terminator;
 	}
