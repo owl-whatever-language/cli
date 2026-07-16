@@ -7,9 +7,6 @@ namespace OwlDomain.Owl.CLI.Actions.Run;
 
 public class GeneralRunCommand : Command
 {
-	#region Fields
-	#endregion
-
 	#region Constructors
 	public GeneralRunCommand() : base("run", "Lets you run OWL code.")
 	{

@@ -1,4 +1,5 @@
 ﻿using System.CommandLine.Help;
+using OwlDomain.Owl.CLI.Actions;
 using OwlDomain.Owl.CLI.Actions.List;
 using OwlDomain.Owl.CLI.Actions.Meta;
 using OwlDomain.Owl.CLI.Actions.Run;
@@ -33,6 +34,8 @@ root.AddGroup(args, new Command("list", "General verb action for listing things,
 {
 	new ListExamples()
 });
+
+root.Add(new AnalyseCommand());
 
 ParseResult result = root.Parse(args);
 return result.Invoke();
