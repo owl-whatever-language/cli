@@ -842,10 +842,20 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		ISymbolGroup group = CurrentScope.GetAll(name);
 		if (group.Count is 0)
 		{
-			// Note(Nightowl): Could maybe do name similarity checking here to make suggestions as extra lines;
-			Diagnostics
-				.BuildError(this, "type_member_not_found")
-				.Add(token, lines => lines.AddLine($"No accessible type member named '", token, "' could be found."));
+			ISymbol? alternative = CurrentScope.GetAlternative(name).FirstOrDefault();
+			ClassificationKind alternativeClassification = alternative?.Classification ?? ClassificationKind.Identifier;
+
+			Diagnostic diagnostic = Diagnostics
+				.BuildError(this, "symbol_not_found")
+				.Add(token, lines =>
+				{
+					if (alternative is not null)
+						lines.AddLine($"No accessible symbol named '", token, "' could be found, did you mean to use '", (alternative.Name, alternativeClassification), "' instead?");
+					else
+						lines.AddLine($"No accessible symbol named '", token, "' could be found.");
+				});
+
+			TryAddDeclaration(diagnostic, alternative);
 		}
 
 		return group;
@@ -858,10 +868,20 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		ISymbolGroup group = type.Members.Where(m => m.Name == name).ToGroup();
 		if (group.Count is 0)
 		{
-			// Note(Nightowl): Could maybe do name similarity checking here to make suggestions as extra lines;
-			Diagnostics
-				.BuildError(this, "symbol_not_found")
-				.Add(token, lines => lines.AddLine($"No accessible symbol named '", token, "' could be found."));
+			ISymbol? alternative = type.Members.ToGroup().GetAlternative(name).FirstOrDefault();
+			ClassificationKind alternativeClassification = alternative?.Classification ?? ClassificationKind.Identifier;
+
+			Diagnostic diagnostic = Diagnostics
+				.BuildError(this, "type_member_not_found")
+				.Add(token, lines =>
+				{
+					if (alternative is not null)
+						lines.AddLine($"No accessible type member named '", token, "' could be found, did you mean to use '", (alternative.Name, alternativeClassification), "' instead?");
+					else
+						lines.AddLine($"No accessible type member named '", token, "' could be found.");
+				});
+
+			TryAddDeclaration(diagnostic, alternative);
 		}
 
 		return group;
@@ -893,16 +913,27 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		ambiguity = symbols.OfType<T>().ToArray();
 		if (ambiguity.Length is 0)
 		{
-			Diagnostics
+			ISymbol? alternative = CurrentScope.GetAlternative<T>(name).FirstOrDefault();
+			ClassificationKind alternativeClassification = alternative?.Classification ?? ClassificationKind.Identifier;
+
+			Diagnostic diagnostic = Diagnostics
 				.BuildError(this, $"{kind}_not_found")
 				.Add(token, lines =>
 				{
-					lines.AddLine($"No accessible {kind} named '{name}' could be found.");
+					if (alternative is not null && symbols.Count is 0)
+						lines.AddLine($"No accessible {kind} named '{name}' could be found, did you mean to use '", alternative.Name, alternativeClassification, "' instead?");
+					else
+						lines.AddLine($"No accessible {kind} named '{name}' could be found.");
+
+
 					if (symbols.Count is 1)
 						lines.AddLine($"But a symbol with the same name was found.");
 					else if (symbols.Count > 1)
 						lines.AddLine("But several symbols with the same name were found.");
 				});
+
+			if (alternative is not null && symbols.Count is 0)
+				TryAddDeclaration(diagnostic, alternative);
 
 			return default;
 		}
@@ -1003,7 +1034,14 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		if (value is not ISemanticGetExpressionSyntax get)
 			return diagnostic;
 
-		ISyntaxNode? position = get.Symbol switch
+		return TryAddDeclaration(diagnostic, get.Symbol);
+	}
+	private Diagnostic TryAddDeclaration(Diagnostic diagnostic, ISymbol? symbol)
+	{
+		if (symbol is null)
+			return diagnostic;
+
+		ISyntaxNode? position = symbol switch
 		{
 			IDeclaredFunctionParameter parameter => parameter.Declaration,
 			IDeclaredLocalVariable variable => variable.Declaration.Name,
@@ -1012,12 +1050,12 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			_ => null
 		};
 
-		ClassificationKind classification = get.Symbol.Classification ?? ClassificationKind.Identifier;
+		ClassificationKind classification = symbol.Classification ?? ClassificationKind.Identifier;
 
 		if (position is null)
 			return diagnostic;
 
-		diagnostic.Add(position, lines => lines.AddLine("This is where '", (get.Symbol.Name, classification), "' is declared."));
+		diagnostic.Add(position, lines => lines.AddLine("This is where '", (symbol.Name, classification), "' is declared."));
 
 		return diagnostic;
 	}

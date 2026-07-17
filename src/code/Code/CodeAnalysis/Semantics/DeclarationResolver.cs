@@ -235,7 +235,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	#endregion
 
 	#region Symbol helpers
-	private ISymbolGroup GetAll(ISyntaxToken token)
+	private ISymbolGroup GetAll(ISyntaxToken token, string kind)
 	{
 		if (token.Value is not string name) // Note(Nightowl): Invalid names will have already been reported during parsing;
 			return new SymbolGroup();
@@ -243,21 +243,30 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 		ISymbolGroup group = CurrentScope.GetAll(name);
 		if (group.Count is 0)
 		{
-			// Note(Nightowl): Could maybe do name similarity checking here to make suggestions as extra lines;
+			ISymbol? alternative = CurrentScope.GetAlternative(name).FirstOrDefault();
+			ClassificationKind alternativeClassification = alternative?.Classification ?? ClassificationKind.Identifier;
 
-			Diagnostics
-				.BuildError(this, "symbol_not_found")
-				.Add(token, lines => lines.AddLine($"No accessible symbol named '", token, "' could be found."));
+			Diagnostic diagnostic = Diagnostics
+				.BuildError(this, $"{kind}_not_found")
+				.Add(token, lines =>
+				{
+					if (alternative is not null)
+						lines.AddLine($"No accessible {kind} named '", token, "' could be found, did you mean to use '", (alternative.Name, alternativeClassification), "' instead?");
+					else
+						lines.AddLine($"No accessible {kind} named '", token, "' could be found.");
+				});
+
+			TryAddDeclaration(diagnostic, alternative);
 		}
 
 		return group;
 	}
 	private ISymbol? GetSingle(ISyntaxToken token) => GetSingle<ISymbol>(token, "symbol", "symbols");
-	private T? GetSingle<T>(ISyntaxToken token, string kind, string kindPlural)
+	private T? GetSingle<T>(ISyntaxToken token, string kind, string kindPlural) where T : notnull, ISymbol
 	{
 		return GetSingle<T>(token, kind, kindPlural, out _);
 	}
-	private T? GetSingle<T>(ISyntaxToken token, string kind, string kindPlural, out T[] ambiguity)
+	private T? GetSingle<T>(ISyntaxToken token, string kind, string kindPlural, out T[] ambiguity) where T : notnull, ISymbol
 	{
 		if (token.Value is not string name) // Note(Nightowl): Invalid names will have already been reported during parsing;
 		{
@@ -266,7 +275,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 		}
 
 		if (CurrentScope.TryGet(name, out ISymbolGroup? symbols) is false)
-			symbols = GetAll(token);
+			symbols = GetAll(token, kind);
 
 		if (symbols.Count is 0)
 		{
@@ -278,16 +287,26 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 
 		if (ambiguity.Length is 0)
 		{
-			Diagnostics
+			ISymbol? alternative = CurrentScope.GetAlternative<T>(name).FirstOrDefault();
+			ClassificationKind alternativeClassification = alternative?.Classification ?? ClassificationKind.Identifier;
+
+			Diagnostic diagnostic = Diagnostics
 				.BuildError(this, $"{kind}_not_found")
 				.Add(token, lines =>
 				{
-					lines.AddLine($"No accessible {kind} named '{name}' could be found.");
+					if (alternative is not null && symbols.Count is 0)
+						lines.AddLine($"No accessible {kind} named '{name}' could be found, did you mean to use '", alternative.Name, alternativeClassification, "' instead?");
+					else
+						lines.AddLine($"No accessible {kind} named '{name}' could be found.");
+
 					if (symbols.Count is 1)
 						lines.AddLine($"But a symbol with the same name was found.");
 					else if (symbols.Count > 1)
 						lines.AddLine("But several symbols with the same name were found.");
 				});
+
+			if (alternative is not null && symbols.Count is 0)
+				TryAddDeclaration(diagnostic, alternative);
 
 			return default;
 		}
@@ -316,6 +335,32 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	private void Update(IConcreteSyntaxNode oldDeclaration, IDeclaredSyntaxNode newDeclaration)
 	{
 		CurrentScope.UpdateChild(oldDeclaration, newDeclaration);
+	}
+	#endregion
+
+	#region Diagnostic helpers
+	private Diagnostic TryAddDeclaration(Diagnostic diagnostic, ISymbol? symbol)
+	{
+		if (symbol is null)
+			return diagnostic;
+
+		ISyntaxNode? position = symbol switch
+		{
+			IDeclaredFunctionParameter parameter => parameter.Declaration,
+			IDeclaredLocalVariable variable => variable.Declaration.Name,
+			IDeclaredFunction function => function.Declaration.Signature,
+
+			_ => null
+		};
+
+		ClassificationKind classification = symbol.Classification ?? ClassificationKind.Identifier;
+
+		if (position is null)
+			return diagnostic;
+
+		diagnostic.Add(position, lines => lines.AddLine("This is where '", (symbol.Name, classification), "' is declared."));
+
+		return diagnostic;
 	}
 	#endregion
 }

@@ -14,6 +14,8 @@ public interface ISymbolScope : IDebugTextFactory
 	ISymbolGroup GetAll(string name);
 	void GetAll(string name, SymbolGroup destination);
 	T Get<T>(ISyntaxNode declaration) where T : notnull, IDeclaredSymbol;
+	ISymbolGroup GetAllNamed();
+	void GetAllNamed(SymbolGroup destination);
 	ISymbolScope GetChild(ISyntaxNode declaration);
 	void Update(IDeclaredSymbol symbol, ISyntaxNode declaration);
 	void UpdateChild(ISyntaxNode oldDeclaration, ISyntaxNode newDeclaration);
@@ -115,6 +117,27 @@ public class SymbolScope : ISymbolScope
 				destination.AddRange(group);
 		}
 	}
+	public ISymbolGroup GetAllNamed()
+	{
+		SymbolGroup group = [];
+
+		ISymbolScope? scope = this;
+		while (scope is not null)
+		{
+			scope.GetAllNamed(group);
+			scope = scope.Parent;
+		}
+
+		return group;
+	}
+	public void GetAllNamed(SymbolGroup destination)
+	{
+		using (_nameLock.ReadLock())
+		{
+			foreach (SymbolGroup group in _byName.Values)
+				destination.AddRange(group);
+		}
+	}
 	public T Get<T>(ISyntaxNode declaration) where T : notnull, IDeclaredSymbol
 	{
 		using (_nodeLock.ReadLock())
@@ -166,6 +189,15 @@ public static class ISymbolScopeExtensions
 		public void Get<T>(ISyntaxNode declaration, out T symbol) where T : notnull, IDeclaredSymbol
 		{
 			symbol = scope.Get<T>(declaration);
+		}
+		public ISymbolGroup GetAlternative(string name) => scope.GetAllNamed().GetAlternative(name);
+		public ISymbolGroup GetAlternative<T>(string name) where T : notnull, ISymbol
+		{
+			return scope
+			.GetAllNamed()
+			.OfType<T>()
+			.ToGroup()
+			.GetAlternative(name);
 		}
 		#endregion
 	}
