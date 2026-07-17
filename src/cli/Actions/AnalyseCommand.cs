@@ -32,7 +32,7 @@ public class AnalyseCommand : Command
 
 			if (watch)
 			{
-				AnsiConsole.AlternateScreen(() => Watch(path));
+				Watch(path);
 				return 0;
 			}
 
