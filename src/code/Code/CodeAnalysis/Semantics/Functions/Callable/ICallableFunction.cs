@@ -18,6 +18,9 @@ public interface ICallableFunction : ICallableType
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	IReadOnlyCollection<ITypeMethod> IType.Methods => [];
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	IReadOnlyCollection<IBinaryOperator> IType.BinaryOperators => [];
 	#endregion
 }
 

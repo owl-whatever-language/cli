@@ -351,13 +351,13 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		var right = Convert(declared.Right);
 
 		OperatorKind kind = op.Kind.GetOperator();
-		IFunction? operation = (left.ResultType.IsError || right.ResultType.IsError) ? null :
+		IBinaryOperator? operation = (left.ResultType.IsError || right.ResultType.IsError) ? null :
 			left.ResultType.FindOperation(left.ResultType, right.ResultType, kind) ??
 			right.ResultType.FindOperation(left.ResultType, right.ResultType, kind)
 		;
 		TryReportUnknownOperator("binary expression", op, operation, left.ResultType, right.ResultType);
 
-		return new(left, op, right, operation, operation?.Return.Type ?? SpecialTypes.Error);
+		return new(left, op, right, operation, operation?.Result ?? SpecialTypes.Error);
 	}
 	protected override SemanticAssignmentExpressionSyntax ConvertCore(IDeclaredAssignmentExpressionSyntax declared)
 	{
@@ -417,7 +417,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			ReportCantAssignToLiteral(op);
 
 		OperatorKind kind = op.Kind.GetOperator();
-		IFunction? operation;
+		IBinaryOperator? operation;
 		if (symbol is null)
 			operation = null;
 		else
@@ -435,7 +435,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			}
 		}
 
-		return new(expression, op, value, symbol ?? SpecialSymbols.NotFound, operation, operation?.Return.Type ?? SpecialTypes.Error);
+		return new(expression, op, value, symbol ?? SpecialSymbols.NotFound, operation, operation?.Result ?? SpecialTypes.Error);
 	}
 
 	protected override SemanticTernaryExpressionSyntax ConvertCore(IDeclaredTernaryExpressionSyntax declared) => throw new NotImplementedException();
@@ -1059,14 +1059,14 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return diagnostic;
 	}
-	private bool ShouldReportUnknownOperator(IFunction? operation, params IEnumerable<IType> types)
+	private bool ShouldReportUnknownOperator(IBinaryOperator? operation, params IEnumerable<IType> types)
 	{
 		if (operation is not null)
 			return false;
 
 		return types.All(t => t.IsNotError);
 	}
-	private Diagnostic? TryReportUnknownOperator(string kind, ISyntaxToken op, IFunction? operation, params IReadOnlyList<IType> types)
+	private Diagnostic? TryReportUnknownOperator(string kind, ISyntaxToken op, IBinaryOperator? operation, params IReadOnlyList<IType> types)
 	{
 		if (ShouldReportUnknownOperator(operation, types))
 			return ReportUnknownOperator(kind, op, types);

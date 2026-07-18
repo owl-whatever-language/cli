@@ -231,6 +231,8 @@ internal sealed class BuiltinContext
 	public void AddBinary<TLeft, TRight, TOut>(BuiltinType type, OperatorKind kind, Func<TLeft, TRight, TOut> callback)
 	{
 		IType outType = _lookup[typeof(TOut)];
+		IType left = _lookup[typeof(TLeft)];
+		IType right = _lookup[typeof(TRight)];
 
 		BuiltinFunction function = new(
 		  kind.ToString(),
@@ -245,7 +247,8 @@ internal sealed class BuiltinContext
 			  return new(outType, result);
 		  });
 
-		type.Operations.Add(function);
+		BuiltinBinaryOperator operation = new(kind, left, right, outType, function);
+		type.BinaryOperators.Add(operation);
 	}
 	#endregion
 

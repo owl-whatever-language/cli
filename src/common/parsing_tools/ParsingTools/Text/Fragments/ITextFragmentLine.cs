@@ -50,7 +50,10 @@ public sealed class TextFragmentLine : TextFragmentCollection, ITextFragmentLine
 			if (value is string str)
 				l.Add(str, null);
 			else if (value is TextFragment fragment)
-				l.Add(fragment);
+			{
+				if (fragment.Text.Length > 0)
+					l.Add(fragment);
+			}
 			else if (value is IEnumerable<TextFragment> fragments)
 				l.AddRange(fragments);
 			else if (value is (string text, ClassificationKind kind))

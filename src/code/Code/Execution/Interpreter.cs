@@ -264,7 +264,7 @@ public class Interpreter : IDiagnosticProvider
 		if (expression.Operation is null)
 			ThrowHelper.ThrowInvalidOperationException("Expected the operator function to be available.");
 
-		BuiltinFunction operation = (BuiltinFunction)expression.Operation;
+		BuiltinBinaryOperator operation = (BuiltinBinaryOperator)expression.Operation;
 
 		InterpreterValue left = Evaluate(expression.Left);
 
@@ -282,7 +282,7 @@ public class Interpreter : IDiagnosticProvider
 
 		InterpreterValue right = Evaluate(expression.Right);
 
-		InterpreterValue result = operation.Execute(Context, [left, right]);
+		InterpreterValue result = operation.AsFunction.Execute(Context, [left, right]);
 		return result;
 	}
 	private InterpreterValue Evaluate(IAnnotatedAssignmentExpressionSyntax assignment)
@@ -297,12 +297,12 @@ public class Interpreter : IDiagnosticProvider
 		if (assignment.Operation is null)
 			ThrowHelper.ThrowInvalidOperationException("Expected the operator function to be available.");
 
-		BuiltinFunction operation = (BuiltinFunction)assignment.Operation;
+		BuiltinBinaryOperator operation = (BuiltinBinaryOperator)assignment.Operation;
 
 		InterpreterValue current = Evaluate(assignment.Expression);
 		InterpreterValue value = Evaluate(assignment.Value);
 
-		value = operation.Execute(Context, [current, value]);
+		value = operation.AsFunction.Execute(Context, [current, value]);
 		Values.Store(assignment.Symbol, value);
 
 		return value;

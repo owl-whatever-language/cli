@@ -4,7 +4,7 @@ namespace OwlDomain.Owl.CLI.Actions.List;
 
 public class ListExamples : Command
 {
-	public ListExamples() : base("examples", "Lets you list the available OWL examples.")
+	public ListExamples() : base("examples", "Shows a list of the available OWL examples.")
 	{
 		SetAction(parsing =>
 		{

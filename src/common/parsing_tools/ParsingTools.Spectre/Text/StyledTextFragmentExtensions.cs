@@ -1,3 +1,5 @@
+using Spectre.Console.Rendering;
+
 namespace OwlDomain.ParsingTools.Text;
 
 public static class StyledTextFragmentExtensions
@@ -64,12 +66,19 @@ public static class StyledTextFragmentExtensions
 		#region Methods
 		public Rows Style(IClassificationStyling styles)
 		{
-			List<Markup> markups = [];
+			List<IRenderable> markups = [];
 
 			foreach (ITextFragmentLine line in lines)
 			{
-				Markup markup = line.StyleMarkup(styles);
-				markups.Add(markup);
+				if (line.Any())
+				{
+					Markup markup = line.StyleMarkup(styles);
+					markups.Add(markup);
+				}
+				else
+				{
+					markups.Add(Spectre.Console.Text.Empty);
+				}
 			}
 
 			return new(markups);

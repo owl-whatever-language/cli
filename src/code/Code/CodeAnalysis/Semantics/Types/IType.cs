@@ -6,6 +6,7 @@ public interface IType : IEquatable<IType>, IDebugTextFactory
 	IReadOnlyCollection<ITypeMember> Members { get; }
 	IReadOnlyCollection<ITypeProperty> Properties { get; }
 	IReadOnlyCollection<ITypeMethod> Methods { get; }
+	IReadOnlyCollection<IBinaryOperator> BinaryOperators { get; }
 	#endregion
 
 	#region Methods
@@ -14,8 +15,6 @@ public interface IType : IEquatable<IType>, IDebugTextFactory
 	/// <returns><see langword="true"/> if a value of the current type can be assigned to the given <paramref name="target"/> type.</returns>
 	/// <remarks>This method should check things like implicit conversions and the like.</remarks>
 	bool CanAssignTo(IType target);
-
-	bool FindOperation(IType left, IType right, OperatorKind @operator, [NotNullWhen(true)] out IFunction? function);
 	#endregion
 }
 
@@ -27,6 +26,7 @@ public static class ITypeExtensions
 		public bool IsError => type == SpecialTypes.Error;
 		public bool IsNotError => type != SpecialTypes.Error;
 		public bool IsVoid => type == SpecialTypes.Void;
+		public bool IsNotVoid => type != SpecialTypes.Void;
 		#endregion
 
 		#region Methods
@@ -35,12 +35,20 @@ public static class ITypeExtensions
 			if (type != SpecialTypes.Unknown)
 				ThrowHelper.ThrowArgumentException(parameter, $"Only types that are still unknown can be replaced.");
 		}
-		public IFunction? FindOperation(IType left, IType right, OperatorKind @operator)
+		public IBinaryOperator? FindOperation(IType left, IType right, OperatorKind kind)
 		{
-			if (type.FindOperation(left, right, @operator, out IFunction? function))
-				return function;
+			foreach (IBinaryOperator operation in type.BinaryOperators)
+			{
+				if (operation.Left.Equals(left) && operation.Right.Equals(right) && operation.Kind == kind)
+					return operation;
+			}
 
-			return default;
+			return null;
+		}
+		public bool TryFindOperation(IType left, IType right, OperatorKind kind, [NotNullWhen(true)] out IBinaryOperator? operation)
+		{
+			operation = FindOperation(type, left, right, kind);
+			return operation is not null;
 		}
 		#endregion
 	}

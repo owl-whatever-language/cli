@@ -30,9 +30,10 @@ root.Add(new GeneralRunCommand()
 	new RunExample()
 });
 
-root.AddGroup(args, new Command("list", "General verb action for listing things, such as examples.")
+root.AddGroup(args, new Command("list", "General verb action for listing things, such as examples, or the builtin symbol.")
 {
-	new ListExamples()
+	new ListExamples(),
+	new BuiltinCommand(),
 });
 
 root.Add(new AnalyseCommand());

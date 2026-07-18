@@ -69,4 +69,39 @@ public static class OperatorKindExtensions
 		public bool IsCompoundAssignmentOperator() => CompoundAssignments.Contains(kind);
 		#endregion
 	}
+
+	extension(OperatorKind kind)
+	{
+		#region Properties
+		public string Operator
+		{
+			get
+			{
+				return kind switch
+				{
+					OperatorKind.Equal => "==",
+					OperatorKind.NotEqual => "!=",
+
+					OperatorKind.LessThan => "<",
+					OperatorKind.LessThanOrEqual => "<=",
+
+					OperatorKind.GreaterThan => ">",
+					OperatorKind.GreaterThanOrEqual => ">=",
+
+					OperatorKind.Add => "+",
+					OperatorKind.Subtract => "-",
+
+					OperatorKind.Multiply => "*",
+					OperatorKind.Divide => "/",
+					OperatorKind.Modulo => "%",
+
+					OperatorKind.LogicalAnd => "&&",
+					OperatorKind.LogicalOr => "||",
+
+					_ => ThrowHelper.ThrowInvalidOperationException<string>($"Unknown operator kind ({kind}).")
+				};
+			}
+		}
+		#endregion
+	}
 }
