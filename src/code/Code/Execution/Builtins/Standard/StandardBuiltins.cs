@@ -1,11 +1,10 @@
 namespace OwlDomain.Owl.Code.Execution.Builtins.Standard;
 
-using OwlDomain.Owl.Code.Execution.Builtins.Attributes;
-
-using IOPath = System.IO.Path;
-using static Core.CoreBuiltins;
 using System.IO;
 using System.Text;
+using OwlDomain.Owl.Code.Execution.Builtins.Attributes;
+using static Core.CoreBuiltins;
+using IOPath = System.IO.Path;
 
 internal partial class StandardBuiltins
 {

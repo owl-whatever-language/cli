@@ -1,7 +1,7 @@
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax;
+using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.FunctionBodies;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Nodes;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Statements;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.FunctionBodies;
 using Spectre.Console.Rendering;
 
 namespace OwlDomain.Owl.CLI.Diagnostics;

@@ -1,4 +1,4 @@
-﻿using System.CommandLine.Help;
+using System.CommandLine.Help;
 using OwlDomain.Owl.CLI.Actions;
 using OwlDomain.Owl.CLI.Actions.List;
 using OwlDomain.Owl.CLI.Actions.Meta;
