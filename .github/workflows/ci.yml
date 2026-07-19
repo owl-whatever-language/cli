@@ -167,12 +167,12 @@ jobs:
 
       - name: Archive the published artifact.
         working-directory: "${{ runner.temp }}/publishing/archives"
-        run: tar -cvzf "owl ${{ matrix.target-runtime }}.tar.gz" "${{ runner.temp }}/publishing/cli/cli (${{ matrix.target-runtime }})"
+        run: tar -cvzf "owl (${{ matrix.target-runtime }}).tar.gz" "${{ runner.temp }}/publishing/cli/cli (${{ matrix.target-runtime }})"
 
       - name: Upload published artifact.
         uses: actions/upload-artifact@v7
         with:
-          path: "${{ runner.temp }}/publishing/archives/owl ${{ matrix.target-runtime }}.tar.gz"
+          path: "${{ runner.temp }}/publishing/archives/owl (${{ matrix.target-runtime }}).tar.gz"
           name: "owl (${{ matrix.target-runtime }})"
           if-no-files-found: error
           archive: false
