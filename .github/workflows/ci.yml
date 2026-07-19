@@ -160,6 +160,7 @@ jobs:
 
       - name: Remove unnecessary files.
         run: rm "${{ runner.temp }}/publishing/cli/**.xml"
+        continue-on-error: true
 
       - name: Archive the published artifact.
         working-directory: "${{ runner.temp }}/publishing/archives"
