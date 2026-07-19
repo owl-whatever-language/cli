@@ -123,11 +123,11 @@ jobs:
           - runner: ubuntu-24.04-arm
             target-runtime: linux-arm64
 
-          - runner: windows-latest
-            target-runtime: win-x64
+          #- runner: windows-latest
+            #target-runtime: win-x64
 
-          - runner: windows-11-arm
-            target-runtime: win-arm64
+          #- runner: windows-11-arm
+            #target-runtime: win-arm64
 
           - runner: macos-latest
             target-runtime: osx-arm64
