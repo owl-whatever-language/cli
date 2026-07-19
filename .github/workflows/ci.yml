@@ -162,6 +162,9 @@ jobs:
         run: rm "${{ runner.temp }}/publishing/cli/**.xml"
         continue-on-error: true
 
+      - name: Create the archive directory.
+        run: mkdir "${{ runner.temp }}/publishing/archives"
+
       - name: Archive the published artifact.
         working-directory: "${{ runner.temp }}/publishing/archives"
         run: tar -cvzf "owl ${{ matrix.target-runtime }}.tar.gz" "${{ runner.temp }}/publishing/cli/cli (${{ matrix.target-runtime }})"
