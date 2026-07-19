@@ -33,9 +33,14 @@ jobs:
 
     - name: Setup the .NET development environment.
       uses: actions/setup-dotnet@v5
+
     - name: Restore the project dependencies.
       working-directory: src/
       run: dotnet restore
+
+    - name: Build the source directory.
+      working-directory: src/
+      run: dotnet build --no-restore
 
     - name: Run the linter.
       working-directory: src/
