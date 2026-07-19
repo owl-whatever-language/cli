@@ -73,7 +73,7 @@ jobs:
 
       - name: Build the source directory.
         working-directory: src/
-        run: dotnet build --no-restore --warnaserror --configuration ${{ matrix.configuration }} /p:ContinuousIntegrationBuild=true /p:noWarn=IDE0055,CS1591
+        run: dotnet build --no-restore --warnaserror --configuration ${{ matrix.configuration }} /p:ContinuousIntegrationBuild=true /p:noWarn=IDE0055 /p:noWarn=CS1591
 
 
 
@@ -102,11 +102,11 @@ jobs:
 
       - name: Build the source directory.
         working-directory: src/
-        run: dotnet build --no-restore --configuration ${{ matrix.configuration }} /p:ContinuousIntegrationBuild=true /p:noWarn=IDE0055,CS1591
+        run: dotnet build --no-restore --configuration ${{ matrix.configuration }} /p:ContinuousIntegrationBuild=true /p:noWarn=IDE0055 /p:noWarn=CS1591
 
       - name: Run the tests.
         working-directory: src/
-        run: dotnet test --no-build --configuration ${{ matrix.configuration }} --warnaserror /p:noWarn=IDE0055,CS1591
+        run: dotnet test --no-build --configuration ${{ matrix.configuration }} --warnaserror /p:noWarn=IDE0055 /p:noWarn=CS1591
 
 
 
@@ -152,11 +152,11 @@ jobs:
 
       - name: Build the project directory.
         working-directory: src/cli/
-        run: dotnet build --no-restore --warnaserror --configuration Release --runtime ${{ matrix.target-runtime }} /p:ContinuousIntegrationBuild=true /p:noWarn=IDE0055,CS1591
+        run: dotnet build --no-restore --warnaserror --configuration Release --runtime ${{ matrix.target-runtime }} /p:ContinuousIntegrationBuild=true /p:noWarn=IDE0055 /p:noWarn=CS1591
 
       - name: Publish the project.
         working-directory: src/cli/
-        run: dotnet publish --no-build  --warnaserror --configuration Release --runtime ${{ matrix.target-runtime }} /p:ContinuousIntegrationBuild=true /p:noWarn=IDE0055,CS1591 --output "${{ runner.temp }}/publishing/cli/cli (${{ matrix.target-runtime }})"
+        run: dotnet publish --no-build  --warnaserror --configuration Release --runtime ${{ matrix.target-runtime }} /p:ContinuousIntegrationBuild=true /p:noWarn=IDE0055 /p:noWarn=CS1591 --output "${{ runner.temp }}/publishing/cli/cli (${{ matrix.target-runtime }})"
 
       - name: Remove unnecessary files.
         run: rm "${{ runner.temp }}/publishing/cli/**.xml"
