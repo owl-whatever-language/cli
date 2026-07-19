@@ -156,10 +156,10 @@ jobs:
 
       - name: Publish the project.
         working-directory: src/cli/
-        run: dotnet publish --no-build  --warnaserror --configuration Release --runtime ${{ matrix.target-runtime }} /p:ContinuousIntegrationBuild=true /p:noWarn=IDE0055 /p:noWarn=CS1591 --output "${{ runner.temp }}/publishing/cli/cli (${{ matrix.target-runtime }})"
+        run: dotnet publish --no-build  --warnaserror --configuration Release --runtime ${{ matrix.target-runtime }} /p:ContinuousIntegrationBuild=true /p:noWarn=IDE0055 /p:noWarn=CS1591 --output "${{ runner.temp }}/publishing/cli/owl (${{ matrix.target-runtime }})"
 
       - name: Remove unnecessary files.
-        working-directory: "${{ runner.temp }}/publishing/cli/cli (${{ matrix.target-runtime }})"
+        working-directory: "${{ runner.temp }}/publishing/cli/owl (${{ matrix.target-runtime }})"
         run: rm -f *.xml
 
       - name: Create the archive directory.
@@ -167,7 +167,7 @@ jobs:
 
       - name: Archive the published artifact.
         working-directory: "${{ runner.temp }}/publishing/cli"
-        run: tar -cvzf "../archives/owl (${{ matrix.target-runtime }}).tar.gz" "cli (${{ matrix.target-runtime }})"
+        run: tar -cvzf "../archives/owl (${{ matrix.target-runtime }}).tar.gz" "owl (${{ matrix.target-runtime }})"
 
       - name: Upload published artifact.
         uses: actions/upload-artifact@v7
