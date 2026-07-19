@@ -33,7 +33,10 @@ public sealed class SymbolGroup : List<ISymbol>, ISymbolGroup
 
 		foreach (ISymbol symbol in this)
 		{
-			int current = GetDistance(name, symbol.Name);
+			int current = GetDistance(name, symbol.Name, out int max);
+			if (current > 2 && current > max / 2)
+				continue;
+
 			if (lowest is null || current < score)
 			{
 				lowest = symbol;
@@ -49,7 +52,7 @@ public sealed class SymbolGroup : List<ISymbol>, ISymbolGroup
 	#endregion
 
 	#region Helpers
-	private static int GetDistance(string from, string to)
+	private static int GetDistance(string from, string to, out int max)
 	{
 		int[] v0 = new int[to.Length + 1];
 		int[] v1 = new int[to.Length + 1];
@@ -73,6 +76,7 @@ public sealed class SymbolGroup : List<ISymbol>, ISymbolGroup
 			(v0, v1) = (v1, v0);
 		}
 
+		max = v0.Concat(v1).Max();
 		return v0[to.Length];
 	}
 	#endregion
