@@ -159,8 +159,7 @@ jobs:
         run: dotnet publish --no-build  --warnaserror --configuration Release --runtime ${{ matrix.target-runtime }} /p:ContinuousIntegrationBuild=true /p:noWarn=IDE0055 /p:noWarn=CS1591 --output "${{ runner.temp }}/publishing/cli/cli (${{ matrix.target-runtime }})"
 
       - name: Remove unnecessary files.
-        run: rm "${{ runner.temp }}/publishing/cli/**.xml"
-        continue-on-error: true
+        run: rm -f "${{ runner.temp }}/publishing/cli/**.xml"
 
       - name: Create the archive directory.
         run: mkdir "${{ runner.temp }}/publishing/archives"
