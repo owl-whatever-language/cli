@@ -158,7 +158,7 @@ $@"span:target {{
 		public void PrintPlainSource(Context context, TextFragmentLineCollection source)
 		{
 			context.Writer.WriteLine("%% Since this file is most likely going to be very difficult to be human-readable,");
-			context.Writer.WriteLine("%% here is a plain text version of the file for:");
+			context.Writer.WriteLine("%% here is a plain text version of the file:");
 			context.Writer.WriteLine("%% ");
 
 			string tab = context.Settings.TabSize is null ? "\t" : new(' ', context.Settings.TabSize.Value);
