@@ -28,7 +28,7 @@ public class BuiltinCommand : Command
 				ISymbolScope scope = stage.ResultScope;
 				lines.AddLine($"// {scope.Name} symbols").AddClassification(ClassificationKind.Comment);
 
-				ISymbolGroup symbols = scope.GetAllNamed();
+				ISymbolGroup symbols = scope.GetAllNamed(includeParent: false);
 
 				bool hadGroup = false;
 				bool wasLastType = false;

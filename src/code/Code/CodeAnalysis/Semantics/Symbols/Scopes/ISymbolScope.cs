@@ -14,7 +14,7 @@ public interface ISymbolScope : IDebugTextFactory
 	ISymbolGroup GetAll(string name);
 	void GetAll(string name, SymbolGroup destination);
 	T Get<T>(ISyntaxNode declaration) where T : notnull, IDeclaredSymbol;
-	ISymbolGroup GetAllNamed();
+	ISymbolGroup GetAllNamed(bool includeParent = true);
 	void GetAllNamed(SymbolGroup destination);
 	ISymbolScope GetChild(ISyntaxNode declaration);
 	void Update(IDeclaredSymbol symbol, ISyntaxNode declaration);
@@ -117,7 +117,7 @@ public class SymbolScope : ISymbolScope
 				destination.AddRange(group);
 		}
 	}
-	public ISymbolGroup GetAllNamed()
+	public ISymbolGroup GetAllNamed(bool includeParent = true)
 	{
 		SymbolGroup group = [];
 
@@ -126,6 +126,9 @@ public class SymbolScope : ISymbolScope
 		{
 			scope.GetAllNamed(group);
 			scope = scope.Parent;
+
+			if (includeParent is false)
+				break;
 		}
 
 		return group;
