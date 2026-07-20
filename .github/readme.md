@@ -45,7 +45,7 @@ is not required to run it.
 
 > [!WARNING]
 > No prebuilt binaries are available for Windows, this is because Windows
-> has annoyed me and is being a pain to built for, but you can attempt to do so
+> has annoyed me and is being a pain to build for, but you can attempt to do so
 > yourself if you'd like to.
 
 
