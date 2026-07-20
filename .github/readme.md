@@ -19,7 +19,7 @@ compiler/toolkit.
 ## Usage
 
 Currently, the CLI can:
-- Run general OWL code and interpreter it.
+- Run general OWL code and interpret it.
 - Analyse a general OWL code file, as a single operation or in watch mode.
 - Run the provided OWL examples and highlight them in your terminal.
 - List the provided OWL examples.
