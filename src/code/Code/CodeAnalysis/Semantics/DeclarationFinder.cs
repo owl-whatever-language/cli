@@ -104,7 +104,7 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 	{
 		if (symbol.Name is not null && CurrentScope.TryGetLocal(symbol.Name, out ISymbolGroup? symbols))
 		{
-			Diagnostics
+			Diagnostic diagnostic = Diagnostics
 				.BuildError(this, "duplicate_symbol")
 				.Add(nameToken, lines =>
 				{
@@ -112,6 +112,8 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 					if (symbol is IFunction && symbols.OfType<IFunction>().Any())
 						lines.AddLine("function overloading is not yet supported.");
 				});
+
+			TryAddDeclaration(diagnostic, symbols.FirstOrDefault());
 		}
 
 		Add(symbol);
@@ -147,6 +149,32 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 			CurrentScope = scope;
 		else
 			ThrowHelper.ThrowInvalidOperationException($"Exiting the '{ResultScope.Name}' scope is not allowed.");
+	}
+	#endregion
+
+	#region Diagnostic helpers
+	private Diagnostic TryAddDeclaration(Diagnostic diagnostic, ISymbol? symbol)
+	{
+		if (symbol is null)
+			return diagnostic;
+
+		ISyntaxNode? position = symbol switch
+		{
+			IDeclaredFunctionParameter parameter => parameter.Declaration,
+			IDeclaredLocalVariable variable => variable.Declaration.Name,
+			IDeclaredFunction function => function.Declaration.Signature,
+
+			_ => null
+		};
+
+		ClassificationKind classification = symbol.Classification ?? ClassificationKind.Identifier;
+
+		if (position is null)
+			return diagnostic;
+
+		diagnostic.Add(position, lines => lines.AddLine("This is where '", (symbol.Name, classification), "' is declared."));
+
+		return diagnostic;
 	}
 	#endregion
 }
