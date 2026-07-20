@@ -9,7 +9,7 @@
 
 		<AssemblyName>owl</AssemblyName>
 		<RootNamespace>OwlDomain.Owl.CLI</RootNamespace>
-		<Version>0.0.1</Version>
+		<Version>0.0.2</Version>
 
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<NoWarn>CS1591</NoWarn>
