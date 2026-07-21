@@ -383,6 +383,19 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 			if (resultType is null && get.Symbol.IsKnown)
 				ReportCantAssignToSymbol(op, get.Symbol);
+			else if (symbol.IsNotKnown && get.Name.Value is string leftName)
+			{
+				// Note(Nightowl): Assignment to an unknown symbol, with no alternative suggestions for typos;
+				if (CurrentScope.GetAlternative(leftName).Any() is false)
+				{
+					Diagnostic diagnostic = Diagnostics.BuildSuggestion(this, "missing_declaration");
+
+					if (valueType.IsNotError)
+						diagnostic.Add(get, get.Position.Start, lines => lines.AddLine("Is '", get.Name, "' perhaps meant to be a declaration of the type '", valueType, "'?"));
+					else
+						diagnostic.Add(get, get.Position.Start, lines => lines.AddLine("Is '", get.Name, "' perhaps meant to be a declaration?"));
+				}
+			}
 		}
 		else if (IsLiteral(expression))
 			ReportCantAssignToLiteral(op);
@@ -391,7 +404,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		{
 			if (ShouldReportIncompatibleType(valueType, resultType))
 			{
-				Diagnostic diagnostic = ReportIncompatibleType(declared.Operator, $"A value of the type '", valueType, $"' cannot be assigned to a {target} of the type '", resultType, "'.");
+				Diagnostic diagnostic = ReportIncompatibleType(op, $"A value of the type '", valueType, $"' cannot be assigned to a {target} of the type '", resultType, "'.");
 				TryAddDeclaration(diagnostic, expression);
 				TryAddDeclaration(diagnostic, value);
 			}

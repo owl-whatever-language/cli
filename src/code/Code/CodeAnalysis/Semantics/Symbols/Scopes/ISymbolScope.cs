@@ -193,8 +193,8 @@ public static class ISymbolScopeExtensions
 		{
 			symbol = scope.Get<T>(declaration);
 		}
-		public ISymbolGroup GetAlternative(string name) => scope.GetAllNamed().GetAlternative(name);
-		public ISymbolGroup GetAlternative<T>(string name) where T : notnull, ISymbol
+		public ISymbolGroup GetAlternative(string? name) => scope.GetAllNamed().GetAlternative(name);
+		public ISymbolGroup GetAlternative<T>(string? name) where T : notnull, ISymbol
 		{
 			return scope
 			.GetAllNamed()

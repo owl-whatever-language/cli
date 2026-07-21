@@ -3,7 +3,7 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols.Scopes;
 public interface ISymbolGroup : IReadOnlyList<ISymbol>
 {
 	#region Methods
-	ISymbolGroup GetAlternative(string name);
+	ISymbolGroup GetAlternative(string? name);
 	#endregion
 }
 
@@ -15,9 +15,12 @@ public sealed class SymbolGroup : List<ISymbol>, ISymbolGroup
 	#endregion
 
 	#region Methods
-	public ISymbolGroup GetAlternative(string name)
+	public ISymbolGroup GetAlternative(string? name)
 	{
 		SymbolGroup alternative = [];
+
+		if (name is null)
+			return alternative;
 
 		foreach (ISymbol symbol in this)
 		{
