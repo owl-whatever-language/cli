@@ -30,14 +30,14 @@ public class RunExample : Command
 
 			if (Directory.Exists(directory) is false)
 			{
-				parsing.CommandResult.AddError("The example directory didn't exist.");
+				Console.WriteError("The example directory didn't exist.");
 				return -1;
 			}
 
 			string? file = GetExampleFile(directory, name);
 			if (file is null)
 			{
-				parsing.CommandResult.AddError($"No example named '{name}' could be found.");
+				Console.WriteError($"No example named '{name}' could be found.");
 				return -1;
 			}
 

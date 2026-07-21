@@ -25,7 +25,7 @@ public class GeneralRunCommand : Command
 
 			if (file is null)
 			{
-				parsing.CommandResult.AddError($"The given file '{path}' was not found.");
+				Console.WriteError($"The given file '{path}' was not found.");
 				return -1;
 			}
 

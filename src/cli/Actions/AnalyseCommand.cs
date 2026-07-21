@@ -38,7 +38,7 @@ public class AnalyseCommand : Command
 
 			if (File.Exists(path) is false)
 			{
-				parsing.CommandResult.AddError($"The given file '{path}' was not found.");
+				Console.WriteError($"The given file '{path}' was not found.");
 				return -1;
 			}
 
