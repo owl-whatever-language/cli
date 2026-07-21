@@ -503,8 +503,8 @@ public sealed class DiagnosticSourceDisplay
 				addedEmpty = true;
 			}
 
-			TextFragmentLine line = PrepareShortLine(diagnostic, false, null);
-			_output.Add(line);
+			TextFragmentLineCollection message = PrepareMessage(diagnostic.Annotations.First(), diagnostic.Kind);
+			_output.AddRange(message);
 		}
 	}
 	#endregion

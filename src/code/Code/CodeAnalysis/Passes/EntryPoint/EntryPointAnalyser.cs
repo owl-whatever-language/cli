@@ -17,6 +17,19 @@ public sealed class EntryPointAnalyser : AnalysisPass.PerCompilation, IDiagnosti
 
 		if (withExecutable.Count is 0)
 		{
+			if (trees.Count is 1)
+			{
+				diagnostics
+					.BuildSuggestion(this, "nothing_to_execute")
+					.Add(trees.Single().Source, lines =>
+					{
+						lines.AddLine("This file didn't contain any executable statements.");
+						lines.AddLine("This means that nothing will happen by trying to run the program.");
+					});
+
+				return diagnostics;
+			}
+
 			diagnostics
 				.BuildSuggestion(this, "nothing_to_execute")
 				.Add(lines =>
