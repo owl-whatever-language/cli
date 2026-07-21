@@ -1,6 +1,6 @@
 namespace OwlDomain.ParsingTools.Parsing;
 
-public abstract class BaseParser
+public abstract class BaseParser : IDiagnosticProvider
 {
 	#region Nested types
 	/// <summary>
@@ -13,7 +13,7 @@ public abstract class BaseParser
 		#region Properties
 		private BaseParser Parser { get; } = parser;
 		private ISyntaxToken Token { get; } = token;
-		private int OldDiagnosticCount { get; } = parser.DiagnosticCount;
+		private int OldDiagnosticCount { get; } = parser.Diagnostics.Count;
 		#endregion
 
 		#region Methods
@@ -22,7 +22,7 @@ public abstract class BaseParser
 		{
 			if (Parser.Current == Token)
 			{
-				if (OldDiagnosticCount >= Parser.DiagnosticCount)
+				if (OldDiagnosticCount >= Parser.Diagnostics.Count)
 					Parser.ReportInfiniteLoop(Token);
 
 				Parser.SkipCurrent();
@@ -38,7 +38,9 @@ public abstract class BaseParser
 	#endregion
 
 	#region Properties
-	protected abstract int DiagnosticCount { get; }
+	public virtual string Name => "parser";
+	protected ISourceFile Source { get; }
+	protected DiagnosticBag Diagnostics { get; } = [];
 
 	/// <summary>The tokens that should be parsed.</summary>
 	/// <remarks>The parser might mutate some of the tokens for error recovery purposes.</remarks>
@@ -70,8 +72,10 @@ public abstract class BaseParser
 	#endregion
 
 	#region Constructors
-	protected BaseParser(IReadOnlyList<ISyntaxToken> tokens)
+	protected BaseParser(ISourceFile source, IReadOnlyList<ISyntaxToken> tokens)
 	{
+		Source = source;
+
 		if (tokens.LastOrDefault()?.Kind != SyntaxKind.EndOfInput)
 			ThrowHelper.ThrowArgumentException(nameof(tokens), $"Expected to have a {nameof(SyntaxKind.EndOfInput)} token as the last token.");
 
@@ -255,6 +259,13 @@ public abstract class BaseParser
 	#endregion
 
 	#region Diagnostic methods
-	protected abstract void ReportInfiniteLoop(ISyntaxToken token);
+	protected virtual void ReportInfiniteLoop(ISyntaxToken token)
+	{
+		StackTrace trace = new();
+
+		Diagnostics
+			.BuildError(this, "infinite_parsing_loop", trace)
+			.Add(token, lines => lines.AddLine("The parser got stuck in an infinite loop without it being accounted for."));
+	}
 	#endregion
 }

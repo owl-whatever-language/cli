@@ -74,7 +74,7 @@ public sealed class ParallelParsingResult : IParallelStageResult<LexingAndParsin
 	#endregion
 }
 
-public sealed class Parser : BaseParser, IDiagnosticProvider
+public sealed class Parser : BaseParser<IConcreteToken>
 {
 	#region Token fragments
 	private static TextFragment SemicolonFragment => new(";", ClassificationKind.Punctuation);
@@ -89,18 +89,8 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	private static TextFragment EqualSignFragment => new("=", ClassificationKind.Punctuation);
 	#endregion
 
-	#region Properties
-	public string Name => "parser";
-	private ISourceFile Source { get; }
-	protected override int DiagnosticCount => Diagnostics.Count;
-	private DiagnosticBag Diagnostics { get; } = [];
-	#endregion
-
 	#region Constructors
-	private Parser(ISourceFile source, IReadOnlyList<ISyntaxToken> tokens) : base(tokens)
-	{
-		Source = source;
-	}
+	private Parser(ISourceFile source, IReadOnlyList<ISyntaxToken> tokens) : base(source, tokens) { }
 	#endregion
 
 	#region Functions
@@ -334,7 +324,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			return null;
 
 		SyntaxList<IConcreteStatementSyntax> statements = ParseStatements(SyntaxKind.CloseBrace);
-		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBrace, ClassificationKind.Punctuation, start, token =>
+		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBrace, ClassificationKind.Punctuation, token =>
 		{
 			ReportExpectedMatchingBrace(token, start, "end the block statement");
 		});
@@ -365,7 +355,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 
 		IConcreteToken start = Expect(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, token => ReportExpectedOpeningBracket(token, "prefix the if statement condition"));
 		IConcreteExpressionSyntax condition = ParseExpression();
-		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, start, token => ReportExpectedMatchingBracket(token, start, "end the condition"));
+		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, token => ReportExpectedMatchingBracket(token, start, "end the condition"));
 
 		IConcreteStatementSyntax trueClause = ParseStatement();
 
@@ -382,7 +372,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 
 		IConcreteToken start = Expect(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, token => ReportExpectedOpeningBracket(token, "prefix the while statement condition"));
 		IConcreteExpressionSyntax condition = ParseExpression();
-		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, start, token => ReportExpectedMatchingBracket(token, start, "end the condition"));
+		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, token => ReportExpectedMatchingBracket(token, start, "end the condition"));
 		IConcreteStatementSyntax body = ParseStatement();
 
 		return new ConcreteWhileStatementSyntax(keyword, start, condition, end, body);
@@ -481,7 +471,6 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			end = ExpectMatching(
 				SyntaxKind.CloseBracket,
 				ClassificationKind.Punctuation,
-				start,
 				token => ReportExpectedMatchingBracket(token, start, "end the function parameters"));
 		}
 
@@ -766,7 +755,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 			return null;
 
 		IConcreteExpressionSyntax expression = ParseExpression();
-		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, start, token => ReportExpectedMatchingBracket(token, start, "end the grouped expression"));
+		IConcreteToken end = ExpectMatching(SyntaxKind.CloseBracket, ClassificationKind.Punctuation, token => ReportExpectedMatchingBracket(token, start, "end the grouped expression"));
 
 		return new ConcreteGroupedExpressionSyntax(start, expression, end);
 	}
@@ -1047,103 +1036,10 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	}
 	#endregion
 
-	#region Parsing helpers
-	private bool Match(SyntaxKind kind, [NotNullWhen(true)] out IConcreteToken? token)
-	{
-		if (Match(kind, out ISyntaxToken? untyped))
-		{
-			token = Convert(untyped);
-			return true;
-		}
-
-		token = default;
-		return false;
-	}
-	private bool Match(SyntaxKind kind, ClassificationKind classification, [NotNullWhen(true)] out IConcreteToken? token)
-	{
-		if (Match(kind, out ISyntaxToken? untyped))
-		{
-			token = Convert(untyped, classification);
-			return true;
-		}
-
-		token = default;
-		return false;
-	}
-	private bool MatchAny([NotNullWhen(true)] out IConcreteToken? token, ClassificationKind classification, params ReadOnlySpan<SyntaxKind> kinds)
-	{
-		if (MatchAny(out ISyntaxToken? untyped, kinds))
-		{
-			token = Convert(untyped, classification);
-			return true;
-		}
-
-		token = default;
-		return false;
-	}
-	private bool MatchAny([NotNullWhen(true)] out IConcreteToken? token, ClassificationKind classification, params IReadOnlyCollection<SyntaxKind> kinds)
-	{
-		if (MatchAny(out ISyntaxToken? untyped, kinds))
-		{
-			token = Convert(untyped, classification);
-			return true;
-		}
-
-		token = default;
-		return false;
-	}
-	#endregion
 
 	#region Error recovery methods
-	private IConcreteToken ExpectSilent(SyntaxKind kind)
-	{
-		ISyntaxToken token = ExpectSilentCore(kind);
-		return Convert(token);
-	}
-	private IConcreteToken ExpectSilent(SyntaxKind kind, ClassificationKind classification)
-	{
-		ISyntaxToken token = ExpectSilentCore(kind);
-		return Convert(token, classification);
-	}
-	private IConcreteToken Expect(SyntaxKind kind, ClassificationKind classification, Action<IConcreteToken> callback)
-	{
-		if (Match(kind, classification, out IConcreteToken? token))
-			return token;
-
-		token = Fabricate(kind, classification);
-		callback.Invoke(token);
-
-		return token;
-	}
-	private IConcreteToken ExpectMatching(SyntaxKind kind, ClassificationKind classification, ISyntaxToken start, Action<IConcreteToken> callback)
-	{
-		if (Match(kind, classification, out IConcreteToken? end) is false)
-		{
-			end = Fabricate(kind, classification);
-			callback.Invoke(end);
-		}
-
-		return end;
-	}
-	private IConcreteToken Expect(SyntaxKind kind, Action<ISyntaxToken> message)
-	{
-		ISyntaxToken token = ExpectCore(kind, message);
-		return Convert(token);
-	}
-
-	private IConcreteToken Fabricate(SyntaxKind kind)
-	{
-		ISyntaxToken token = FabricateCore(kind);
-		return Convert(token);
-	}
-	private IConcreteToken Fabricate(SyntaxKind kind, ClassificationKind classification)
-	{
-		ISyntaxToken token = FabricateCore(kind);
-		return Convert(token, classification);
-	}
-
 	[return: NotNullIfNotNull(nameof(token))]
-	private IConcreteToken? Convert(ISyntaxToken? token, ClassificationKind? classification = null)
+	protected override IConcreteToken? Convert(ISyntaxToken? token, ClassificationKind? classification = null)
 	{
 		if (token is null)
 			return null;
@@ -1298,16 +1194,6 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 				.BuildError(this, "expected_closing_brace")
 				.Add(fabricated, fabricated.Position.Start, lines => lines.AddLine("Expected a closing brace '", ClosingBraceFragment, $"' here to {purpose}."))
 				.Add(start, lines => lines.AddLine("It needs to match this opening brace '", OpeningBraceFragment, "'."));
-	}
-
-
-	protected override void ReportInfiniteLoop(ISyntaxToken token)
-	{
-		StackTrace trace = new();
-
-		Diagnostics
-			.BuildError(this, "infinite_parsing_loop", trace)
-			.Add(token, lines => lines.AddLine("The parser got stuck in an infinite loop without me accounting for it. I'd appreciate it if you told me that it happened."));
 	}
 	#endregion
 }
