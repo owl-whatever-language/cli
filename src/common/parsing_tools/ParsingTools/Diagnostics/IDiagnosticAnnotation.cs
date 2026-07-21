@@ -219,7 +219,8 @@ public static class IDiagnosticAnnotationExtensions
 					return true;
 				}
 
-				return false;
+				// Note(Nightowl): returning false was meant to protect against large error spans, but it seems to be necessary for now;
+				return true;
 			}
 		}
 		#endregion
