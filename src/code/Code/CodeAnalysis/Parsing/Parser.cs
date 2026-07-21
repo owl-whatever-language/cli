@@ -244,12 +244,14 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 
 		terminator = Fabricate(SyntaxKind.Semicolon, ClassificationKind.Punctuation);
 
-		ISyntaxToken position =
+		ISyntaxToken token =
 			Previous ??
 			value?.Flatten()?.LastOrDefault() ??
 			terminator;
 
-		ReportExpectedSimple(position, "terminator", "Expected a semi-colon '", SemicolonFragment, "' here to end the statement.");
+		Diagnostics
+			.BuildError(this, "expected_terminator")
+			.Add(token, token.Position.End, lines => lines.AddLine("Expected a semi-colon '", SemicolonFragment, "' here to end the statement."));
 
 		return terminator;
 	}
@@ -467,8 +469,12 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		{
 			// Note(Nightowl): I don't know if this is really needed, but I'm doing it this way for now;
 			IConcreteToken target = nodes.LastOrDefault()?.Flatten().LastOrDefault() ?? start;
-			ReportExpectedSimple(target, "closing_bracket", "Expected a closing bracket '", ClosingBracketFragment, "' here to end the function parameters.");
-			end = Fabricate(SyntaxKind.Semicolon, ClassificationKind.Punctuation);
+			Diagnostics
+				.BuildError(this, "expected_closing_bracket")
+				.Add(target, target.Position.End, lines => lines.AddLine("Expected a closing bracket '", ClosingBracketFragment, $"' here to end the function parameters."))
+				.Add(start, lines => lines.AddLine("It needs to match this opening bracket '", OpeningBracketFragment, "'."));
+
+			end = Fabricate(SyntaxKind.CloseBracket, ClassificationKind.Punctuation);
 		}
 		else
 		{
@@ -652,7 +658,7 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 		{
 			Diagnostics
 				.BuildError(this, "expected_generic_type_end")
-				.Add(token, lines => lines.AddLine("Expected a closing angle bracket '", ClosingAngleBracketFragment, "' to end the generic type."))
+				.Add(token, lines => lines.AddLine("Expected a closing angle bracket '", ClosingAngleBracketFragment, "' here to end the generic type."))
 				.Add(start, lines => lines.AddLine("It needs to match this opening angle bracket '", OpeningAngleBracketFragment, "'."));
 		});
 
@@ -1264,33 +1270,33 @@ public sealed class Parser : BaseParser, IDiagnosticProvider
 	{
 		Diagnostics
 			.BuildError(this, $"expected_bracket")
-			.Add(fabricatedToken, lines => lines.AddLine("Expected an opening bracket '", OpeningBracketFragment, $"' here to {purpose}."));
+			.Add(fabricatedToken, fabricatedToken.Position.Start, lines => lines.AddLine("Expected an opening bracket '", OpeningBracketFragment, $"' here to {purpose}."));
 	}
 	private void ReportExpectedComma(ISyntaxToken fabricatedToken, string purpose)
 	{
 		Diagnostics
 			.BuildError(this, $"expected_comma")
-			.Add(fabricatedToken, lines => lines.AddLine("Expected a comma '", CommaFragment, $"' here to {purpose}."));
+			.Add(fabricatedToken, fabricatedToken.Position.Start, lines => lines.AddLine("Expected a comma '", CommaFragment, $"' here to {purpose}."));
 	}
 	private void ReportExpectedMatchingBracket(ISyntaxToken fabricated, ISyntaxToken start, string purpose)
 	{
 		Diagnostics
 				.BuildError(this, "expected_closing_bracket")
-				.Add(fabricated, lines => lines.AddLine("Expected a closing bracket '", ClosingBracketFragment, $"' to {purpose}."))
+				.Add(fabricated, fabricated.Position.Start, lines => lines.AddLine("Expected a closing bracket '", ClosingBracketFragment, $"' here to {purpose}."))
 				.Add(start, lines => lines.AddLine("It needs to match this opening bracket '", OpeningBracketFragment, "'."));
 	}
 	private void ReportExpectedMatchingAngleBracket(ISyntaxToken fabricated, ISyntaxToken start, string purpose)
 	{
 		Diagnostics
 				.BuildError(this, "expected_closing_angle_bracket")
-				.Add(fabricated, lines => lines.AddLine("Expected a closing angle bracket '", ClosingAngleBracketFragment, $"' to {purpose}."))
+				.Add(fabricated, fabricated.Position.Start, lines => lines.AddLine("Expected a closing angle bracket '", ClosingAngleBracketFragment, $"' here to {purpose}."))
 				.Add(start, lines => lines.AddLine("It needs to match this opening angle bracket '", OpeningAngleBracketFragment, "'."));
 	}
 	private void ReportExpectedMatchingBrace(ISyntaxToken fabricated, ISyntaxToken start, string purpose)
 	{
 		Diagnostics
 				.BuildError(this, "expected_closing_brace")
-				.Add(fabricated, lines => lines.AddLine("Expected a closing brace '", ClosingBraceFragment, $"' to {purpose}."))
+				.Add(fabricated, fabricated.Position.Start, lines => lines.AddLine("Expected a closing brace '", ClosingBraceFragment, $"' here to {purpose}."))
 				.Add(start, lines => lines.AddLine("It needs to match this opening brace '", OpeningBraceFragment, "'."));
 	}
 

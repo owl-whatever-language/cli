@@ -114,6 +114,9 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 		IsFabricated = isFabricated;
 
 		AssignParentToChildren();
+
+		if (Position.End > FullPosition.End)
+			ThrowHelper.ThrowArgumentException(nameof(position), "The regular position ended after the full position, this is likely a mistake in taking the end position after lexing the trivia.");
 	}
 	protected BaseSyntaxToken(SyntaxKind kind, IndexedPositionRange position)
 	{

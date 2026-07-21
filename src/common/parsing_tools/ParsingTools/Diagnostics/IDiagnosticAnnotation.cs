@@ -55,6 +55,31 @@ public sealed class DiagnosticAnnotation : IDiagnosticAnnotation
 		Node = node;
 		Message = message;
 	}
+	public DiagnosticAnnotation(ISyntaxNode node, PositionRange position, TextFragmentLineCollection message)
+	{
+		Node = node;
+		Position = position;
+		Message = message;
+	}
+	public DiagnosticAnnotation(ISyntaxNode node, LinePosition position, TextFragmentLineCollection message)
+	{
+		Node = node;
+		Position = new(position, position);
+		Message = message;
+	}
+	public DiagnosticAnnotation(ISyntaxNode node, IndexedPositionRange position, TextFragmentLineCollection message)
+	{
+		Node = node;
+		IndexedPosition = position;
+		Message = message;
+	}
+	public DiagnosticAnnotation(ISyntaxNode node, IndexedLinePosition position, TextFragmentLineCollection message)
+	{
+		Node = node;
+		IndexedPosition = new(position, position);
+		Message = message;
+	}
+
 	public DiagnosticAnnotation(ISourceFile source, TextFragmentLineCollection message)
 	{
 		Source = source;
@@ -96,6 +121,31 @@ public sealed class DiagnosticAnnotation : IDiagnosticAnnotation
 		Node = node;
 		Message = TextFragment.LineBuilder(message);
 	}
+	public DiagnosticAnnotation(ISyntaxNode node, PositionRange position, Action<TextFragmentLineCollection> message)
+	{
+		Node = node;
+		Position = position;
+		Message = TextFragment.LineBuilder(message);
+	}
+	public DiagnosticAnnotation(ISyntaxNode node, LinePosition position, Action<TextFragmentLineCollection> message)
+	{
+		Node = node;
+		Position = new(position, position);
+		Message = TextFragment.LineBuilder(message);
+	}
+	public DiagnosticAnnotation(ISyntaxNode node, IndexedPositionRange position, Action<TextFragmentLineCollection> message)
+	{
+		Node = node;
+		IndexedPosition = position;
+		Message = TextFragment.LineBuilder(message);
+	}
+	public DiagnosticAnnotation(ISyntaxNode node, IndexedLinePosition position, Action<TextFragmentLineCollection> message)
+	{
+		Node = node;
+		IndexedPosition = new(position, position);
+		Message = TextFragment.LineBuilder(message);
+	}
+
 	public DiagnosticAnnotation(ISourceFile source, Action<TextFragmentLineCollection> message)
 	{
 		Source = source;
@@ -126,7 +176,6 @@ public sealed class DiagnosticAnnotation : IDiagnosticAnnotation
 		Message = TextFragment.LineBuilder(message);
 	}
 	#endregion
-
 
 	#region Helpers
 	private string DebuggerDisplay() => $"Annotation {{ Message = ({Message.ToPlainText()}) }}";

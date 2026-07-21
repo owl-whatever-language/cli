@@ -92,6 +92,27 @@ public sealed class Diagnostic : IDiagnostic
 		DiagnosticAnnotation annotation = new(node, message);
 		return Add(annotation);
 	}
+	public Diagnostic Add(ISyntaxNode node, PositionRange position, TextFragmentLineCollection message)
+	{
+		DiagnosticAnnotation annotation = new(node, position, message);
+		return Add(annotation);
+	}
+	public Diagnostic Add(ISyntaxNode node, LinePosition position, TextFragmentLineCollection message)
+	{
+		DiagnosticAnnotation annotation = new(node, position, message);
+		return Add(annotation);
+	}
+	public Diagnostic Add(ISyntaxNode node, IndexedLinePosition position, TextFragmentLineCollection message)
+	{
+		DiagnosticAnnotation annotation = new(node, position, message);
+		return Add(annotation);
+	}
+	public Diagnostic Add(ISyntaxNode node, IndexedPositionRange position, TextFragmentLineCollection message)
+	{
+		DiagnosticAnnotation annotation = new(node, position, message);
+		return Add(annotation);
+	}
+
 	public Diagnostic Add(ISourceFile source, TextFragmentLineCollection message)
 	{
 		DiagnosticAnnotation annotation = new(source, message);
@@ -130,6 +151,27 @@ public sealed class Diagnostic : IDiagnostic
 		DiagnosticAnnotation annotation = new(node, message);
 		return Add(annotation);
 	}
+	public Diagnostic Add(ISyntaxNode node, PositionRange position, Action<TextFragmentLineCollection> message)
+	{
+		DiagnosticAnnotation annotation = new(node, position, message);
+		return Add(annotation);
+	}
+	public Diagnostic Add(ISyntaxNode node, LinePosition position, Action<TextFragmentLineCollection> message)
+	{
+		DiagnosticAnnotation annotation = new(node, position, message);
+		return Add(annotation);
+	}
+	public Diagnostic Add(ISyntaxNode node, IndexedLinePosition position, Action<TextFragmentLineCollection> message)
+	{
+		DiagnosticAnnotation annotation = new(node, position, message);
+		return Add(annotation);
+	}
+	public Diagnostic Add(ISyntaxNode node, IndexedPositionRange position, Action<TextFragmentLineCollection> message)
+	{
+		DiagnosticAnnotation annotation = new(node, position, message);
+		return Add(annotation);
+	}
+
 	public Diagnostic Add(ISourceFile source, Action<TextFragmentLineCollection> message)
 	{
 		DiagnosticAnnotation annotation = new(source, message);

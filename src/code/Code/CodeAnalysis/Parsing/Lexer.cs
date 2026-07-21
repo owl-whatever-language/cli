@@ -408,8 +408,10 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 			return false;
 		}
 
+		IndexedLinePosition end = Text.Position;
 		FinishPrefixToken(out TriviaList leadingTrivia);
-		token = new(SyntaxKind.StringStart, new(start, Text.Position), "\"", null, leadingTrivia, TriviaList.Empty);
+
+		token = new(SyntaxKind.StringStart, new(start, end), "\"", null, leadingTrivia, TriviaList.Empty);
 		Tokens.Add(token);
 
 		return true;
@@ -429,8 +431,10 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 
 		Text.Advance(2);
 
+		IndexedLinePosition end = Text.Position;
 		FinishPrefixToken(out TriviaList leadingTrivia);
-		token = new(SyntaxKind.InterpolatedStringStart, new(start, Text.Position), "$\"", null, leadingTrivia, TriviaList.Empty);
+
+		token = new(SyntaxKind.InterpolatedStringStart, new(start, end), "$\"", null, leadingTrivia, TriviaList.Empty);
 		Tokens.Add(token);
 
 		return true;
@@ -441,8 +445,10 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 		if (Text.Match('"') is false)
 			return false;
 
+		IndexedLinePosition end = Text.Position;
 		FinishSuffixToken(out TriviaList trailingTrivia);
-		SyntaxToken token = new(SyntaxKind.StringEnd, new(start, Text.Position), "\"", null, TriviaList.Empty, trailingTrivia);
+
+		SyntaxToken token = new(SyntaxKind.StringEnd, new(start, end), "\"", null, TriviaList.Empty, trailingTrivia);
 		Tokens.Add(token);
 
 		return true;
