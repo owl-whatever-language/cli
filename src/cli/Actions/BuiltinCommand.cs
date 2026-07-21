@@ -65,9 +65,8 @@ public class BuiltinCommand : Command
 	#region Helpers
 	private static void Add(TextFragmentLineCollection lines, ISymbol symbol)
 	{
-		TextFragment indent = new("\t", ClassificationKind.Indentation);
-		TextFragment space = new(" ", ClassificationKind.Whitespace);
-		TextFragment colon = new(":", ClassificationKind.Punctuation);
+		TextFragment indent = TextFragment.Tab;
+		TextFragment space = TextFragment.Space;
 
 		TextFragmentLine Get()
 		{
@@ -79,7 +78,7 @@ public class BuiltinCommand : Command
 				line.Add("property", ClassificationKind.Keyword);
 				line.Add(space);
 				line.Add(symbol.Name, ClassificationKind.TypeProperty);
-				line.Add(colon);
+				line.Add(TextFragment.Colon);
 				line.Add(space);
 				line.AddRange(property.Type.GetDebugText());
 			}
@@ -97,7 +96,7 @@ public class BuiltinCommand : Command
 		if (symbol is INamedType type)
 		{
 			lines.AddLine(("type", ClassificationKind.Keyword), space, (type.Name, type.Classification));
-			lines.AddLine(("{", ClassificationKind.Punctuation));
+			lines.AddLine(TextFragment.OpeningBrace);
 
 			bool hadGroup = false;
 			foreach (ITypeProperty property in type.Members.OfType<ITypeProperty>())

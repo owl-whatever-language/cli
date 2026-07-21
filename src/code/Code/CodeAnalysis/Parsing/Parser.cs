@@ -76,19 +76,6 @@ public sealed class ParallelParsingResult : IParallelStageResult<LexingAndParsin
 
 public sealed class Parser : BaseParser<IConcreteToken>
 {
-	#region Token fragments
-	private static TextFragment SemicolonFragment => new(";", ClassificationKind.Punctuation);
-	private static TextFragment CommaFragment => new(",", ClassificationKind.Punctuation);
-	private static TextFragment OpeningBracketFragment => new("(", ClassificationKind.Punctuation);
-	private static TextFragment ClosingBracketFragment => new(")", ClassificationKind.Punctuation);
-	private static TextFragment OpeningBraceFragment => new("{", ClassificationKind.Punctuation);
-	private static TextFragment ClosingBraceFragment => new("}", ClassificationKind.Punctuation);
-	private static TextFragment OpeningAngleBracketFragment => new("<", ClassificationKind.Punctuation);
-	private static TextFragment ClosingAngleBracketFragment => new(">", ClassificationKind.Punctuation);
-	private static TextFragment NumberUnderscoreFragment => new("_", ClassificationKind.Number);
-	private static TextFragment EqualSignFragment => new("=", ClassificationKind.Punctuation);
-	#endregion
-
 	#region Constructors
 	private Parser(ISourceFile source, IReadOnlyList<ISyntaxToken> tokens) : base(source, tokens) { }
 	#endregion
@@ -200,7 +187,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 				if (last?.Kind == SyntaxKind.CloseBrace)
 					target = last;
 
-				ReportDuplicate(target, "closing_brace", ClosingBraceFragment);
+				ReportDuplicate(target, "closing_brace", TextFragment.ClosingBrace);
 				SkipCurrent();
 			}
 			else
@@ -241,7 +228,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 
 		Diagnostics
 			.BuildError(this, "expected_terminator")
-			.Add(token, token.Position.End, lines => lines.AddLine("Expected a semi-colon '", SemicolonFragment, "' here to end the statement."));
+			.Add(token, token.Position.End, lines => lines.AddLine("Expected a semi-colon '", TextFragment.Semicolon, "' here to end the statement."));
 
 		return terminator;
 	}
@@ -311,7 +298,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 
 		IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Variable, token => ReportExpectedSimple(token, "variable_name", "Expect the name of the new variable."));
 		IConcreteToken assignment = Expect(SyntaxKind.EqualSign, ClassificationKind.Punctuation, token =>
-			ReportExpectedSimple(token, "equal_sign", "Expect an equal sign '", EqualSignFragment, "' between the variable name and its value."));
+			ReportExpectedSimple(token, "equal_sign", "Expect an equal sign '", TextFragment.EqualSign, "' between the variable name and its value."));
 
 		IConcreteExpressionSyntax value = ParseExpression();
 		IConcreteToken terminator = ExpectStatementTerminator(value);
@@ -461,8 +448,8 @@ public sealed class Parser : BaseParser<IConcreteToken>
 			IConcreteToken target = nodes.LastOrDefault()?.Flatten().LastOrDefault() ?? start;
 			Diagnostics
 				.BuildError(this, "expected_closing_bracket")
-				.Add(target, target.Position.End, lines => lines.AddLine("Expected a closing bracket '", ClosingBracketFragment, $"' here to end the function parameters."))
-				.Add(start, lines => lines.AddLine("It needs to match this opening bracket '", OpeningBracketFragment, "'."));
+				.Add(target, target.Position.End, lines => lines.AddLine("Expected a closing bracket '", TextFragment.ClosingBracket, $"' here to end the function parameters."))
+				.Add(start, lines => lines.AddLine("It needs to match this opening bracket '", TextFragment.OpeningBracket, "'."));
 
 			end = Fabricate(SyntaxKind.CloseBracket, ClassificationKind.Punctuation);
 		}
@@ -551,7 +538,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 		{
 			Diagnostics
 				.BuildError(this, "expected_terminator")
-				.Add(token, lines => lines.AddLine("Expected a semi-colon '", SemicolonFragment, "' here to end the function body short-hand."))
+				.Add(token, lines => lines.AddLine("Expected a semi-colon '", TextFragment.Semicolon, "' here to end the function body short-hand."))
 				.Add(arrow, lines => lines.AddLine("This arrow here means that you started the function body short-hand."));
 		});
 
@@ -647,8 +634,8 @@ public sealed class Parser : BaseParser<IConcreteToken>
 		{
 			Diagnostics
 				.BuildError(this, "expected_generic_type_end")
-				.Add(token, lines => lines.AddLine("Expected a closing angle bracket '", ClosingAngleBracketFragment, "' here to end the generic type."))
-				.Add(start, lines => lines.AddLine("It needs to match this opening angle bracket '", OpeningAngleBracketFragment, "'."));
+				.Add(token, lines => lines.AddLine("Expected a closing angle bracket '", TextFragment.ClosingAngleBracket, "' here to end the generic type."))
+				.Add(start, lines => lines.AddLine("It needs to match this opening angle bracket '", TextFragment.OpeningAngleBracket, "'."));
 		});
 
 		return new ConcreteGenericTypeSyntax(
@@ -805,9 +792,9 @@ public sealed class Parser : BaseParser<IConcreteToken>
 					{
 						lines.AddLine(
 							"This opening bracket '",
-							OpeningBracketFragment,
+							TextFragment.OpeningBracket,
 							"' is used to call a function. You end this call with a closing bracket '",
-							ClosingBracketFragment,
+							TextFragment.ClosingBracket,
 							"'.");
 					});
 
@@ -816,7 +803,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 					diagnostic.Add(lastComma, lines =>
 					{
 						lines
-						.AddLine("This is a comma '", CommaFragment, "', in this context, it is used to separate the function arguments.")
+						.AddLine("This is a comma '", TextFragment.Comma, "', in this context, it is used to separate the function arguments.")
 						.AddLine("Writing it here means that you intended to pass in another argument to the function.");
 					});
 				}
@@ -921,7 +908,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 							"This is a number base specifier, this particular one is for ",
 							(numberBase.Name.ToLower(), ClassificationKind.Number),
 							$" digits, meaning you can only use the {numberBase.CharacterSetDisplay} characters, or an underscore '",
-							NumberUnderscoreFragment,
+							TextFragment.NumberUnderscore,
 							"' to separate the digits.");
 					});
 
@@ -1166,34 +1153,34 @@ public sealed class Parser : BaseParser<IConcreteToken>
 	{
 		Diagnostics
 			.BuildError(this, $"expected_bracket")
-			.Add(fabricatedToken, fabricatedToken.Position.Start, lines => lines.AddLine("Expected an opening bracket '", OpeningBracketFragment, $"' here to {purpose}."));
+			.Add(fabricatedToken, fabricatedToken.Position.Start, lines => lines.AddLine("Expected an opening bracket '", TextFragment.OpeningBracket, $"' here to {purpose}."));
 	}
 	private void ReportExpectedComma(ISyntaxToken fabricatedToken, string purpose)
 	{
 		Diagnostics
 			.BuildError(this, $"expected_comma")
-			.Add(fabricatedToken, fabricatedToken.Position.Start, lines => lines.AddLine("Expected a comma '", CommaFragment, $"' here to {purpose}."));
+			.Add(fabricatedToken, fabricatedToken.Position.Start, lines => lines.AddLine("Expected a comma '", TextFragment.Comma, $"' here to {purpose}."));
 	}
 	private void ReportExpectedMatchingBracket(ISyntaxToken fabricated, ISyntaxToken start, string purpose)
 	{
 		Diagnostics
 				.BuildError(this, "expected_closing_bracket")
-				.Add(fabricated, fabricated.Position.Start, lines => lines.AddLine("Expected a closing bracket '", ClosingBracketFragment, $"' here to {purpose}."))
-				.Add(start, lines => lines.AddLine("It needs to match this opening bracket '", OpeningBracketFragment, "'."));
+				.Add(fabricated, fabricated.Position.Start, lines => lines.AddLine("Expected a closing bracket '", TextFragment.ClosingBracket, $"' here to {purpose}."))
+				.Add(start, lines => lines.AddLine("It needs to match this opening bracket '", TextFragment.OpeningBracket, "'."));
 	}
 	private void ReportExpectedMatchingAngleBracket(ISyntaxToken fabricated, ISyntaxToken start, string purpose)
 	{
 		Diagnostics
 				.BuildError(this, "expected_closing_angle_bracket")
-				.Add(fabricated, fabricated.Position.Start, lines => lines.AddLine("Expected a closing angle bracket '", ClosingAngleBracketFragment, $"' here to {purpose}."))
-				.Add(start, lines => lines.AddLine("It needs to match this opening angle bracket '", OpeningAngleBracketFragment, "'."));
+				.Add(fabricated, fabricated.Position.Start, lines => lines.AddLine("Expected a closing angle bracket '", TextFragment.ClosingAngleBracket, $"' here to {purpose}."))
+				.Add(start, lines => lines.AddLine("It needs to match this opening angle bracket '", TextFragment.OpeningAngleBracket, "'."));
 	}
 	private void ReportExpectedMatchingBrace(ISyntaxToken fabricated, ISyntaxToken start, string purpose)
 	{
 		Diagnostics
 				.BuildError(this, "expected_closing_brace")
-				.Add(fabricated, fabricated.Position.Start, lines => lines.AddLine("Expected a closing brace '", ClosingBraceFragment, $"' here to {purpose}."))
-				.Add(start, lines => lines.AddLine("It needs to match this opening brace '", OpeningBraceFragment, "'."));
+				.Add(fabricated, fabricated.Position.Start, lines => lines.AddLine("Expected a closing brace '", TextFragment.ClosingBrace, $"' here to {purpose}."))
+				.Add(start, lines => lines.AddLine("It needs to match this opening brace '", TextFragment.OpeningBrace, "'."));
 	}
 	#endregion
 }

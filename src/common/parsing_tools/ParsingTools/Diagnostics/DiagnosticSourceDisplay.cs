@@ -313,7 +313,7 @@ public sealed class DiagnosticSourceDisplay
 			int mid = (annotation.Position.End.Column - annotation.Position.Start.Column) / 2;
 			toStart += mid;
 
-			TextFragment space = new(" ", ClassificationKind.Whitespace);
+			TextFragment space = TextFragment.Space;
 			TextFragment alignment = new(new(' ', toStart), ClassificationKind.Whitespace);
 			TextFragment underline = new("└", classification);
 			TextFragment pipe = new("│", classification);
@@ -544,7 +544,7 @@ public sealed class DiagnosticSourceDisplay
 		line.Insert(0, prefix);
 
 		if (isSuffix)
-			line.Insert(0, new(" ", ClassificationKind.Whitespace));
+			line.Insert(0, TextFragment.Space);
 		else if (indent is not null)
 			line.Insert(0, indent.Value);
 
@@ -559,7 +559,7 @@ public sealed class DiagnosticSourceDisplay
 		line.Insert(0, prefix);
 
 		if (isSuffix)
-			line.Insert(0, new(" ", ClassificationKind.Whitespace));
+			line.Insert(0, TextFragment.Space);
 		else if (indent is not null)
 			line.Insert(0, indent.Value);
 
@@ -570,7 +570,7 @@ public sealed class DiagnosticSourceDisplay
 		string symbol =
 			_styling.GetSymbol(ClassificationKind.Snipped) ??
 			_styling.GetSymbol(ClassificationKind.Message) ??
-			_styling.GetSymbol(ClassificationKind.Diagnostic) ?? "//";
+			_styling.GetSymbol(ClassificationKind.Diagnostic) ?? "⯌";
 
 		TextFragment fragment = new($"{symbol} omitted code", null, ClassificationKind.Snipped);
 
@@ -590,7 +590,7 @@ public sealed class DiagnosticSourceDisplay
 	{
 		string symbol =
 			_styling.GetSymbol(ClassificationKind.Diagnostic) ??
-			_styling.GetSymbol(ClassificationKind.Message) ?? "/⯌";
+			_styling.GetSymbol(ClassificationKind.Message) ?? "⯌";
 
 		TextFragment fragment = new($"{symbol} ", null, [ClassificationKind.Diagnostic, ClassificationKind.Message]);
 		return fragment;

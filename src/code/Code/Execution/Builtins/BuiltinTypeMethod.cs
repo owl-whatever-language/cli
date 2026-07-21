@@ -29,7 +29,7 @@ internal class BuiltinTypeMethod : ITypeMethod
 		return
 		[
 			..DeclaringType.GetDebugText(),
-			new(".", ClassificationKind.Punctuation),
+			TextFragment.Period,
 			..Function.GetDebugText()
 		];
 	}

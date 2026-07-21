@@ -4,6 +4,7 @@ global using System.CommandLine.Invocation;
 global using OwlDomain.Owl.CLI;
 global using OwlDomain.Owl.CLI.Diagnostics;
 global using OwlDomain.Owl.Code.CodeAnalysis;
+global using OwlDomain.Owl.Code.CodeAnalysis.Text;
 global using OwlDomain.Owl.Code.Styling;
 global using OwlDomain.ParsingTools.Classification;
 global using OwlDomain.ParsingTools.Diagnostics;

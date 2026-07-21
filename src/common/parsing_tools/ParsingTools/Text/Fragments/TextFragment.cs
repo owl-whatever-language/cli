@@ -4,6 +4,7 @@ public readonly struct TextFragment
 {
 	#region Properties
 	public static TextFragment Space => new(" ", ClassificationKind.Whitespace);
+	public static TextFragment Tab => new("\t", ClassificationKind.Whitespace);
 
 	public string Text => field ?? "";
 	public ISyntaxPart? Syntax { get; }

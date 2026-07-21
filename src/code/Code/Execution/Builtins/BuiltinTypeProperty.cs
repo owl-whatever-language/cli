@@ -35,10 +35,10 @@ internal class BuiltinTypeProperty : ITypeProperty
 		return
 		[
 			..DeclaringType.GetDebugText(),
-			new(".", ClassificationKind.Punctuation),
+			TextFragment.Period,
 			new(Name, ClassificationKind.TypeProperty),
-			new(":", ClassificationKind.Punctuation),
-			new(" ", ClassificationKind.Whitespace),
+			TextFragment.Colon,
+			TextFragment.Space,
 			..Type.GetDebugText()
 		];
 	}

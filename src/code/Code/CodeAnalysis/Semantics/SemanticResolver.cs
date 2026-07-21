@@ -1011,13 +1011,11 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	}
 	private Diagnostic ReportInvalidConditionType(ISemanticExpressionSyntax condition)
 	{
-		TextFragment boolType = new("bool", ClassificationKind.Type);
-
 		return Diagnostics
 			.BuildError(this, "invalid_condition_type")
 			.Add(condition, lines =>
 			{
-				lines.AddLine("Expected the condition to result in a '", boolType, "' type.");
+				lines.AddLine("Expected the condition to result in a '", TextFragment.Bool, "' type.");
 				if (condition.ResultType.IsNotError)
 					lines.AddLine("The actual result type of the condition was '", condition.ResultType, "'.");
 			});
@@ -1102,7 +1100,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 						if (i + 1 == types.Count)
 							values.Add(" and ");
 						else
-							values.Add(new TextFragment(", ", ClassificationKind.Punctuation));
+							values.AddRange(TextFragment.Comma, " ");
 					}
 
 					values.Add("'");
