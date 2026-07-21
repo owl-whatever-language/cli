@@ -391,9 +391,9 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 					Diagnostic diagnostic = Diagnostics.BuildSuggestion(this, "missing_declaration");
 
 					if (valueType.IsNotError)
-						diagnostic.Add(get, get.Position.Start, lines => lines.AddLine("Is '", get.Name, "' perhaps meant to be a new variable of the type '", valueType, "'?"));
+						diagnostic.Add(get, get.Position.Start, lines => lines.AddLine("Is '", get.Name, "' meant to be a new variable of the type '", valueType, "'?"));
 					else
-						diagnostic.Add(get, get.Position.Start, lines => lines.AddLine("Is '", get.Name, "' perhaps meant to be a new variable?"));
+						diagnostic.Add(get, get.Position.Start, lines => lines.AddLine("Is '", get.Name, "' meant to be a new variable?"));
 				}
 			}
 		}
