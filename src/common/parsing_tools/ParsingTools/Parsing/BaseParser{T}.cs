@@ -65,30 +65,105 @@ public abstract class BaseParser<TToken> : BaseParser
 		ISyntaxToken token = ExpectSilentCore(kind);
 		return Convert(token, classification);
 	}
-	protected TToken Expect(SyntaxKind kind, ClassificationKind classification, Action<TToken> callback)
+
+	protected TToken Expect(SyntaxKind kind, ClassificationKind classification, string lexeme, string purpose)
+	{
+		return Expect(kind, classification, lexeme, purpose, out _);
+	}
+	protected TToken Expect(SyntaxKind kind, ClassificationKind classification, string lexeme, string purpose, out Diagnostic? diagnostic)
 	{
 		if (Match(kind, classification, out TToken? token))
+		{
+			diagnostic = default;
 			return token;
+		}
 
 		token = Fabricate(kind, classification);
-		callback.Invoke(token);
+		diagnostic = ReportExpected(token, purpose, lexeme);
 
 		return token;
 	}
-	protected TToken ExpectMatching(SyntaxKind kind, ClassificationKind classification, Action<TToken> callback)
+
+	protected TToken Expect(SyntaxKind kind, ClassificationKind classification, string message)
 	{
-		if (Match(kind, classification, out TToken? end) is false)
+		return Expect(kind, classification, message, out _);
+	}
+	protected TToken Expect(SyntaxKind kind, ClassificationKind classification, string message, out Diagnostic? diagnostic)
+	{
+		if (Match(kind, classification, out TToken? token))
 		{
-			end = Fabricate(kind, classification);
-			callback.Invoke(end);
+			diagnostic = default;
+			return token;
 		}
 
-		return end;
+		token = Fabricate(kind, classification);
+		diagnostic = ReportExpected(token, message);
+
+		return token;
 	}
-	protected TToken Expect(SyntaxKind kind, Action<ISyntaxToken> message)
+
+	protected TToken Expect(SyntaxKind kind, ClassificationKind classification, Action<TextFragmentLineCollection> message)
 	{
-		ISyntaxToken token = ExpectCore(kind, message);
-		return Convert(token);
+		return Expect(kind, classification, message, out _);
+	}
+	protected TToken Expect(SyntaxKind kind, ClassificationKind classification, Action<TextFragmentLineCollection> message, out Diagnostic? diagnostic)
+	{
+		if (Match(kind, classification, out TToken? token))
+		{
+			diagnostic = default;
+			return token;
+		}
+
+		token = Fabricate(kind, classification);
+		diagnostic = ReportExpected(token, message);
+
+		return token;
+	}
+
+	protected TToken ExpectClosing(
+		ISyntaxToken opening,
+		string openingLexeme,
+		SyntaxKind kind,
+		ClassificationKind classification,
+		string closingLexeme,
+		string purpose)
+	{
+		return ExpectClosing(opening, openingLexeme, kind, classification, closingLexeme, purpose, out _);
+	}
+	protected TToken ExpectClosing(
+		ISyntaxToken opening,
+		string openingLexeme,
+		SyntaxKind kind,
+		ClassificationKind classification,
+		string closingLexeme,
+		string purpose,
+		out Diagnostic? diagnostic)
+	{
+		if (Match(kind, classification, out TToken? token))
+		{
+			diagnostic = default;
+			return token;
+		}
+
+		token = Fabricate(kind, classification);
+		diagnostic = ReportExpectedClosing(opening, token, openingLexeme, closingLexeme, purpose);
+
+		return token;
+	}
+
+	protected TToken ExpectEndOfInput() => ExpectEndOfInput(out _);
+	protected TToken ExpectEndOfInput(out Diagnostic? diagnostic)
+	{
+		if (Match(SyntaxKind.EndOfInput, out TToken? token))
+		{
+			diagnostic = default;
+			return token;
+		}
+
+		token = Fabricate(SyntaxKind.EndOfInput);
+		diagnostic = ReportExpectedEndOfInput(token);
+
+		return token;
 	}
 	#endregion
 

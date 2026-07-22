@@ -4,6 +4,23 @@ public static class StringExtensions
 {
 	extension(string? value)
 	{
+		#region Properties
+		public string IndefiniteArticle
+		{
+			get
+			{
+				if (value is null || value.IsWhiteSpace())
+					return "";
+
+				char first = char.ToLower(value[0]);
+				if (first is 'a' or 'e' or 'i' or 'o' or 'u')
+					return "an";
+
+				return "a";
+			}
+		}
+		#endregion
+
 		#region Methods
 		[return: NotNullIfNotNull(nameof(value))]
 		public string? TryIntern()

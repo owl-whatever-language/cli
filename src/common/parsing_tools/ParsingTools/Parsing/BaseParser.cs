@@ -259,13 +259,35 @@ public abstract class BaseParser : IDiagnosticProvider
 	#endregion
 
 	#region Diagnostic methods
-	protected virtual void ReportInfiniteLoop(ISyntaxToken token)
+	protected virtual Diagnostic ReportInfiniteLoop(ISyntaxToken token) => Diagnostics.ReportInfiniteLoop(this, token);
+	protected virtual Diagnostic ReportDuplicate(ISyntaxToken token) => Diagnostics.ReportDuplicate(this, token);
+	protected virtual Diagnostic ReportExpected(ISyntaxToken token, string lexeme, string purpose)
 	{
-		StackTrace trace = new();
-
-		Diagnostics
-			.BuildError(this, "infinite_parsing_loop", trace)
-			.Add(token, lines => lines.AddLine("The parser got stuck in an infinite loop without it being accounted for."));
+		return Diagnostics.ReportExpected(this, token, lexeme, purpose);
+	}
+	protected virtual Diagnostic ReportExpected(ISyntaxToken token, string message)
+	{
+		return Diagnostics.ReportExpected(this, token, message);
+	}
+	protected virtual Diagnostic ReportExpected(ISyntaxToken token, Action<TextFragmentLineCollection> message)
+	{
+		return Diagnostics.ReportExpected(this, token, message);
+	}
+	protected virtual Diagnostic ReportExpectedClosing(
+			ISyntaxToken openingToken,
+			ISyntaxToken closingToken,
+			string openingLexeme,
+			string closingLexeme,
+			string purpose)
+	{
+		return Diagnostics.ReportExpectedClosing(this, openingToken, closingToken, openingLexeme, closingLexeme, purpose);
+	}
+	protected virtual Diagnostic ReportExpectedEndOfInput(ISyntaxToken token) => Diagnostics.ReportExpectedEndOfInput(this, token);
+	protected virtual Diagnostic ReportExpectedSimple(ISyntaxToken fabricatedToken, string kind, params IEnumerable<object?> message)
+	{
+		return Diagnostics
+			.BuildError(this, $"expected_{kind}")
+			.Add(fabricatedToken, lines => lines.AddLine(message));
 	}
 	#endregion
 }

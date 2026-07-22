@@ -212,3 +212,22 @@ public sealed class SyntaxToken : BaseSyntaxToken
 	}
 	#endregion
 }
+
+public static class ISyntaxTokenExtensions
+{
+	extension(ISyntaxToken token)
+	{
+		#region Methods
+		public TextFragment ToFragment(string? fallbackLexeme = null)
+		{
+			if (token.Lexeme is not null)
+				return new(token.Lexeme, token.Classification);
+
+			if (fallbackLexeme is not null)
+				return new(fallbackLexeme, token.Classification);
+
+			return new("???", ClassificationKind.Error);
+		}
+		#endregion
+	}
+}

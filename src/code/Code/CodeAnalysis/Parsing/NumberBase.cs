@@ -25,6 +25,7 @@ public readonly struct NumberBase
 	public string? Specifier { get; }
 	public string CharacterSetDisplay { get; }
 	public IReadOnlySet<char> CharacterSet { get; }
+	public TextFragment AsFragment => new(Name.ToLower(), ClassificationKind.Number);
 	#endregion
 
 	#region Constructors
