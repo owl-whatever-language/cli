@@ -103,18 +103,7 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 	private void AddSingle(IDeclaredSymbol symbol, IConcreteToken nameToken)
 	{
 		if (symbol.Name is not null && CurrentScope.TryGetLocal(symbol.Name, out ISymbolGroup? symbols))
-		{
-			Diagnostic diagnostic = Diagnostics
-				.BuildError(this, "duplicate_symbol")
-				.Add(nameToken, lines =>
-				{
-					lines.AddLine($"A symbol named '{symbol.Name}' already exists in this scope.");
-					if (symbol is IFunction && symbols.OfType<IFunction>().Any())
-						lines.AddLine("function overloading is not yet supported.");
-				});
-
-			TryAddDeclaration(diagnostic, symbols.FirstOrDefault());
-		}
+			Diagnostics.ReportDuplicate(this, nameToken, symbol, symbols);
 
 		Add(symbol);
 	}
@@ -149,32 +138,6 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 			CurrentScope = scope;
 		else
 			ThrowHelper.ThrowInvalidOperationException($"Exiting the '{ResultScope.Name}' scope is not allowed.");
-	}
-	#endregion
-
-	#region Diagnostic helpers
-	private Diagnostic TryAddDeclaration(Diagnostic diagnostic, ISymbol? symbol)
-	{
-		if (symbol is null)
-			return diagnostic;
-
-		ISyntaxNode? position = symbol switch
-		{
-			IDeclaredFunctionParameter parameter => parameter.Declaration,
-			IDeclaredLocalVariable variable => variable.Declaration.Name,
-			IDeclaredFunction function => function.Declaration.Signature,
-
-			_ => null
-		};
-
-		ClassificationKind classification = symbol.Classification ?? ClassificationKind.Identifier;
-
-		if (position is null)
-			return diagnostic;
-
-		diagnostic.Add(position, lines => lines.AddLine("This is where '", (symbol.Name, classification), "' is declared."));
-
-		return diagnostic;
 	}
 	#endregion
 }

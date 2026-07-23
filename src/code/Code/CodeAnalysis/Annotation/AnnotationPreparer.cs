@@ -47,16 +47,6 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 		public void Dispose() => resolver.ExitScope();
 		#endregion
 	}
-	private readonly ref struct ValueScope<T>(ref T field, T oldValue) : IDisposable
-	{
-		#region Fields
-		private readonly ref T _field = ref field;
-		#endregion
-
-		#region Methods
-		public void Dispose() => _field = oldValue;
-		#endregion
-	}
 	#endregion
 
 	#region Fields
@@ -126,7 +116,7 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 	protected override AnnotatedFunctionDeclarationStatementSyntax ConvertCore(ISemanticFunctionDeclarationStatementSyntax semantic)
 	{
 		AnnotatedFunctionDeclarationStatementSyntax annotated;
-		using (WithValue(ref _currentFunction, semantic.Function))
+		using (Value.Scope(ref _currentFunction, semantic.Function))
 		using (EnterScope(semantic))
 		{
 			annotated = base.ConvertCore(semantic);
@@ -141,8 +131,8 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 	#region Function call methods
 	protected override AnnotatedFunctionCallExpressionSyntax ConvertCore(ISemanticFunctionCallExpressionSyntax semantic)
 	{
-		using (WithValue(ref _currentCallableParameterIndex, 0))
-		using (WithValue(ref _currentCallable, semantic.Callable))
+		using (Value.Scope(ref _currentCallableParameterIndex, 0))
+		using (Value.Scope(ref _currentCallable, semantic.Callable))
 		{
 			AnnotatedFunctionCallExpressionSyntax call = base.ConvertCore(semantic);
 
@@ -209,12 +199,6 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 	#endregion
 
 	#region Scope helpers
-	private ValueScope<T> WithValue<T>(ref T field, T value)
-	{
-		T old = field;
-		field = value;
-		return new(ref field, old);
-	}
 	private Scope EnterScope(ISemanticSyntaxNode declaration)
 	{
 		// Note(Nightowl):
@@ -258,51 +242,16 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 	}
 	private Diagnostic ReportIncompatibleParameterType(IAnnotatedExpressionSyntax value, ICallableTypeParameter parameter)
 	{
-		Diagnostic diagnostic = ReportIncompatibleType(value, $"An argument value of the type '", value.ResultType, "' cannot be assigned to the '", parameter, "' parameter.");
-		TryAddDeclaration(diagnostic, value);
-		TryAddDeclaration(diagnostic, parameter);
-
-		return diagnostic;
+		return
+			ReportIncompatibleType(value, $"An argument value of the type '", value.ResultType, "' cannot be assigned to the '", parameter, "' parameter.")
+			.TryAddDeclaration(value)
+			.TryAddDeclaration(parameter);
 	}
 	private Diagnostic ReportIncompatibleType(ISyntaxNode node, params IEnumerable<object?> message)
 	{
 		return Diagnostics
 			.BuildError(this, "incompatible_type")
 			.Add(node, lines => lines.AddLine(message));
-	}
-	private Diagnostic TryAddDeclaration(Diagnostic diagnostic, ISemanticExpressionSyntax value)
-	{
-		if (value is not ISemanticGetExpressionSyntax get)
-			return diagnostic;
-
-		ISyntaxNode? position = get.Symbol switch
-		{
-			IDeclaredFunctionParameter parameter => parameter.Declaration,
-			IDeclaredLocalVariable variable => variable.Declaration.Name,
-			IDeclaredFunction function => function.Declaration.Signature,
-
-			_ => null
-		};
-
-		ClassificationKind classification = get.Symbol.Classification ?? ClassificationKind.Identifier;
-
-		if (position is null)
-			return diagnostic;
-
-		diagnostic.Add(position, lines => lines.AddLine("This is where '", (get.Symbol.Name, classification), "' is declared."));
-
-		return diagnostic;
-	}
-	private Diagnostic TryAddDeclaration(Diagnostic diagnostic, ICallableTypeParameter parameter)
-	{
-		if (parameter is not ICallableFunctionParameter functionParameter)
-			return diagnostic;
-
-		if (functionParameter is not IDeclaredFunctionParameter declared)
-			return diagnostic;
-
-		diagnostic.Add(declared.Declaration, lines => lines.AddLine("This is where '", parameter, "' is declared."));
-		return diagnostic;
 	}
 	#endregion
 }

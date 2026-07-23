@@ -50,16 +50,6 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 		public void Dispose() => resolver.ExitScope();
 		#endregion
 	}
-	private readonly ref struct ValueScope<T>(ref T field, T oldValue) : IDisposable
-	{
-		#region Fields
-		private readonly ref T _field = ref field;
-		#endregion
-
-		#region Methods
-		public void Dispose() => _field = oldValue;
-		#endregion
-	}
 	#endregion
 
 	#region Fields
@@ -140,7 +130,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 		DeclaredFunctionDeclarationStatementSyntax declared;
 
 		Get(concrete, out IDeclaredFunction function);
-		using (WithValue(ref _currentFunction, function))
+		using (Value.Scope(ref _currentFunction, function))
 		using (EnterScope(concrete, out ISymbolScope scope))
 		{
 			var signature = Convert(concrete.Signature);
@@ -212,12 +202,6 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	#endregion
 
 	#region Scope helpers
-	private ValueScope<T> WithValue<T>(ref T field, T value)
-	{
-		T old = field;
-		field = value;
-		return new(ref field, old);
-	}
 	private Scope EnterScope(IConcreteSyntaxNode declaration, out ISymbolScope scope)
 	{
 		scope = CurrentScope.GetChild(declaration);
@@ -244,19 +228,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 		if (group.Count is 0)
 		{
 			ISymbol? alternative = CurrentScope.GetAlternative(name).FirstOrDefault();
-			ClassificationKind alternativeClassification = alternative?.Classification ?? ClassificationKind.Identifier;
-
-			Diagnostic diagnostic = Diagnostics
-				.BuildError(this, $"{kind}_not_found")
-				.Add(token, lines =>
-				{
-					if (alternative is not null)
-						lines.AddLine($"No accessible {kind} named '", token, "' could be found, did you mean to use '", (alternative.Name, alternativeClassification), "' instead?");
-					else
-						lines.AddLine($"No accessible {kind} named '", token, "' could be found.");
-				});
-
-			TryAddDeclaration(diagnostic, alternative);
+			Diagnostics.ReportNotFound(this, token, kind, 0, alternative);
 		}
 
 		return group;
@@ -288,25 +260,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 		if (ambiguity.Length is 0)
 		{
 			ISymbol? alternative = CurrentScope.GetAlternative<T>(name).FirstOrDefault();
-			ClassificationKind alternativeClassification = alternative?.Classification ?? ClassificationKind.Identifier;
-
-			Diagnostic diagnostic = Diagnostics
-				.BuildError(this, $"{kind}_not_found")
-				.Add(token, lines =>
-				{
-					if (alternative is not null && symbols.Count is 0)
-						lines.AddLine($"No accessible {kind} named '{name}' could be found, did you mean to use '", alternative.Name, alternativeClassification, "' instead?");
-					else
-						lines.AddLine($"No accessible {kind} named '{name}' could be found.");
-
-					if (symbols.Count is 1)
-						lines.AddLine($"But a symbol with the same name was found.");
-					else if (symbols.Count > 1)
-						lines.AddLine("But several symbols with the same name were found.");
-				});
-
-			if (alternative is not null && symbols.Count is 0)
-				TryAddDeclaration(diagnostic, alternative);
+			Diagnostics.ReportNotFound(this, token, kind, symbols.Count, alternative);
 
 			return default;
 		}
@@ -314,10 +268,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 		if (ambiguity.Length > 1)
 		{
 			// Note(Nightowl): Could maybe list the ambiguous symbols as extra lines here;
-
-			Diagnostics
-				.BuildError(this, $"{kind}_ambiguity")
-				.Add(token, lines => lines.AddLine($"Multiple {kindPlural} named '{name}' were found, but they couldn't be disambiguated."));
+			Diagnostics.ReportAmbiguity(this, token, kind, kindPlural);
 
 			return default;
 		}
@@ -335,32 +286,6 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	private void Update(IConcreteSyntaxNode oldDeclaration, IDeclaredSyntaxNode newDeclaration)
 	{
 		CurrentScope.UpdateChild(oldDeclaration, newDeclaration);
-	}
-	#endregion
-
-	#region Diagnostic helpers
-	private Diagnostic TryAddDeclaration(Diagnostic diagnostic, ISymbol? symbol)
-	{
-		if (symbol is null)
-			return diagnostic;
-
-		ISyntaxNode? position = symbol switch
-		{
-			IDeclaredFunctionParameter parameter => parameter.Declaration,
-			IDeclaredLocalVariable variable => variable.Declaration.Name,
-			IDeclaredFunction function => function.Declaration.Signature,
-
-			_ => null
-		};
-
-		ClassificationKind classification = symbol.Classification ?? ClassificationKind.Identifier;
-
-		if (position is null)
-			return diagnostic;
-
-		diagnostic.Add(position, lines => lines.AddLine("This is where '", (symbol.Name, classification), "' is declared."));
-
-		return diagnostic;
 	}
 	#endregion
 }
