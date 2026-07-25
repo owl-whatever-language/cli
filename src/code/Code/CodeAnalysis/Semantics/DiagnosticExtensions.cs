@@ -27,7 +27,9 @@ public static class DiagnosticExtensions
 				{
 					if (alternative is not null && symbolCount is 0)
 					{
-						TextFragment fragment = new(alternative.Name, alternative.Classification ?? ClassificationKind.Identifier);
+						Debug.Assert(alternative.Name is not null);
+
+						TextFragment fragment = new(alternative.Name, alternative.Classification);
 						lines.AddLine($"No accessible {kindNatural} named '{name}' could be found, did you mean to use '", fragment, "' instead?");
 					}
 					else
@@ -44,7 +46,7 @@ public static class DiagnosticExtensions
 
 			return diagnostic;
 		}
-		public Diagnostic ReportDuplicate(IDiagnosticProvider provider, ISyntaxToken token, ISymbol symbol, ISymbolGroup alternative)
+		public Diagnostic ReportDuplicate(IDiagnosticProvider provider, ISyntaxToken token, ISymbol symbol, ISymbolCollection alternative)
 		{
 			return diagnostics
 				.BuildError(provider, "duplicate_symbol")
@@ -77,7 +79,7 @@ public static class DiagnosticExtensions
 			{
 				Debug.Assert(symbol is not null);
 
-				TextFragment fragment = new(symbol.Name, symbol.Classification ?? ClassificationKind.Identifier);
+				TextFragment fragment = new(symbol.Name ?? "???", symbol.Classification);
 				diagnostic.Add(position, lines => lines.AddLine("This is where '", fragment, "' is declared."));
 			}
 

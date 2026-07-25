@@ -1,17 +1,16 @@
 namespace OwlDomain.Owl.Code.Execution.Builtins;
 
-internal class BuiltinTypeProperty : ITypeProperty
+internal class BuiltinTypeProperty : BaseSymbol, ITypeProperty
 {
 	#region Nested types
 	public delegate InterpreterValue GetPropertyDelegate(InterpreterValue instance);
 	#endregion
 
 	#region Properties
-	public string Id { get; } = SymbolHelpers.GetNewId();
-
+	public override string Name { get; }
+	public override ClassificationKind Classification => ClassificationKind.TypeProperty;
 	public IType DeclaringType { get; }
 	public IType Type { get; }
-	public string Name { get; }
 	public GetPropertyDelegate Getter { get; }
 	#endregion
 
@@ -30,7 +29,7 @@ internal class BuiltinTypeProperty : ITypeProperty
 	#endregion
 
 	#region Methods
-	public TextFragmentCollection GetDebugText()
+	public override TextFragmentCollection GetDebugText()
 	{
 		return
 		[

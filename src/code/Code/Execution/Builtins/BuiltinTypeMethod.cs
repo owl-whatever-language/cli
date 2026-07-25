@@ -1,14 +1,13 @@
 namespace OwlDomain.Owl.Code.Execution.Builtins;
 
-internal class BuiltinTypeMethod : ITypeMethod
+internal class BuiltinTypeMethod : BaseSymbol, ITypeMethod
 {
 	#region Properties
-	public string Id { get; } = SymbolHelpers.GetNewId();
-
+	public override string Name => Function.Name;
+	public override ClassificationKind Classification => ClassificationKind.TypeMethod;
 	public IType DeclaringType { get; }
 	public BuiltinFunction Function { get; }
 	IFunction ITypeMethod.Function => Function;
-	public string Name => Function.Name;
 	#endregion
 
 	#region Constructors
@@ -24,7 +23,7 @@ internal class BuiltinTypeMethod : ITypeMethod
 	#endregion
 
 	#region Methods
-	public TextFragmentCollection GetDebugText()
+	public override TextFragmentCollection GetDebugText()
 	{
 		return
 		[

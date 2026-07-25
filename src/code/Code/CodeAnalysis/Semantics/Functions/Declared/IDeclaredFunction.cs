@@ -1,9 +1,8 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions.Declared;
 
-public interface IDeclaredFunction : IDeclaredSymbol<IConcreteFunctionDeclarationStatementSyntax>, IFunction
+public interface IDeclaredFunction : IMutableDeclaredSymbol<IConcreteFunctionDeclarationStatementSyntax>, IFunction
 {
 	#region Properties
-	new string? Name { get; }
 	new IReadOnlyList<IDeclaredFunctionParameter> Parameters { get; }
 	new IDeclaredFunctionReturn Return { get; }
 
@@ -12,31 +11,19 @@ public interface IDeclaredFunction : IDeclaredSymbol<IConcreteFunctionDeclaratio
 	#endregion
 }
 
-public sealed class DeclaredFunction : IDeclaredFunction
+public sealed class DeclaredFunction : BaseDeclaredSymbol<IConcreteFunctionDeclarationStatementSyntax>, IDeclaredFunction
 {
 	#region Properties
-	public string Id { get; } = SymbolHelpers.GetNewId();
-	public IConcreteFunctionDeclarationStatementSyntax Declaration
-	{
-		get;
-		set
-		{
-			field?.ThrowIfInvalidShadow(value);
-			field = value;
-		}
-	}
-	public string? Name => Declaration.Signature.Name.Value as string;
-	string ISymbol.Name => Name ?? SymbolHelpers.ThrowSymbolWithoutNameException<string>();
+	public override string? Name => Declaration.Signature.Name.Value as string;
+	public override ClassificationKind Classification => ClassificationKind.Function;
 	public IReadOnlyList<IDeclaredFunctionParameter> Parameters { get; }
 	public IDeclaredFunctionReturn Return { get; }
 	public ICallableFunction AsCallable { get; }
 	#endregion
 
 	#region Constructors
-	public DeclaredFunction(IConcreteFunctionDeclarationStatementSyntax declaration)
+	public DeclaredFunction(IConcreteFunctionDeclarationStatementSyntax declaration) : base(declaration)
 	{
-		Declaration = declaration;
-
 		DeclaredFunctionParameter[] parameters = new DeclaredFunctionParameter[declaration.Signature.Parameters.Values.Count];
 		for (int i = 0; i < parameters.Length; i++)
 			parameters[i] = new(declaration.Signature.Parameters.Values[i], i);
@@ -49,7 +36,7 @@ public sealed class DeclaredFunction : IDeclaredFunction
 	#endregion
 
 	#region Methods
-	public TextFragmentCollection GetDebugText()
+	public override TextFragmentCollection GetDebugText()
 	{
 		TextFragmentCollection fragments = [];
 

@@ -43,15 +43,6 @@ public sealed class ParallelDeclarationResolutionResult : IParallelStageResult<D
 
 public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagnosticProvider
 {
-	#region Nested types
-	private readonly struct Scope(SymbolResolver resolver) : IDisposable
-	{
-		#region Methods
-		public void Dispose() => resolver.ExitScope();
-		#endregion
-	}
-	#endregion
-
 	#region Fields
 	private IDeclaredFunction? _currentFunction;
 	#endregion
@@ -121,17 +112,15 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 		variable.Type = type.TypeInfo;
 
 		DeclaredVariableDeclarationStatementSyntax declared = new(type, name, assignment, value, terminator, variable);
-		Update(variable, declared);
+		variable.Declaration = declared;
 
 		return declared;
 	}
 	protected override DeclaredFunctionDeclarationStatementSyntax ConvertCore(IConcreteFunctionDeclarationStatementSyntax concrete)
 	{
-		DeclaredFunctionDeclarationStatementSyntax declared;
-
 		Get(concrete, out IDeclaredFunction function);
 		using (Value.Scope(ref _currentFunction, function))
-		using (EnterScope(concrete, out ISymbolScope scope))
+		using (EnterScope(concrete, out IMutableDeclaredSymbolScope scope))
 		{
 			var signature = Convert(concrete.Signature);
 			var body = Convert(concrete.Body);
@@ -144,13 +133,12 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 				_ => ThrowHelper.ThrowInvalidOperationException<IType>($"Unhandled function return type {signature.Return.GetType().Name}"),
 			};
 
-			declared = new(signature, body, function, scope);
-			Update(function, declared);
+			DeclaredFunctionDeclarationStatementSyntax declared = new(signature, body, function, scope);
+			function.Declaration = declared;
+			scope.Declaration = declared;
+
+			return declared;
 		}
-
-		Update(concrete, declared);
-
-		return declared;
 	}
 	protected override DeclaredFunctionDeclarationSignatureSyntax ConvertCore(IConcreteFunctionDeclarationSignatureSyntax concrete)
 	{
@@ -179,7 +167,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 		parameter.Type = type.TypeInfo;
 
 		DeclaredRegularFunctionParameterSyntax declared = new(type, name, parameter);
-		Update(parameter, declared);
+		parameter.Declaration = declared;
 
 		return declared;
 	}
@@ -193,7 +181,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 
 		return new(
 			name,
-			(ISymbol?)type ?? SpecialSymbols.NotFound,
+			(ISymbol?)type ?? Symbol.Unknown,
 			(IType?)type ?? SpecialTypes.Error);
 	}
 	protected override DeclaredEmptyTypeSyntax ConvertCore(IConcreteEmptyTypeSyntax concrete) => new(SpecialTypes.Error);
@@ -202,11 +190,12 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	#endregion
 
 	#region Scope helpers
-	private Scope EnterScope(IConcreteSyntaxNode declaration, out ISymbolScope scope)
+	private DelegateScope EnterScope(IConcreteSyntaxNode declaration, out IMutableDeclaredSymbolScope scope)
 	{
-		scope = CurrentScope.GetChild(declaration);
+		scope = CurrentScope.GetScope(declaration);
 		CurrentScope = scope;
-		return new(this);
+
+		return new(ExitScope);
 	}
 	private void ExitScope()
 	{
@@ -219,12 +208,12 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	#endregion
 
 	#region Symbol helpers
-	private ISymbolGroup GetAll(ISyntaxToken token, string kind)
+	private ISymbolCollection GetAll(ISyntaxToken token, string kind)
 	{
 		if (token.Value is not string name) // Note(Nightowl): Invalid names will have already been reported during parsing;
-			return new SymbolGroup();
+			return new SymbolCollection();
 
-		ISymbolGroup group = CurrentScope.GetAll(name);
+		ISymbolCollection group = CurrentScope.Search(name).All;
 		if (group.Count is 0)
 		{
 			ISymbol? alternative = CurrentScope.GetAlternative(name).FirstOrDefault();
@@ -246,7 +235,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 			return default;
 		}
 
-		if (CurrentScope.TryGet(name, out ISymbolGroup? symbols) is false)
+		if (CurrentScope.TrySearchFirst(name, out ISymbolCollection? symbols) is false)
 			symbols = GetAll(token, kind);
 
 		if (symbols.Count is 0)
@@ -275,17 +264,9 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 
 		return ambiguity[0];
 	}
-	private void Get<T>(IConcreteSyntaxNode declaration, out T symbol) where T : notnull, IDeclaredSymbol
+	private void Get<T>(IConcreteSyntaxNode declaration, out T symbol) where T : notnull, IMutableDeclaredSymbol
 	{
 		symbol = CurrentScope.Get<T>(declaration);
-	}
-	private void Update(IDeclaredSymbol symbol, IDeclaredSyntaxNode declaration)
-	{
-		CurrentScope.Update(symbol, declaration);
-	}
-	private void Update(IConcreteSyntaxNode oldDeclaration, IDeclaredSyntaxNode newDeclaration)
-	{
-		CurrentScope.UpdateChild(oldDeclaration, newDeclaration);
 	}
 	#endregion
 }

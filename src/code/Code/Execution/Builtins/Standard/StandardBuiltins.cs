@@ -192,7 +192,7 @@ internal partial class StandardBuiltins
 
 		#region Input
 		context.AddFunction("input", Input);
-		context.AddFunction<Text, Text>("input", "value", Input);
+		context.AddFunction<Text, Text>("input", "prompt", Input);
 		#endregion
 	}
 	private static void ResolvePrintFunctions(BuiltinContext context)

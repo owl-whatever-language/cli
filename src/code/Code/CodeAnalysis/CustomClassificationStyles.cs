@@ -5,7 +5,9 @@ public static class CustomClassificationStyles
 	extension(ClassificationKind)
 	{
 		#region Properties
-		public static ClassificationKind TypeProperty => ClassificationKind.Identifier + "type_property";
+		public static ClassificationKind TypeMember => ClassificationKind.Identifier + "type_member";
+		public static ClassificationKind TypeProperty => get_TypeMember() + "property";
+		public static ClassificationKind TypeMethod => get_TypeMember() + "method";
 		#endregion
 	}
 }

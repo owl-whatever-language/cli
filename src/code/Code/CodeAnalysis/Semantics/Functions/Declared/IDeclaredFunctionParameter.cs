@@ -1,25 +1,17 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions.Declared;
 
-public interface IDeclaredFunctionParameter : IDeclaredSymbol<IConcreteFunctionParameterSyntax>, IFunctionParameter
+public interface IDeclaredFunctionParameter : IMutableDeclaredSymbol<IConcreteFunctionParameterSyntax>, IFunctionParameter
 {
 	#region Properties
 	new IType Type { get; set; }
 	#endregion
 }
 
-public sealed class DeclaredFunctionParameter : IDeclaredFunctionParameter
+public sealed class DeclaredFunctionParameter : BaseDeclaredSymbol<IConcreteFunctionParameterSyntax>, IDeclaredFunctionParameter
 {
 	#region Properties
-	public string Id { get; } = SymbolHelpers.GetNewId();
-	public IConcreteFunctionParameterSyntax Declaration
-	{
-		get;
-		set
-		{
-			field?.ThrowIfInvalidShadow(value);
-			field = value;
-		}
-	}
+	public override string? Name => Declaration.Name.Value as string;
+	public override ClassificationKind Classification => ClassificationKind.Parameter;
 	public int Index { get; }
 	public IType Type
 	{
@@ -30,15 +22,12 @@ public sealed class DeclaredFunctionParameter : IDeclaredFunctionParameter
 			field = value;
 		}
 	}
-	public string? Name => Declaration.Name.Value as string;
-	string ISymbol.Name => Name ?? SymbolHelpers.ThrowSymbolWithoutNameException<string>();
 	public ICallableFunctionParameter AsCallable { get; }
 	#endregion
 
 	#region Constructors
-	public DeclaredFunctionParameter(IConcreteFunctionParameterSyntax declaration, int index)
+	public DeclaredFunctionParameter(IConcreteFunctionParameterSyntax declaration, int index) : base(declaration)
 	{
-		Declaration = declaration;
 		Index = index;
 		Type = SpecialTypes.Unknown;
 		AsCallable = new CallableFunctionParameter(this);
@@ -46,7 +35,7 @@ public sealed class DeclaredFunctionParameter : IDeclaredFunctionParameter
 	#endregion
 
 	#region Methods
-	public TextFragmentCollection GetDebugText()
+	public override TextFragmentCollection GetDebugText()
 	{
 		TextFragmentCollection fragments = [];
 

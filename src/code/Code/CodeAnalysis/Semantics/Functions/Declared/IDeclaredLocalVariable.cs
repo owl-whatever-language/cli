@@ -1,26 +1,17 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions.Declared;
 
-public interface IDeclaredLocalVariable : IDeclaredSymbol<IConcreteVariableDeclarationStatementSyntax>, ILocalVariable
+public interface IDeclaredLocalVariable : IMutableDeclaredSymbol<IConcreteVariableDeclarationStatementSyntax>, ILocalVariable
 {
 	#region Properties
-	new string? Name { get; }
 	new IType Type { get; set; }
 	#endregion
 }
 
-public sealed class DeclaredLocalVariable : IDeclaredLocalVariable
+public sealed class DeclaredLocalVariable : BaseDeclaredSymbol<IConcreteVariableDeclarationStatementSyntax>, IDeclaredLocalVariable
 {
 	#region Properties
-	public string Id { get; } = SymbolHelpers.GetNewId();
-	public IConcreteVariableDeclarationStatementSyntax Declaration
-	{
-		get;
-		set
-		{
-			field?.ThrowIfInvalidShadow(value);
-			field = value;
-		}
-	}
+	public override string? Name => Declaration.Name.Value as string;
+	public override ClassificationKind Classification => ClassificationKind.Variable;
 	public IType Type
 	{
 		get;
@@ -30,20 +21,17 @@ public sealed class DeclaredLocalVariable : IDeclaredLocalVariable
 			field = value;
 		}
 	}
-	public string? Name => Declaration.Name.Value as string;
-	string ISymbol.Name => Name ?? SymbolHelpers.ThrowSymbolWithoutNameException<string>();
 	#endregion
 
 	#region Constructors
-	public DeclaredLocalVariable(IConcreteVariableDeclarationStatementSyntax declaration)
+	public DeclaredLocalVariable(IConcreteVariableDeclarationStatementSyntax declaration) : base(declaration)
 	{
-		Declaration = declaration;
 		Type = SpecialTypes.Unknown;
 	}
 	#endregion
 
 	#region Methods
-	public TextFragmentCollection GetDebugText()
+	public override TextFragmentCollection GetDebugText()
 	{
 		TextFragmentCollection fragments = [];
 

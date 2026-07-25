@@ -1,4 +1,4 @@
-namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols.Scopes;
+namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols;
 
 public interface ICoreSymbolScope : ISymbolScope
 {
@@ -13,7 +13,6 @@ public interface ICoreSymbolScope : ISymbolScope
 public sealed class CoreSymbolScope : SymbolScope, ICoreSymbolScope
 {
 	#region Properties
-	public override ICoreSymbolScope Core => this;
 	public INamedType? Bool => field ??= GetCoreType("bool");
 	public INamedType? Text => field ??= GetCoreType("text");
 	public INamedType? Int => field ??= GetCoreType("int");
@@ -27,10 +26,9 @@ public sealed class CoreSymbolScope : SymbolScope, ICoreSymbolScope
 	#region Helpers
 	private INamedType? GetCoreType(string name)
 	{
-		if (TryGet(name, out ISymbolGroup? symbols) is false)
-			return null;
+		SymbolSearchResult symbols = Search(name);
 
-		INamedType[]? types = symbols.OfType<INamedType>().ToArray();
+		INamedType[]? types = symbols.All.OfType<INamedType>().ToArray();
 		if (types.Length is 1)
 			return types[0];
 

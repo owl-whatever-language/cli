@@ -1,4 +1,4 @@
-namespace OwlDomain.Owl.Code;
+namespace OwlDomain.ParsingTools;
 
 public readonly struct ReaderWriterReadLock(ReaderWriterLockSlim @lock) : IDisposable
 {

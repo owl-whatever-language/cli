@@ -4,6 +4,5 @@ public interface ITypeMethod : ITypeMember
 {
 	#region Properties
 	IFunction Function { get; }
-	new string? Name { get; }
 	#endregion
 }

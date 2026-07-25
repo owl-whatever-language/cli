@@ -1,15 +1,15 @@
 namespace OwlDomain.Owl.Code.Execution.Builtins;
 
 [DebuggerDisplay($"{{{nameof(DebuggerDisplay)}(), nq}}")]
-internal sealed class BuiltinFunction : IFunction
+internal sealed class BuiltinFunction : BaseSymbol, IFunction
 {
 	#region Nested types
 	public delegate InterpreterValue ExecuteDelegate(IExecutionContext context, IReadOnlyList<InterpreterValue> values);
 	#endregion
 
 	#region Properties
-	public string Id { get; } = SymbolHelpers.GetNewId();
-	public string Name { get; }
+	public override string Name { get; }
+	public override ClassificationKind Classification => ClassificationKind.Function;
 	public IReadOnlyList<IFunctionParameter> Parameters { get; }
 	public IFunctionReturn Return { get; }
 	public ICallableFunction AsCallable { get; }
@@ -39,7 +39,7 @@ internal sealed class BuiltinFunction : IFunction
 		return result;
 	}
 
-	public TextFragmentCollection GetDebugText()
+	public override TextFragmentCollection GetDebugText()
 	{
 		TextFragmentCollection fragments = [];
 
@@ -71,13 +71,13 @@ internal sealed class BuiltinFunction : IFunction
 	#endregion
 }
 
-internal sealed class BuiltinFunctionParameter : IFunctionParameter
+internal sealed class BuiltinFunctionParameter : BaseSymbol, IFunctionParameter
 {
 	#region Properties
-	public string Id { get; } = SymbolHelpers.GetNewId();
+	public override string Name { get; }
+	public override ClassificationKind Classification => ClassificationKind.Parameter;
 	public int Index { get; }
 	public IType Type { get; }
-	public string Name { get; }
 	public ICallableFunctionParameter AsCallable { get; }
 	#endregion
 
@@ -92,7 +92,7 @@ internal sealed class BuiltinFunctionParameter : IFunctionParameter
 	#endregion
 
 	#region Methods
-	public TextFragmentCollection GetDebugText()
+	public override TextFragmentCollection GetDebugText()
 	{
 		TextFragmentCollection fragments = [];
 

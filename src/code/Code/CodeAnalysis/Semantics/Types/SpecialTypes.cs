@@ -1,14 +1,9 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 
-public abstract class SpecialType : INamedType
+public abstract class SpecialType : BaseSymbol, INamedType
 {
 	#region Properties
-	public string Id { get; } = SymbolHelpers.GetNewId();
-	public abstract string Name { get; }
-	protected virtual ClassificationKind Classification => ClassificationKind.Type;
-
-	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-	string ISymbol.Name => Name ?? SymbolHelpers.ThrowSymbolWithoutNameException<string>();
+	public override ClassificationKind Classification => ClassificationKind.Type;
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	IReadOnlyCollection<ITypeMember> IType.Members => [];
@@ -32,8 +27,8 @@ public abstract class SpecialType : INamedType
 	public virtual bool Equals([NotNullWhen(true)] IType? other) => ReferenceEquals(this, other);
 	public override bool Equals([NotNullWhen(true)] object? obj) => ReferenceEquals(this, obj);
 	public override int GetHashCode() => base.GetHashCode(); // Note(Nightowl): We want reference equality so this is ok;
-	public override string ToString() => Name;
-	public TextFragmentCollection GetDebugText() => [new(Name, Classification)];
+	public override string ToString() => Name ?? "???";
+	public override TextFragmentCollection GetDebugText() => [new(Name ?? "???", Classification)];
 	#endregion
 }
 
@@ -53,7 +48,7 @@ public sealed class VoidType : SpecialType<VoidType>
 public sealed class UnknownType : SpecialType<UnknownType>
 {
 	#region Properties
-	protected override ClassificationKind Classification => ClassificationKind.Error;
+	public override ClassificationKind Classification => ClassificationKind.Error;
 	public override string Name => "unknown";
 	#endregion
 
@@ -67,7 +62,7 @@ public sealed class UnknownType : SpecialType<UnknownType>
 public sealed class ErrorType : SpecialType<ErrorType>
 {
 	#region Properties
-	protected override ClassificationKind Classification => ClassificationKind.Error;
+	public override ClassificationKind Classification => ClassificationKind.Error;
 	public override string Name => "error";
 	#endregion
 

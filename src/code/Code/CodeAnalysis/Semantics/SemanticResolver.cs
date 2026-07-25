@@ -113,7 +113,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	protected override SemanticVariableDeclarationStatementSyntax ConvertCore(IDeclaredVariableDeclarationStatementSyntax declared)
 	{
 		var semantic = base.ConvertCore(declared);
-		Update(semantic.Variable, semantic);
+		declared.Variable.Declaration = semantic;
 
 		IType variableType = semantic.Variable.Type;
 		IType valueType = semantic.Value.ResultType;
@@ -129,22 +129,22 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	protected override ISemanticFunctionParameterSyntax ConvertCore(IDeclaredFunctionParameterSyntax declared)
 	{
 		var semantic = base.ConvertCore(declared);
-		Update(semantic.Parameter, semantic);
+		declared.Parameter.Declaration = semantic;
 
 		return semantic;
 	}
 	protected override SemanticFunctionDeclarationStatementSyntax ConvertCore(IDeclaredFunctionDeclarationStatementSyntax declared)
 	{
-		SemanticFunctionDeclarationStatementSyntax semantic;
 		using (Value.Scope(ref _currentFunction, declared.Function))
-		using (EnterScope(declared))
+		using (EnterScope(declared, out IMutableDeclaredSymbolScope scope))
 		{
-			semantic = base.ConvertCore(declared);
-			Update(semantic.Function, semantic);
-		}
-		Update(declared, semantic);
+			SemanticFunctionDeclarationStatementSyntax semantic = base.ConvertCore(declared);
 
-		return semantic;
+			declared.Function.Declaration = semantic;
+			scope.Declaration = semantic;
+
+			return semantic;
+		}
 	}
 	#endregion
 
@@ -296,7 +296,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		var name = Convert(declared.Name, classification, symbol);
 		IType resultType = GetResultType(symbol, declared.Name);
 
-		return new(name, symbol ?? SpecialSymbols.NotFound, resultType);
+		return new(name, symbol ?? Symbol.Unknown, resultType);
 	}
 	#endregion
 
@@ -331,7 +331,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		};
 
 		var nameToken = Convert(declared.Name, classification, symbol);
-		return new(expression, dot, nameToken, symbol ?? SpecialSymbols.NotFound, resultType);
+		return new(expression, dot, nameToken, symbol ?? Symbol.Unknown, resultType);
 	}
 	protected override SemanticBinaryExpressionSyntax ConvertCore(IDeclaredBinaryExpressionSyntax declared)
 	{
@@ -372,7 +372,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 			if (resultType is null && get.Symbol.IsKnown)
 				ReportCantAssignToSymbol(op, get.Symbol);
-			else if (symbol.IsNotKnown && get.Name.Value is string leftName)
+			else if (symbol.IsKnown is false && get.Name.Value is string leftName)
 			{
 				// Note(Nightowl): Assignment to an unknown symbol, with no alternative suggestions for typos;
 				if (CurrentScope.GetAlternative(leftName).Any() is false)
@@ -399,7 +399,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			}
 		}
 
-		return new(expression, op, value, symbol ?? SpecialSymbols.NotFound, resultType ?? SpecialTypes.Error);
+		return new(expression, op, value, symbol ?? Symbol.Unknown, resultType ?? SpecialTypes.Error);
 	}
 	protected override SemanticCompoundAssignmentExpressionSyntax ConvertCore(IDeclaredCompoundAssignmentExpressionSyntax declared)
 	{
@@ -434,7 +434,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 				?.TryAddDeclaration(value);
 		}
 
-		return new(expression, op, value, symbol ?? SpecialSymbols.NotFound, operation, operation?.Result ?? SpecialTypes.Error);
+		return new(expression, op, value, symbol ?? Symbol.Unknown, operation, operation?.Result ?? SpecialTypes.Error);
 	}
 
 	protected override SemanticTernaryExpressionSyntax ConvertCore(IDeclaredTernaryExpressionSyntax declared) => throw new NotImplementedException();
@@ -601,7 +601,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		if (expression.ResultType.IsNotError)
 		{
-			ISymbolGroup symbols = GetAll(expression.ResultType, access.Name);
+			ISymbolCollection symbols = GetAll(expression.ResultType, access.Name);
 			(symbol, callable) = SelectFunction(arguments.Values, symbols, start);
 		}
 
@@ -610,7 +610,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			expression,
 			dot,
 			name,
-			symbol ?? SpecialSymbols.NotFound,
+			symbol ?? Symbol.Unknown,
 			callable ?? (IType)SpecialTypes.Error);
 
 		return new(semanticAccess, start, arguments, end, callable, callable?.Return.Type ?? SpecialTypes.Error);
@@ -621,17 +621,17 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		var arguments = Convert(declared.Arguments);
 		var end = Convert(declared.End);
 
-		ISymbolGroup symbols = GetAll(get.Name);
+		ISymbolCollection symbols = GetAll(get.Name);
 		(ISymbol? symbol, ICallableType? callable) = SelectFunction(arguments.Values, symbols, start);
 
 		var name = Convert(get.Name, symbol?.Classification ?? ClassificationKind.Identifier, symbol);
-		SemanticGetExpressionSyntax semanticGet = new(name, symbol ?? SpecialSymbols.NotFound, callable ?? (IType)SpecialTypes.Error);
+		SemanticGetExpressionSyntax semanticGet = new(name, symbol ?? Symbol.Unknown, callable ?? (IType)SpecialTypes.Error);
 
 		return new(semanticGet, start, arguments, end, callable, callable?.Return.Type ?? SpecialTypes.Error);
 	}
 	private (ISymbol? symbol, ICallableType? callable) SelectFunction(
 		IReadOnlyList<ISemanticFunctionArgumentSyntax> arguments,
-		ISymbolGroup symbols,
+		ISymbolCollection symbols,
 		ISemanticSyntaxNode errorOn)
 	{
 		if (symbols.Count is 0)
@@ -760,7 +760,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return candidates;
 	}
-	private IReadOnlyDictionary<ISymbol, ICallableType> GetCallable(ISymbolGroup symbols)
+	private IReadOnlyDictionary<ISymbol, ICallableType> GetCallable(ISymbolCollection symbols)
 	{
 		Dictionary<ISymbol, ICallableType> result = [];
 
@@ -804,7 +804,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	#endregion
 
 	#region Scope helpers
-	private Scope EnterScope(IDeclaredSyntaxNode declaration)
+	private Scope EnterScope(IDeclaredSyntaxNode declaration, out IMutableDeclaredSymbolScope scope)
 	{
 		// Note(Nightowl):
 		// We could get the scope directly from the declaration in each method,
@@ -813,7 +813,9 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		// I just wanted to make the comment line lengths line up;
 
-		CurrentScope = CurrentScope.GetChild(declaration);
+		scope = CurrentScope.GetScope(declaration);
+		CurrentScope = scope;
+
 		return new(this);
 	}
 	private void ExitScope()
@@ -827,12 +829,12 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 	#endregion
 
 	#region Symbol helpers
-	private ISymbolGroup GetAll(ISyntaxToken token)
+	private ISymbolCollection GetAll(ISyntaxToken token)
 	{
 		if (token.Value is not string name) // Note(Nightowl): Invalid names will have already been reported during parsing;
-			return new SymbolGroup();
+			return SymbolCollection.Empty;
 
-		ISymbolGroup group = CurrentScope.GetAll(name);
+		ISymbolCollection group = CurrentScope.Search(name).All;
 		if (group.Count is 0)
 		{
 			ISymbol? alternative = CurrentScope.GetAlternative(name).FirstOrDefault();
@@ -841,15 +843,15 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return group;
 	}
-	private ISymbolGroup GetAll(IType type, ISyntaxToken token)
+	private ISymbolCollection GetAll(IType type, ISyntaxToken token)
 	{
 		if (token.Value is not string name) // Note(Nightowl): Invalid names will have already been reported during parsing;
-			return new SymbolGroup();
+			return SymbolCollection.Empty;
 
-		ISymbolGroup group = type.Members.Where(m => m.Name == name).ToGroup();
+		ISymbolCollection group = type.Members.Where(m => m.Name == name).ToCollection();
 		if (group.Count is 0)
 		{
-			ISymbol? alternative = type.Members.ToGroup().GetAlternative(name).FirstOrDefault();
+			ISymbol? alternative = type.Members.ToCollection().GetAlternative(name).FirstOrDefault();
 			Diagnostics.ReportNotFound(this, token, "type_member", 0, alternative);
 		}
 
@@ -870,7 +872,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			return default;
 		}
 
-		if (CurrentScope.TryGet(name, out ISymbolGroup? symbols) is false)
+		if (CurrentScope.TrySearchFirst(name, out ISymbolCollection? symbols) is false)
 			symbols = GetAll(token);
 
 		if (symbols.Count is 0)
@@ -897,14 +899,6 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		}
 
 		return ambiguity[0];
-	}
-	private void Update(IDeclaredSymbol symbol, ISemanticSyntaxNode declaration)
-	{
-		CurrentScope.Update(symbol, declaration);
-	}
-	private void Update(IDeclaredSyntaxNode oldDeclaration, ISemanticSyntaxNode newDeclaration)
-	{
-		CurrentScope.UpdateChild(oldDeclaration, newDeclaration);
 	}
 	private IType GetResultType(ISymbol? symbol, ISyntaxNode node)
 	{

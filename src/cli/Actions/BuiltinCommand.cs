@@ -1,6 +1,4 @@
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics;
-using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols;
-using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols.Scopes;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
 using OwlDomain.Owl.Code.Execution.Builtins;
@@ -28,7 +26,7 @@ public class BuiltinCommand : Command
 				ISymbolScope scope = stage.ResultScope;
 				lines.AddLine($"// {scope.Name} symbols").AddClassification(ClassificationKind.Comment);
 
-				ISymbolGroup symbols = scope.GetAllNamed(includeParent: false);
+				ISymbolCollection symbols = scope.GetNamed(includeParents: false).All;
 
 				bool hadGroup = false;
 				bool wasLastType = false;
@@ -37,7 +35,7 @@ public class BuiltinCommand : Command
 				{
 					bool lastHadMultiple = false;
 
-					foreach (IGrouping<string, ISymbol> byName in byKind.GroupBy(s => s.Name).OrderByDescending(g => g.Count()))
+					foreach (IGrouping<string?, ISymbol> byName in byKind.Where(s => s.Name is not null).GroupBy(s => s.Name).OrderByDescending(g => g.Count()))
 					{
 						if (hadGroup && (lastHadMultiple || wasLastType))
 							lines.AddLine();
@@ -50,7 +48,6 @@ public class BuiltinCommand : Command
 						lastHadMultiple = byName.Skip(1).Any();
 						wasLastType = byKind.Key == ClassificationKind.Type;
 					}
-
 				}
 			}
 
@@ -65,6 +62,8 @@ public class BuiltinCommand : Command
 	#region Helpers
 	private static void Add(TextFragmentLineCollection lines, ISymbol symbol)
 	{
+		Debug.Assert(symbol.Name is not null);
+
 		TextFragment indent = TextFragment.Tab;
 		TextFragment space = TextFragment.Space;
 

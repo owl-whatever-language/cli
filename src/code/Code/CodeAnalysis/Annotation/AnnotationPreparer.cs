@@ -40,15 +40,6 @@ public sealed class ParallelAnnotationPreparingResult : IParallelStageResult<Ann
 
 public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, IDiagnosticProvider
 {
-	#region Nested types
-	private readonly struct Scope(AnnotationPreparer resolver) : IDisposable
-	{
-		#region Methods
-		public void Dispose() => resolver.ExitScope();
-		#endregion
-	}
-	#endregion
-
 	#region Fields
 	private ICallableType? _currentCallable;
 	private IDeclaredFunction? _currentFunction;
@@ -57,16 +48,14 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 
 	#region Properties
 	public string Name => "annotation_preparer";
-	private ISourceFile Source { get; }
 	private DiagnosticBag Diagnostics { get; } = [];
 	private ISymbolScope BaseScope { get; }
 	private ISymbolScope CurrentScope { get; set; }
 	#endregion
 
 	#region Constructors
-	private AnnotationPreparer(ISourceFile source, ISymbolScope baseScope)
+	private AnnotationPreparer(ISymbolScope baseScope)
 	{
-		Source = source;
 		BaseScope = baseScope;
 		CurrentScope = baseScope;
 	}
@@ -77,7 +66,7 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 	{
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
-			AnnotationPreparer preparer = new(semantic.Source, baseScope);
+			AnnotationPreparer preparer = new(baseScope);
 			IAnnotatedSyntaxTree annotated = preparer.Convert(semantic);
 
 			return new(preparer.Diagnostics, performance, annotated);
@@ -109,21 +98,28 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 	protected override AnnotatedVariableDeclarationStatementSyntax ConvertCore(ISemanticVariableDeclarationStatementSyntax semantic)
 	{
 		AnnotatedVariableDeclarationStatementSyntax annotated = base.ConvertCore(semantic);
-		Update(semantic.Variable, annotated);
+		semantic.Variable.Declaration = annotated;
 
 		return annotated;
 	}
 	protected override AnnotatedFunctionDeclarationStatementSyntax ConvertCore(ISemanticFunctionDeclarationStatementSyntax semantic)
 	{
-		AnnotatedFunctionDeclarationStatementSyntax annotated;
 		using (Value.Scope(ref _currentFunction, semantic.Function))
-		using (EnterScope(semantic))
+		using (EnterScope(semantic, out IMutableDeclaredSymbolScope scope))
 		{
-			annotated = base.ConvertCore(semantic);
-			Update(annotated.Function, annotated);
-		}
+			AnnotatedFunctionDeclarationStatementSyntax annotated = base.ConvertCore(semantic);
 
-		Update(semantic, annotated);
+			semantic.Function.Declaration = annotated;
+			scope.Declaration = annotated;
+
+			return annotated;
+		}
+	}
+	protected override IAnnotatedFunctionParameterSyntax ConvertCore(ISemanticFunctionParameterSyntax semantic)
+	{
+		var annotated = base.ConvertCore(semantic);
+		semantic.Parameter.Declaration = annotated;
+
 		return annotated;
 	}
 	#endregion
@@ -199,7 +195,7 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 	#endregion
 
 	#region Scope helpers
-	private Scope EnterScope(ISemanticSyntaxNode declaration)
+	private DelegateScope EnterScope(ISemanticSyntaxNode declaration, out IMutableDeclaredSymbolScope scope)
 	{
 		// Note(Nightowl):
 		// We could get the scope directly from the declaration in each method,
@@ -208,8 +204,10 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 
 		// I just wanted to make the comment line lengths line up;
 
-		CurrentScope = CurrentScope.GetChild(declaration);
-		return new(this);
+		scope = CurrentScope.GetScope(declaration);
+		CurrentScope = scope;
+
+		return new(ExitScope);
 	}
 	private void ExitScope()
 	{
@@ -218,17 +216,6 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 
 		Debug.Assert(CurrentScope.Parent is not null);
 		CurrentScope = CurrentScope.Parent;
-	}
-	#endregion
-
-	#region Symbol helpers
-	private void Update(IDeclaredSymbol symbol, IAnnotatedSyntaxNode declaration)
-	{
-		CurrentScope.Update(symbol, declaration);
-	}
-	private void Update(ISemanticSyntaxNode oldDeclaration, IAnnotatedSyntaxNode newDeclaration)
-	{
-		CurrentScope.UpdateChild(oldDeclaration, newDeclaration);
 	}
 	#endregion
 

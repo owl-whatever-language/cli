@@ -1,14 +1,14 @@
 namespace OwlDomain.Owl.Code.Execution.Builtins;
 
-internal class BuiltinType : INamedType
+internal class BuiltinType : BaseSymbol, INamedType
 {
 	#region Nested types
 	public delegate InterpreterValue BackingConstructorDelegate<in T>(T backing);
 	#endregion
 
 	#region Properties
-	public string Id { get; } = SymbolHelpers.GetNewId();
-	public string Name { get; }
+	public override string Name { get; }
+	public override ClassificationKind Classification => ClassificationKind.Type;
 	public List<ITypeMember> Members { get; } = [];
 	public IReadOnlyCollection<ITypeProperty> Properties => Members.OfType<ITypeProperty>().ToArray();
 	public IReadOnlyCollection<ITypeMethod> Methods => Members.OfType<ITypeMethod>().ToArray();
@@ -42,6 +42,6 @@ internal class BuiltinType : INamedType
 	public bool CanAssignTo(IType target) => Equals(target);
 	public bool Equals(IType? other) => ReferenceEquals(this, other);
 	public override string ToString() => Name;
-	public TextFragmentCollection GetDebugText() => [new(Name, ClassificationKind.Type)];
+	public override TextFragmentCollection GetDebugText() => [new(Name, ClassificationKind.Type)];
 	#endregion
 }

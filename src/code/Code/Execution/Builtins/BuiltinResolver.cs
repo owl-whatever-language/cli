@@ -84,7 +84,7 @@ public static class BuiltinResolver
 	{
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
-			SymbolScope standard = new("standard", core);
+			SymbolScope standard = new(core, "standard");
 			context.TargetScope = standard;
 
 			context.ResolveStandard();

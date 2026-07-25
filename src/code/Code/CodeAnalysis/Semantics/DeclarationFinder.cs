@@ -24,29 +24,18 @@ public sealed class DeclarationDiscoveryResult : IStageResultDiagnostics, IStage
 
 public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 {
-	#region Nested types
-	private readonly struct Scope(DeclarationFinder finder) : IDisposable
-	{
-		#region Methods
-		public void Dispose() => finder.ExitScope();
-		#endregion
-	}
-	#endregion
-
 	#region Properties
 	public string Name => "declaration_finder";
 	private DiagnosticBag Diagnostics { get; } = [];
-	private SymbolScope ResultScope { get; }
-	private Stack<SymbolScope> Scopes { get; } = [];
-	private SymbolScope CurrentScope { get; set; }
-
-	private ThreadLocal<ISourceFile?> Source { get; } = new();
+	private IMutableSymbolScope ResultScope { get; }
+	private Stack<IMutableSymbolScope> Scopes { get; } = [];
+	private IMutableSymbolScope CurrentScope { get; set; }
 	#endregion
 
 	#region Constructors
 	private DeclarationFinder(ISymbolScope baseScope)
 	{
-		ResultScope = new("user_defined", baseScope);
+		ResultScope = new SymbolScope(baseScope, "user_defined");
 		CurrentScope = ResultScope;
 	}
 	#endregion
@@ -72,11 +61,6 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 	#endregion
 
 	#region Methods
-	public override void Visit(IConcreteSyntaxTree tree)
-	{
-		Source.Value = tree.Source;
-		base.Visit(tree);
-	}
 	protected override bool Visit(IConcreteVariableDeclarationStatementSyntax node)
 	{
 		DeclaredLocalVariable variable = new(node);
@@ -87,7 +71,7 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 	protected override bool Visit(IConcreteFunctionDeclarationStatementSyntax node)
 	{
 		DeclaredFunction function = new(node);
-		using (NewScopeSingle("function", function, node.Signature.Name))
+		using (NewScopeSingle(function, node.Signature.Name))
 		{
 			foreach (IDeclaredFunctionParameter parameter in function.Parameters)
 				Add(parameter);
@@ -102,39 +86,35 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 	#region Scope methods
 	private void AddSingle(IDeclaredSymbol symbol, IConcreteToken nameToken)
 	{
-		if (symbol.Name is not null && CurrentScope.TryGetLocal(symbol.Name, out ISymbolGroup? symbols))
+		if (symbol.Name is not null && CurrentScope.TrySearch(symbol.Name, includeParents: false, out ISymbolCollection? symbols))
 			Diagnostics.ReportDuplicate(this, nameToken, symbol, symbols);
 
 		Add(symbol);
 	}
 	private void Add(IDeclaredSymbol symbol) => CurrentScope.Add(symbol);
-	private Scope NewScopeSingle(string kind, IDeclaredSymbol symbol, IConcreteToken nameToken)
+	private DelegateScope NewScopeSingle(IDeclaredSymbol symbol, IConcreteToken nameToken)
 	{
 		AddSingle(symbol, nameToken);
-
-		string name = $"{kind}({symbol.Name})";
-		return NewScope(name, symbol.Declaration);
+		return EnterNewScope(symbol);
 	}
-	private Scope NewScope(string kind, IDeclaredSymbol symbol)
+	private DelegateScope NewScope(IDeclaredSymbol symbol)
 	{
 		Add(symbol);
 
-		string name = $"{kind}({symbol.Name})";
-		return NewScope(name, symbol.Declaration);
+		return EnterNewScope(symbol);
 	}
-	private Scope NewScope(string name, ISyntaxNode declaration)
+	private DelegateScope EnterNewScope(IDeclaredSymbol symbol)
 	{
-		SymbolScope newScope = new(name, CurrentScope);
-		CurrentScope.Add(declaration, newScope);
+		IMutableSymbolScope newScope = CurrentScope.AddScope(symbol);
 
 		Scopes.Push(CurrentScope);
 		CurrentScope = newScope;
 
-		return new(this);
+		return new(ExitScope);
 	}
 	private void ExitScope()
 	{
-		if (Scopes.TryPop(out SymbolScope? scope))
+		if (Scopes.TryPop(out IMutableSymbolScope? scope))
 			CurrentScope = scope;
 		else
 			ThrowHelper.ThrowInvalidOperationException($"Exiting the '{ResultScope.Name}' scope is not allowed.");
