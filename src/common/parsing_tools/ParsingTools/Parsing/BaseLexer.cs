@@ -207,16 +207,6 @@ public abstract class BaseLexer
 		if (TrailingTrivia.Any())
 			ThrowHelper.ThrowInvalidOperationException("Some trailing trivia has already been accumulated.");
 	}
-
-	private void ReportCurrentBadCharacters()
-	{
-		foreach (ISyntaxTrivia trivia in LeadingTrivia)
-		{
-			if (trivia.Kind == SyntaxKind.BadCharactersTrivia)
-				ReportBadCharacters(trivia);
-		}
-	}
-	protected abstract void ReportBadCharacters(ISyntaxTrivia badGroup);
 	#endregion
 
 	#region Trivia methods
@@ -272,6 +262,14 @@ public abstract class BaseLexer
 				return LexIndentation('\t');
 		}
 
+		if (Text.Current == '\t')
+		{
+			ISyntaxTrivia tab = LexInvalidTab();
+			ReportTabAsAlignment(tab);
+
+			return tab;
+		}
+
 		if (Text.Current.IsWhiteSpace)
 			return LexWhiteSpace();
 
@@ -283,7 +281,7 @@ public abstract class BaseLexer
 
 		IndexedLinePosition start = Text.Position;
 
-		while (Text.Current.IsWhiteSpace)
+		while (Text.Current == character)
 		{
 			LexemeBuilder.Append(Text.Current.Value);
 			Text.Advance();
@@ -291,7 +289,7 @@ public abstract class BaseLexer
 
 		string lexeme = GetLexeme().TryIntern();
 
-		return new SyntaxTrivia(SyntaxKind.WhiteSpace, new(start, Text.Position), lexeme, ClassificationKind.Indentation);
+		return new SyntaxTrivia(SyntaxKind.Indentation, new(start, Text.Position), lexeme, ClassificationKind.Indentation);
 	}
 	private ISyntaxTrivia LexWhiteSpace()
 	{
@@ -309,6 +307,35 @@ public abstract class BaseLexer
 
 		return new SyntaxTrivia(SyntaxKind.WhiteSpace, new(start, Text.Position), lexeme, ClassificationKind.Whitespace);
 	}
+	private ISyntaxTrivia LexInvalidTab()
+	{
+		ThrowIfLexemeBuilderNotCleared();
+
+		IndexedLinePosition start = Text.Position;
+
+		while (Text.Current == '\t')
+		{
+			LexemeBuilder.Append(Text.Current.Value);
+			Text.Advance();
+		}
+
+		string lexeme = GetLexeme().TryIntern();
+
+		return new SyntaxTrivia(SyntaxKind.Indentation, new(start, Text.Position), lexeme, ClassificationKind.Whitespace);
+	}
+	#endregion
+
+	#region Diagnostic methods
+	private void ReportCurrentBadCharacters()
+	{
+		foreach (ISyntaxTrivia trivia in LeadingTrivia)
+		{
+			if (trivia.Kind == SyntaxKind.BadCharactersTrivia)
+				ReportBadCharacters(trivia);
+		}
+	}
+	protected abstract void ReportBadCharacters(ISyntaxTrivia badGroup);
+	protected abstract void ReportTabAsAlignment(ISyntaxTrivia tab);
 	#endregion
 
 	#region Helpers

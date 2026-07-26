@@ -601,23 +601,6 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 	#endregion
 
 	#region Trivia methods
-	protected override void ReportBadCharacters(ISyntaxTrivia badGroup)
-	{
-		Debug.Assert(badGroup.Position.Length > 0);
-
-		if (badGroup.Position.Length is 1)
-		{
-			Diagnostics
-				.BuildError(this, "bad_character")
-				.Add(badGroup, lines => lines.AddLine("This character is not recognised by the lexer."));
-		}
-		else
-		{
-			Diagnostics
-				.BuildError(this, "bad_characters")
-				.Add(badGroup, lines => lines.AddLine("These characters are not recognised by the lexer."));
-		}
-	}
 	protected override ISyntaxTrivia? LexTrivia()
 	{
 		return
@@ -649,6 +632,36 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 		string value = GetValue().Trim();
 
 		return new SyntaxTrivia(SyntaxKind.Comment, new(start, Text.Position), lexeme, ClassificationKind.SinglelineComment, value);
+	}
+	#endregion
+
+	#region Diagnostic methods
+	protected override void ReportBadCharacters(ISyntaxTrivia badGroup)
+	{
+		Debug.Assert(badGroup.Position.Length > 0);
+
+		if (badGroup.Position.Length is 1)
+		{
+			Diagnostics
+				.BuildError(this, "bad_character")
+				.Add(badGroup, lines => lines.AddLine("This character is not recognised by the lexer."));
+		}
+		else
+		{
+			Diagnostics
+				.BuildError(this, "bad_characters")
+				.Add(badGroup, lines => lines.AddLine("These characters are not recognised by the lexer."));
+		}
+	}
+	protected override void ReportTabAsAlignment(ISyntaxTrivia tab)
+	{
+		Diagnostics
+			.BuildWarning(this, "tab_as_alignment")
+			.Add(tab, lines =>
+			{
+				lines.AddLine("Tabs should only be used at the very start of the line for indentation. They should never be used for alignment.");
+				lines.AddLine("This is not an OWL limitation, but a common problem with how tabs work in general.");
+			});
 	}
 	#endregion
 
