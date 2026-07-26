@@ -59,13 +59,12 @@ public static class DiagnosticExtensions
 			IDiagnosticProvider provider,
 			ISyntaxToken openingToken,
 			ISyntaxToken closingToken,
-			string openingLexeme,
 			string closingLexeme,
 			string purpose)
 		{
 			Debug.Assert(closingToken.IsFabricated);
 
-			TextFragment openingFragment = openingToken.ToFragment(openingLexeme);
+			TextFragment openingFragment = openingToken.ToFragment(openingToken.Lexeme);
 			TextFragment closingFragment = closingToken.ToFragment(closingLexeme);
 
 			string openingKind = openingToken.Kind.Name;
@@ -74,10 +73,14 @@ public static class DiagnosticExtensions
 			string openingNatural = openingKind.Replace('_', ' ');
 			string closingNatural = closingKind.Replace('_', ' ');
 
-			return diagnostics
+			Diagnostic diagnostic = diagnostics
 				.BuildError(provider, $"expected_{closingKind}")
-				.Add(closingToken, closingToken.Position.Start, lines => lines.AddLine($"Expected {closingNatural.IndefiniteArticle} {closingNatural} '", openingFragment, $"' here to {purpose}."))
-				.Add(openingToken, lines => lines.AddLine($"It needs to match this {openingNatural} '", closingFragment, "'."));
+				.Add(closingToken, closingToken.Position.Start, lines => lines.AddLine($"Expected {closingNatural.IndefiniteArticle} {closingNatural} '", closingFragment, $"' here to {purpose}."));
+
+			if (openingToken.IsFabricated is false)
+				diagnostic.Add(openingToken, lines => lines.AddLine($"It needs to match this {openingNatural} '", openingFragment, "'."));
+
+			return diagnostic;
 		}
 		public Diagnostic ReportExpectedEndOfInput(IDiagnosticProvider provider, ISyntaxToken token)
 		{

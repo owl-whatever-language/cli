@@ -317,7 +317,7 @@ public sealed class DiagnosticSourceDisplay
 			TextFragment alignment = new(new(' ', toStart), ClassificationKind.Whitespace);
 			TextFragment underline = new("└", classification);
 			TextFragment pipe = new("│", classification);
-			column = annotation.Position.Start.Column + 1;
+			column = annotation.Position.Start.Column;
 
 			prefixes[annotation].AddRange(alignment, underline, space);
 

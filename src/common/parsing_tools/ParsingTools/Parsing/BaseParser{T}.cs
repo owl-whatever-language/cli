@@ -79,7 +79,7 @@ public abstract class BaseParser<TToken> : BaseParser
 		}
 
 		token = Fabricate(kind, classification);
-		diagnostic = ReportExpected(token, purpose, lexeme);
+		diagnostic = ReportExpected(token, lexeme, purpose);
 
 		return token;
 	}
@@ -122,17 +122,15 @@ public abstract class BaseParser<TToken> : BaseParser
 
 	protected TToken ExpectClosing(
 		ISyntaxToken opening,
-		string openingLexeme,
 		SyntaxKind kind,
 		ClassificationKind classification,
 		string closingLexeme,
 		string purpose)
 	{
-		return ExpectClosing(opening, openingLexeme, kind, classification, closingLexeme, purpose, out _);
+		return ExpectClosing(opening, kind, classification, closingLexeme, purpose, out _);
 	}
 	protected TToken ExpectClosing(
 		ISyntaxToken opening,
-		string openingLexeme,
 		SyntaxKind kind,
 		ClassificationKind classification,
 		string closingLexeme,
@@ -146,7 +144,7 @@ public abstract class BaseParser<TToken> : BaseParser
 		}
 
 		token = Fabricate(kind, classification);
-		diagnostic = ReportExpectedClosing(opening, token, openingLexeme, closingLexeme, purpose);
+		diagnostic = ReportExpectedClosing(opening, token, closingLexeme, purpose);
 
 		return token;
 	}

@@ -304,7 +304,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 			return null;
 
 		SyntaxList<IConcreteStatementSyntax> statements = ParseStatements(SyntaxKind.CloseBrace);
-		IConcreteToken end = ExpectClosing(start, "{", SyntaxKind.CloseBrace, ClassificationKind.Punctuation, "}", "end the block statement");
+		IConcreteToken end = ExpectClosing(start, SyntaxKind.CloseBrace, ClassificationKind.Punctuation, "}", "end the block statement");
 
 		return new ConcreteBlockStatementSyntax(start, statements, end);
 	}
@@ -332,7 +332,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 
 		IConcreteToken start = Expect(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, "(", "prefix the if statement condition");
 		IConcreteExpressionSyntax condition = ParseExpression();
-		IConcreteToken end = ExpectClosing(start, "(", SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "end the condition");
+		IConcreteToken end = ExpectClosing(start, SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "end the condition");
 
 		IConcreteStatementSyntax trueClause = ParseStatement();
 
@@ -349,7 +349,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 
 		IConcreteToken start = Expect(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, "(", "prefix the while statement condition");
 		IConcreteExpressionSyntax condition = ParseExpression();
-		IConcreteToken end = ExpectClosing(start, "(", SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "end the condition");
+		IConcreteToken end = ExpectClosing(start, SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "end the condition");
 		IConcreteStatementSyntax body = ParseStatement();
 
 		return new ConcreteWhileStatementSyntax(keyword, start, condition, end, body);
@@ -447,7 +447,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 			end = Fabricate(SyntaxKind.CloseBracket, ClassificationKind.Punctuation);
 		}
 		else
-			end = ExpectClosing(start, "(", SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "end the function parameters");
+			end = ExpectClosing(start, SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "end the function parameters");
 
 		IConcreteFunctionReturnSyntax @return = ParseFunctionReturn();
 
@@ -610,7 +610,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 			}
 		}
 
-		IConcreteToken end = ExpectClosing(start, "<", SyntaxKind.CloseAngleBracket, ClassificationKind.Punctuation, ">", "end the generic type");
+		IConcreteToken end = ExpectClosing(start, SyntaxKind.CloseAngleBracket, ClassificationKind.Punctuation, ">", "end the generic type");
 
 		return new ConcreteGenericTypeSyntax(
 			type,
@@ -716,7 +716,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 			return null;
 
 		IConcreteExpressionSyntax expression = ParseExpression();
-		IConcreteToken end = ExpectClosing(start, "(", SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "end the grouped expression");
+		IConcreteToken end = ExpectClosing(start, SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "end the grouped expression");
 
 		return new ConcreteGroupedExpressionSyntax(start, expression, end);
 	}
@@ -817,7 +817,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 			diagnostic.Add(Source, afterLast, lines => lines.AddLine("Move them here."));
 		}
 
-		IConcreteToken end = ExpectClosing(start, "(", SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "End the function call");
+		IConcreteToken end = ExpectClosing(start, SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "End the function call");
 
 		return new(
 			expression,

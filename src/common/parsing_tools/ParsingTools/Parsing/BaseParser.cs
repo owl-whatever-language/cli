@@ -276,11 +276,10 @@ public abstract class BaseParser : IDiagnosticProvider
 	protected virtual Diagnostic ReportExpectedClosing(
 			ISyntaxToken openingToken,
 			ISyntaxToken closingToken,
-			string openingLexeme,
 			string closingLexeme,
 			string purpose)
 	{
-		return Diagnostics.ReportExpectedClosing(this, openingToken, closingToken, openingLexeme, closingLexeme, purpose);
+		return Diagnostics.ReportExpectedClosing(this, openingToken, closingToken, closingLexeme, purpose);
 	}
 	protected virtual Diagnostic ReportExpectedEndOfInput(ISyntaxToken token) => Diagnostics.ReportExpectedEndOfInput(this, token);
 	protected virtual Diagnostic ReportExpectedSimple(ISyntaxToken fabricatedToken, string kind, params IEnumerable<object?> message)
