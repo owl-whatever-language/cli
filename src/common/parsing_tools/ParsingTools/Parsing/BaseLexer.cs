@@ -220,17 +220,21 @@ public abstract class BaseLexer
 	#endregion
 
 	#region Trivia methods
-	protected virtual void LexLeadingTrivia()
+	protected virtual void AccumulateLeadingTrivia()
 	{
-		if (LeadingTrivia.Any(static t => t.Kind != SyntaxKind.BadCharactersTrivia))
-			ThrowHelper.ThrowInvalidOperationException("Tried to lex leading trivia nodes when the previously lexed ones still weren't used.");
-
 		ISyntaxTrivia? node = LexTrivia();
 		while (node is not null)
 		{
 			LeadingTrivia.Add(node);
 			node = LexTrivia();
 		}
+	}
+	protected virtual void LexLeadingTrivia()
+	{
+		if (LeadingTrivia.Any() && LeadingTrivia.All(static t => t.Kind != SyntaxKind.BadCharactersTrivia))
+			ThrowHelper.ThrowInvalidOperationException("Tried to lex leading trivia nodes when the previously lexed ones still weren't used.");
+
+		AccumulateLeadingTrivia();
 	}
 	protected virtual void LexTrailingTrivia()
 	{

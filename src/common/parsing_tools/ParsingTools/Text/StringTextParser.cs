@@ -49,7 +49,7 @@ public sealed class StringTextParser : BaseTextParser
 		if (offset is 1)
 			return new(_cache1 ??= PeekNoGuard(lookupIndex), false);
 
-		string value = PeekNoGuard(offset);
+		string value = PeekNoGuard(lookupIndex);
 		return new(value, false);
 	}
 

@@ -147,7 +147,8 @@ public abstract class BaseTextParser : ITextParser
 		int i = 0;
 		foreach (TextElement current in sequence.EnumerateTextElements())
 		{
-			if (Peek(i) != current)
+			TextElement peek = Peek(i);
+			if (peek != current)
 				return false;
 
 			i++;
