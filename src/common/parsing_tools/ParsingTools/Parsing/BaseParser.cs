@@ -25,7 +25,7 @@ public abstract class BaseParser : IDiagnosticProvider
 				if (OldDiagnosticCount >= Parser.Diagnostics.Count)
 					Parser.ReportInfiniteLoop(Token);
 
-				Parser.SkipCurrent();
+				Parser.RecoverFromCurrent();
 			}
 		}
 		#endregion
@@ -209,14 +209,14 @@ public abstract class BaseParser : IDiagnosticProvider
 		return new(kind, position);
 	}
 
-	protected void SkipToEndOfInput()
+	protected void RecoverUntilEndOfInput()
 	{
 		while (RealisticHasRemaining && Current.Kind != SyntaxKind.EndOfInput)
-			SkipCurrent();
+			RecoverFromCurrent();
 
 		Debug.Assert(Current?.Kind == SyntaxKind.EndOfInput);
 	}
-	protected void SkipCurrent()
+	protected void RecoverFromCurrent()
 	{
 		if (Current is null || Current.Kind == SyntaxKind.EndOfInput)
 			return;
@@ -230,14 +230,18 @@ public abstract class BaseParser : IDiagnosticProvider
 		if (badSyntax is null && hadCurrent)
 			ThrowHelper.ThrowInvalidOperationException($"{nameof(TryParseBadSyntax)}() can only return null if there's no current token.");
 
-		if (Current is null)
-			ThrowHelper.ThrowInvalidOperationException($"{nameof(TryParseBadSyntax)}() shouldn't consume the very last token (which should be the special end of input token).");
-
 		if (badSyntax is null)
 		{
 			Debug.Assert(IsAtEnd);
 			return;
 		}
+
+		ToBadSyntaxTrivia(badSyntax);
+	}
+	protected void ToBadSyntaxTrivia(ISyntaxNode badSyntax)
+	{
+		if (Current is null)
+			ThrowHelper.ThrowInvalidOperationException($"{nameof(TryParseBadSyntax)}() shouldn't consume the very last token (which should be the special end of input token).");
 
 		BadSyntaxTrivia newTrivia = new(badSyntax);
 		TriviaList newList = new([newTrivia, .. Current.LeadingTrivia]);

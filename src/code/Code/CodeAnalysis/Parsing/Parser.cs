@@ -151,7 +151,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 		if (Current.Kind != SyntaxKind.EndOfInput)
 			ReportExpectedSimple(Current, "statement", "Expected a statement here.");
 
-		SkipToEndOfInput();
+		RecoverUntilEndOfInput();
 		IConcreteToken endOfInput = ExpectEndOfInput();
 
 		return new(statements, endOfInput);
@@ -182,13 +182,13 @@ public sealed class Parser : BaseParser<IConcreteToken>
 					target = last;
 
 				ReportDuplicate(target);
-				SkipCurrent();
+				RecoverFromCurrent();
 			}
 			else
 			{
 				Debug.Assert(Current is not null, "EOF should still be here.");
 				ReportExpectedSimple(Current, "statement", "Expected a statement here.");
-				SkipCurrent();
+				RecoverFromCurrent();
 			}
 		}
 
@@ -782,7 +782,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 					});
 				}
 
-				SkipCurrent();
+				RecoverFromCurrent();
 			}
 
 			if (RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket)

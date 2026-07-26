@@ -197,5 +197,15 @@ public abstract class BaseParser<TToken> : BaseParser
 		return Convert(current);
 	}
 	protected abstract ISyntaxNode? TryParseBadSyntaxCore();
+
+	protected void SkipCurrent(ClassificationKind? classification = null)
+	{
+		ISyntaxToken? badSyntax = Convert(Current, classification);
+		if (badSyntax is null)
+			return;
+
+		Advance();
+		ToBadSyntaxTrivia(badSyntax);
+	}
 	#endregion
 }
