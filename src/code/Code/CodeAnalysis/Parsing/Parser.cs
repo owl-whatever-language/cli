@@ -134,19 +134,14 @@ public sealed class Parser : BaseParser<IConcreteToken>
 		ConcreteDocumentSyntax document = ParseDocument();
 		return new(Source, document);
 	}
-	protected override ISyntaxNode? TryParseBadSyntax()
+	protected override ISyntaxNode? TryParseBadSyntaxCore()
 	{
 		// Note(Nightowl): Bad syntax parsing should only be done on things that will start with a keyword;
-		ISyntaxNode? attempt = TryParseLocalFunctionDeclaration();
-
-		if (attempt is not null)
-			return attempt;
-
-		ISyntaxToken? current = Current;
-		if (current is not null)
-			Advance();
-
-		return Convert(current);
+		return
+			TryParseLocalFunctionDeclaration() ??
+			TryParseIfStatement() ??
+			TryParseWhileStatement()
+		;
 	}
 	private ConcreteDocumentSyntax ParseDocument()
 	{

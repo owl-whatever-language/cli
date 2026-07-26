@@ -184,4 +184,20 @@ public abstract class BaseParser<TToken> : BaseParser
 	[return: NotNullIfNotNull(nameof(token))]
 	protected abstract TToken? Convert(ISyntaxToken? token, ClassificationKind? classification = null);
 	#endregion
+
+	#region Recovery methods
+	protected sealed override ISyntaxNode? TryParseBadSyntax()
+	{
+		ISyntaxNode? attempt = TryParseBadSyntaxCore();
+		if (attempt is not null)
+			return attempt;
+
+		ISyntaxToken? current = Current;
+		if (current is not null)
+			Advance();
+
+		return Convert(current);
+	}
+	protected abstract ISyntaxNode? TryParseBadSyntaxCore();
+	#endregion
 }
