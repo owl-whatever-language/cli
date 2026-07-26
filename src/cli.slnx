@@ -15,4 +15,7 @@
 	</Folder>
 	-->
 	<Project Path="cli/cli.csproj" />
+	<Folder Name="/lsp/">
+		<Project Path="lsp/lsp/lsp.csproj" />
+	</Folder>
 </Solution>
