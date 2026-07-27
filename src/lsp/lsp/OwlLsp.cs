@@ -72,6 +72,7 @@ public static class OwlLsp
 		server.AddHandler(new CompletionHandler(context));
 		server.AddHandler(new SignatureHelpHandler(context));
 		server.AddHandler(new SelectionRangeHandler(context));
+		server.AddHandler(new FoldingRangeHandler(context));
 	}
 	#endregion
 }
