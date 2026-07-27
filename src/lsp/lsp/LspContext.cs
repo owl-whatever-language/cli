@@ -2,11 +2,10 @@ namespace OwlDomain.Owl.LSP;
 
 using LspPosition = EmmyLua.LanguageServer.Framework.Protocol.Model.Position;
 using LspRange = EmmyLua.LanguageServer.Framework.Protocol.Model.DocumentRange;
-
-using OwlPosition = ParsingTools.Positioning.LinePosition;
-using OwlPositionRange = ParsingTools.Positioning.Ranges.PositionRange;
 using OwlIndexedPosition = ParsingTools.Positioning.IndexedLinePosition;
 using OwlIndexedPositionRange = ParsingTools.Positioning.Ranges.IndexedPositionRange;
+using OwlPosition = ParsingTools.Positioning.LinePosition;
+using OwlPositionRange = ParsingTools.Positioning.Ranges.PositionRange;
 
 internal interface ILspContext
 {

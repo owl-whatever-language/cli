@@ -9,10 +9,10 @@ global using OwlDomain.Owl.Code.Styling;
 global using OwlDomain.ParsingTools.Classification;
 global using OwlDomain.ParsingTools.Diagnostics;
 global using OwlDomain.ParsingTools.Results;
+global using OwlDomain.ParsingTools.Semantics.Symbols;
 global using OwlDomain.ParsingTools.Sources;
 global using OwlDomain.ParsingTools.Syntax;
 global using OwlDomain.ParsingTools.Text;
-global using OwlDomain.ParsingTools.Semantics.Symbols;
 global using OwlDomain.ParsingTools.Text.Fragments;
 
 global using Spectre.Console;
