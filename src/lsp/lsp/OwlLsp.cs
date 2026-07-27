@@ -66,6 +66,7 @@ public static class OwlLsp
 		server.AddHandler(new DocumentHighlightHandler(context));
 		server.AddHandler(new DocumentSymbolHandler(context));
 		server.AddHandler(new CompletionHandler(context));
+		server.AddHandler(new SignatureHelpHandler(context));
 	}
 	#endregion
 }

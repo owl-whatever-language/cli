@@ -40,11 +40,10 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 			_ => null,
 		};
 
-		if (kind is not null)
-			parts.Add($"`({kind})`");
-
 		if (token.Symbol is IDeclaredSymbol declared)
 		{
+			parts.Add($"```owl\n{token.Symbol.GetDebugText().ToPlainText()}\n```");
+
 			string comments = string.Join("\n",
 				declared.Declaration
 				.ToTokens()
@@ -57,6 +56,8 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 			if (comments.Length > 0)
 				parts.Add(comments);
 		}
+		else if (kind is not null)
+			parts.Add($"`({kind})`");
 
 		if (parts.Any())
 		{
