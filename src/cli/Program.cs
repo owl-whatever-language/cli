@@ -36,6 +36,7 @@ root.AddGroup(args, new Command("list", "General verb action for listing things,
 	new BuiltinCommand(),
 });
 
+root.Add(new LspCommand());
 root.Add(new AnalyseCommand());
 
 ParseResult result = root.Parse(args);

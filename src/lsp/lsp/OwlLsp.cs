@@ -1,0 +1,71 @@
+using System.Net;
+using System.Net.Sockets;
+using OwlDomain.Owl.Code.Execution.Builtins;
+
+namespace OwlDomain.Owl.LSP;
+
+public static class OwlLsp
+{
+	#region Functions
+	public static LanguageServer Create(string version, ushort port)
+	{
+		Socket socket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+		IPAddress ip = IPAddress.Loopback;
+
+		IPEndPoint endpoint = new(ip, port);
+		socket.Bind(endpoint);
+		socket.Listen(1);
+
+		Console.WriteLine("Waiting for connection...");
+		var client = socket.Accept();
+		Console.WriteLine("Accepted connection");
+
+		NetworkStream stream = new(client);
+		LanguageServer server = LanguageServer.From(stream, stream);
+		Customise(server, version);
+
+		return server;
+	}
+	public static LanguageServer Create(string version)
+	{
+		LanguageServer server = LanguageServer.From(Console.OpenStandardInput(), Console.OpenStandardOutput());
+		Customise(server, version);
+
+		return server;
+	}
+
+	private static void Customise(LanguageServer server, string version)
+	{
+		server.OnInitialize((request, serverInfo) =>
+		{
+			serverInfo.Name = "OWL";
+			serverInfo.Version = version;
+
+			return Task.CompletedTask;
+		});
+
+		server.OnInitialized(async request =>
+		{
+			await server.Client.LogInfo("Server initialised!");
+
+			var a = server.ClientCapabilities.TextDocument?.SemanticTokens;
+			Console.Error.WriteLine();
+		});
+
+		BuiltinResolutionResult builtinResult = BuiltinResolver.Resolve();
+		AnalysisContext analysis = new(builtinResult.ResultScope);
+		LspContext context = new(server, analysis);
+
+		server.AddHandler(new TextDocumentHandler(context));
+		server.AddHandler(new SemanticTokensHandler(context));
+		server.AddHandler(new InlayHintHandler(context));
+		server.AddHandler(new HoverHandler(context));
+		server.AddHandler(new DocumentDiagnosticHandler(context));
+		server.AddHandler(new DeclarationHandler(context));
+		server.AddHandler(new ReferenceHandler(context));
+		server.AddHandler(new DocumentHighlightHandler(context));
+		server.AddHandler(new DocumentSymbolHandler(context));
+		server.AddHandler(new CompletionHandler(context));
+	}
+	#endregion
+}
