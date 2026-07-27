@@ -58,8 +58,14 @@ public sealed class AnalysisContext : IAnalysisContext
 	{
 		BaseScope = baseScope;
 
+		// Note(Nightowl): Preamble;
 		RegisterPass<ControlFlow.ControlFlowAnalyser>();
-		RegisterPass<Passes.LocalCapture.LocalCaptureAnalyser>();
+
+		// Note(Nightowl): Annotators;
+		RegisterPass<Passes.LocalCapture.LocalCaptureAnnotator>();
+
+		// Note(Nightowl): Checkers;
+		RegisterPass<Passes.LocalCapture.LocalCaptureChecker>();
 		RegisterPass<Passes.EntryPoint.EntryPointAnalyser>();
 	}
 	#endregion
