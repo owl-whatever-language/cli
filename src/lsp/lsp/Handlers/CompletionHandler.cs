@@ -72,9 +72,18 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 		{
 			var call = target.GetParent<ISemanticFunctionCallExpressionSyntax>();
 			if (call?.Callable is not null)
-			{
 				AddParameterNames(completions, call.Callable);
+			else if (call?.Expression is ISemanticGetExpressionSyntax get)
+			{
+				foreach (ISymbol candidate in get.Candidates)
+				{
+					if (candidate is ICallableType callable)
+						AddParameterNames(completions, callable);
+					else if (candidate is IFunction function)
+						AddParameterNames(completions, function.AsCallable);
+				}
 			}
+
 		}
 
 		ISyntaxNode? contextNode = target ?? bundle.LeastDetailed.Document.Search(node => node.Position.WithoutIndex.Contains(request.Position.ToOwl));
@@ -101,10 +110,16 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 			if (string.IsNullOrWhiteSpace(parameter.Name))
 				continue;
 
+			string label = $"{parameter.Name}:";
+
+			if (items.Any(i => i.Label == label))
+				continue;
+
 			items.Add(new()
 			{
 				Kind = CompletionItemKind.Reference,
-				Label = parameter.Name + ":"
+				Label = label,
+				Detail = parameter.GetDebugText().ToPlainText()
 			});
 		}
 	}

@@ -296,7 +296,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		var name = Convert(declared.Name, classification, symbol);
 		IType resultType = GetResultType(symbol, declared.Name);
 
-		return new(name, symbol ?? Symbol.Unknown, resultType);
+		return new(name, symbol ?? Symbol.Unknown, ambiguity.ToCollection(), resultType);
 	}
 	#endregion
 
@@ -625,7 +625,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 		(ISymbol? symbol, ICallableType? callable) = SelectFunction(arguments.Values, symbols, start);
 
 		var name = Convert(get.Name, symbol?.Classification ?? ClassificationKind.Identifier, symbol);
-		SemanticGetExpressionSyntax semanticGet = new(name, symbol ?? Symbol.Unknown, callable ?? (IType)SpecialTypes.Error);
+		SemanticGetExpressionSyntax semanticGet = new(name, symbol ?? Symbol.Unknown, symbols, callable ?? (IType)SpecialTypes.Error);
 
 		return new(semanticGet, start, arguments, end, callable, callable?.Return.Type ?? SpecialTypes.Error);
 	}
