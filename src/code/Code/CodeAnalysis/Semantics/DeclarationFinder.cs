@@ -33,9 +33,9 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 	#endregion
 
 	#region Constructors
-	private DeclarationFinder(ISymbolScope baseScope)
+	private DeclarationFinder(IMutableSymbolScope resultScope)
 	{
-		ResultScope = new SymbolScope(baseScope, "user_defined");
+		ResultScope = resultScope;
 		CurrentScope = ResultScope;
 	}
 	#endregion
@@ -45,17 +45,34 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 	{
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
-			DeclarationFinder finder = new(baseScope);
+			SymbolScope resultScope = new(baseScope, "user_defined");
+			if (trees.Count is 0)
+				return new(DiagnosticBag.Empty, performance, resultScope);
 
 			if (trees.Count is 1)
-				finder.Visit(trees.Single());
-			else if (trees.Count > 1)
 			{
-				ParallelOptions options = new() { MaxDegreeOfParallelism = Environment.ProcessorCount };
-				Parallel.ForEach(trees, options, finder.Visit);
+				DeclarationFinder finder = new(resultScope);
+				finder.Visit(trees.Single());
+
+				return new(finder.Diagnostics, performance, resultScope);
 			}
 
-			return new(finder.Diagnostics, performance, finder.ResultScope);
+			ParallelOptions options = new() { MaxDegreeOfParallelism = Environment.ProcessorCount };
+			IDiagnosticBag[] results = new IDiagnosticBag[trees.Count];
+
+			Parallel.ForEach(trees, options, (tree, _, index) =>
+			{
+				DeclarationFinder finder = new(resultScope);
+				finder.Visit(tree);
+
+				results[index] = finder.Diagnostics;
+			});
+
+			DiagnosticBag diagnostics = [];
+			foreach (IDiagnosticBag bag in results)
+				diagnostics.AddRange(bag);
+
+			return new(diagnostics, performance, resultScope);
 		}
 	}
 	#endregion
@@ -91,7 +108,10 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 
 		Add(symbol);
 	}
-	private void Add(IDeclaredSymbol symbol) => CurrentScope.Add(symbol);
+	private void Add(IDeclaredSymbol symbol)
+	{
+		CurrentScope.Add(symbol);
+	}
 	private DelegateScope NewScopeSingle(IDeclaredSymbol symbol, IConcreteToken nameToken)
 	{
 		AddSingle(symbol, nameToken);

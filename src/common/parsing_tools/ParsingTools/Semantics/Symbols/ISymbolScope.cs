@@ -5,6 +5,8 @@ public interface ISymbolScope : IDebugTextFactory
 	#region Properties
 	ISymbolScope? Parent { get; }
 	string Name { get; }
+	int ChildCount { get; }
+	int SymbolCount { get; }
 	#endregion
 
 	#region Methods
@@ -32,13 +34,18 @@ public class SymbolScope : IMutableSymbolScope
 	private readonly Dictionary<string, IMutableSymbolCollection> _byName = [];
 	private readonly Dictionary<ISyntaxNode, IMutableDeclaredSymbol> _byNode = [];
 
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	private int _symbolCount;
+
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 	private int _scopeCount;
 	#endregion
 
 	#region Properties
 	public ISymbolScope? Parent { get; }
 	public string Name { get; }
+	public int ChildCount => _scopeCount;
+	public int SymbolCount => _symbolCount;
 	#endregion
 
 	#region Constructors
