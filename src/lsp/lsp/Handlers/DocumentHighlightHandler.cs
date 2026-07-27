@@ -32,7 +32,7 @@ internal sealed class DocumentHighlightHandler(ILspContext context) : DocumentHi
 		{
 			DocumentHighlightKind kind = token.Parent switch
 			{
-				IConcreteGetExpressionSyntax => DocumentHighlightKind.Read,
+				IConcreteGetExpressionSyntax get => get.Parent is IConcreteAssignmentExpressionSyntax ? DocumentHighlightKind.Write : DocumentHighlightKind.Read,
 				IConcreteAssignmentExpressionSyntax => DocumentHighlightKind.Write,
 				IConcreteVariableDeclarationStatementSyntax => DocumentHighlightKind.Write,
 				IConcreteNamedFunctionArgumentSyntax => DocumentHighlightKind.Write,
