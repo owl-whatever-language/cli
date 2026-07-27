@@ -20,7 +20,7 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 	public List<StructuredNodeInfo> Nodes { get; } = [];
 	public List<StructuredGroupInfo> Groups { get; } = [];
 	public IReadOnlyCollection<StructuredNodeInfo> DirectNodes => Nodes.Where(n => n.Group is null).ToArray();
-	public StructuredNodeInfo Document => _document ??= DirectNodes.Single(n => n.Name == "document");
+	public StructuredNodeInfo Document => _document ??= DirectNodes.First(n => n.Name == "document");
 	public IReadOnlyList<string> Namespaces => GetAllNamespaces().Distinct().OrderBy(n => n).ToArray();
 	public string Directory => Kind.Pascal;
 	public string TreePath => $"{Directory}/{Class.Name}.g.cs";
@@ -169,7 +169,7 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 		{
 			TreeDescription tree = description.OfType<TreeDescription>().Single(d => d.Kind == kind);
 			TokenDescription token = description.OfType<TokenDescription>().Single(d => d.Kind == kind);
-			NodeDescription document = description.OfType<NodeDescription>().Single(d => d.Name == "document" && d.Kind == "node");
+			NodeDescription document = description.OfType<NodeDescription>().First(d => d.Name == "document" && d.Kind == "node");
 
 			StructuredTreeInfo? lastTree = trees.LastOrDefault();
 

@@ -101,6 +101,9 @@ internal sealed record class SyntaxDescriptionFile(IReadOnlyList<ISyntaxDescript
 
 		MemberDescriptionList memberList = ParseMembers(members);
 
+		if (declaration2 is "@")
+			return new OnKindDescription(declaration1, declaration3, memberList);
+
 		if (declaration1 is "token")
 			return new TokenDescription(declaration2, memberList);
 
@@ -113,8 +116,6 @@ internal sealed record class SyntaxDescriptionFile(IReadOnlyList<ISyntaxDescript
 		if (declaration1 is "document")
 			return new NodeDescription("document", "node", memberList);
 
-		if (declaration2 is "@")
-			return new OnKindDescription(declaration1, declaration3, memberList);
 
 		return new NodeDescription(declaration1, declaration2, memberList);
 	}

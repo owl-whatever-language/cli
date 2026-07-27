@@ -444,7 +444,7 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 	static void GenerateTree(SourceProductionContext context, StructuredTreeInfo info)
 	{
 		IndentedTextWriter writer = GetWriter(out StringWriter result);
-		StructuredNodeInfo document = info.Nodes.Single(n => n.Name == "document");
+		StructuredNodeInfo document = info.Nodes.First(n => n.Name == "document");
 
 		using (writer.Preamble(info.Namespace))
 		{

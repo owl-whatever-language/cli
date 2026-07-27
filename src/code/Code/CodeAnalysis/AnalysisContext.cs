@@ -162,7 +162,7 @@ public sealed class AnalysisContext : IAnalysisContext
 	}
 	private ParallelDeclarationResolutionResult ResolveSymbols(AnalysisStageCompleteDelegate? callback, ISymbolScope userScope)
 	{
-		ParallelDeclarationResolutionResult result = SymbolResolver.Resolve(userScope, Concrete);
+		ParallelDeclarationResolutionResult result = DeclarationResolver.Resolve(userScope, Concrete);
 		foreach (IDeclaredSyntaxTree tree in result.Trees)
 		{
 			SyntaxTreeBundle bundle = _trees[tree.Source];

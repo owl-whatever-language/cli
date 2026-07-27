@@ -41,7 +41,7 @@ public sealed class ParallelDeclarationResolutionResult : IParallelStageResult<D
 	#endregion
 }
 
-public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagnosticProvider
+public sealed class DeclarationResolver : BaseConcreteToDeclaredTreeConverter, IDiagnosticProvider
 {
 	#region Fields
 	private IDeclaredFunction? _currentFunction;
@@ -56,7 +56,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	#endregion
 
 	#region Constructors
-	private SymbolResolver(ISourceFile source, ISymbolScope baseScope)
+	private DeclarationResolver(ISourceFile source, ISymbolScope baseScope)
 	{
 		Source = source;
 		BaseScope = baseScope;
@@ -69,7 +69,7 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	{
 		using (PerformanceResult.Scope(out IPerformanceResult performance))
 		{
-			SymbolResolver resolver = new(concrete.Source, baseScope);
+			DeclarationResolver resolver = new(concrete.Source, baseScope);
 			IDeclaredSyntaxTree declared = resolver.Convert(concrete);
 
 			return new(resolver.Diagnostics, performance, declared);
@@ -99,6 +99,13 @@ public sealed class SymbolResolver : BaseConcreteToDeclaredTreeConverter, IDiagn
 	#endregion
 
 	#region Refine declaration methods
+	protected override DeclaredDocumentSyntax ConvertCore(IConcreteDocumentSyntax concrete)
+	{
+		var statements = Convert(concrete.Statements);
+		var endOfInput = Convert(concrete.EndOfInput);
+
+		return new(statements, endOfInput, CurrentScope);
+	}
 	protected override DeclaredVariableDeclarationStatementSyntax ConvertCore(IConcreteVariableDeclarationStatementSyntax concrete)
 	{
 		Get(concrete, out IDeclaredLocalVariable variable);
