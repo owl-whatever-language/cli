@@ -1,6 +1,7 @@
 using System.CommandLine.Help;
 using OwlDomain.Owl.CLI.Actions;
 using OwlDomain.Owl.CLI.Actions.List;
+using OwlDomain.Owl.CLI.Actions.Lsp;
 using OwlDomain.Owl.CLI.Actions.Meta;
 using OwlDomain.Owl.CLI.Actions.Run;
 
@@ -36,8 +37,13 @@ root.AddGroup(args, new Command("list", "General verb action for listing things,
 	new BuiltinCommand(),
 });
 
-root.Add(new LspCommand());
+root.AddGroup(args, new Command("lsp", "General action for LSP related things.")
+{
+	new LspStdioCommand(),
+	new LspHostCommand(),
+});
+
 root.Add(new AnalyseCommand());
 
-ParseResult result = root.Parse(args);
+ParseResult result = root.Parse("lsp host 8095");
 return result.Invoke();

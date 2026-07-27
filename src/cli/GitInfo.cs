@@ -7,6 +7,7 @@ public static class GitInfo
 	#region Properties
 	public static bool IsAvailable => Branch.IsWhiteSpace() is false;
 	public static string? Version { get; }
+	public static string VersionOrMissing => Version ?? "<missing>";
 	public static string? Branch { get; }
 	public static bool HasChanges { get; }
 	public static string? Hash { get; }

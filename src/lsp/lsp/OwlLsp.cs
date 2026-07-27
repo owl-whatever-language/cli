@@ -7,7 +7,7 @@ namespace OwlDomain.Owl.LSP;
 public static class OwlLsp
 {
 	#region Functions
-	public static LanguageServer Create(string version, ushort port)
+	public static LanguageServer Host(string version, ushort port)
 	{
 		Socket socket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 		IPAddress ip = IPAddress.Loopback;
@@ -16,7 +16,7 @@ public static class OwlLsp
 		socket.Bind(endpoint);
 		socket.Listen(1);
 
-		Console.WriteLine("Waiting for connection...");
+		Console.WriteLine($"Waiting for connection...");
 		var client = socket.Accept();
 		Console.WriteLine("Accepted connection");
 
@@ -26,7 +26,7 @@ public static class OwlLsp
 
 		return server;
 	}
-	public static LanguageServer Create(string version)
+	public static LanguageServer Stdio(string version)
 	{
 		LanguageServer server = LanguageServer.From(Console.OpenStandardInput(), Console.OpenStandardOutput());
 		Customise(server, version);
@@ -47,9 +47,12 @@ public static class OwlLsp
 		server.OnInitialized(async request =>
 		{
 			await server.Client.LogInfo("Server initialised!");
-
-			var a = server.ClientCapabilities.TextDocument?.SemanticTokens;
 			Console.Error.WriteLine();
+		});
+
+		server.OnShutdown(async () =>
+		{
+			Console.Error.WriteLine($"Bye.");
 		});
 
 		BuiltinResolutionResult builtinResult = BuiltinResolver.Resolve();
