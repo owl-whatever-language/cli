@@ -1,0 +1,63 @@
+%YAML 1.2
+---
+name: OWL
+file_extensions: [owl]
+scope: source.owl
+version: 2
+
+contexts:
+  main:
+    - match: //
+      push: comment
+
+    - match: \$?"
+      push: string
+
+    - match: \b(if|else|while)\b
+      scope: keyword.control.conditional.owl
+
+    - match: \breturn\b
+      scope: keyword.control.owl
+
+    - match: \b(fun)\s+(\w+)\b
+      scope: meta.function.owl
+      captures:
+        1: keyword.other.owl
+        2: entity.name.function.owl
+
+    - match: \b[\d-]+(\.\d+)?\b
+      scope: constant.numeric.owl
+
+    - match: (&&|\|\|)
+      scope: keyword.control.owl
+
+    - match: ;
+      scope: punctuation.terminator.owl
+
+    - match: \,
+      scope: punctuation.separator.owl
+
+    - match: (==|!=|<|<=|>|>=|\+=?|-=?|\*=?|/=?|%=?)
+      scope: keyword.operator.arithmetic
+
+    - match: (=>)
+      scope: keyword.operator
+
+    - match: \b(\w+)\s+(\w+)\s*(=)
+      captures:
+        1: entity.name.type.owl
+        2: variable.other.owl
+        3: keyword.operator.assignment.owl
+
+
+  comment:
+    - meta_scope: comment.line.double-slash.owl
+
+    - match: $
+      pop: true
+
+  string:
+    - meta_scope: string.quoted.double.owl
+
+    - match: \"
+      pop: true
