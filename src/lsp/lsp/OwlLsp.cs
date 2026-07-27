@@ -65,6 +65,7 @@ public static class OwlLsp
 		server.AddHandler(new HoverHandler(context));
 		server.AddHandler(new DocumentDiagnosticHandler(context));
 		server.AddHandler(new DeclarationHandler(context));
+		server.AddHandler(new DefinitionHandler(context));
 		server.AddHandler(new ReferenceHandler(context));
 		server.AddHandler(new DocumentHighlightHandler(context));
 		server.AddHandler(new DocumentSymbolHandler(context));
