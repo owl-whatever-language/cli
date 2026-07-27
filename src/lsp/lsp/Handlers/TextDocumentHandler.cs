@@ -17,7 +17,6 @@ internal sealed class TextDocumentHandler(ILspContext context) : TextDocumentHan
 	}
 	protected override async Task Handle(DidOpenTextDocumentParams request, CancellationToken token)
 	{
-		Console.Error.WriteLine($"Opened file: {request.TextDocument.Uri.Uri.AbsolutePath}");
 		_context.AddFile(request.TextDocument.Uri.Uri, request.TextDocument.Text);
 	}
 	protected override async Task Handle(DidChangeTextDocumentParams request, CancellationToken token)
