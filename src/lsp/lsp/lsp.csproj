@@ -22,6 +22,7 @@
 	<!-- Project references -->
 	<ItemGroup Label="projects">
 		<ProjectReference Include="../../code/Code/Code.csproj" />
+		<ProjectReference Include="../../workspaces/Workspaces/Workspaces.csproj" />
 	</ItemGroup>
 
 	<!-- Package references -->

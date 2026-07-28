@@ -23,15 +23,15 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 	{
 		serverCapabilities.CompletionProvider = new()
 		{
-			TriggerCharacters = ["."],
+			TriggerCharacters = [".", "(", ","],
 		};
 	}
 	protected override Task<CompletionResponse?> Handle(CompletionParams request, CancellationToken cancellation)
 	{
-		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false || bundle.LeastDetailed is null)
+		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult<CompletionResponse?>(null);
 
-		ISyntaxNode? target = bundle.LeastDetailed.Document.Search<ISyntaxToken>(request.Position);
+		ISyntaxNode? target = tree.Document.Search<ISyntaxToken>(request.Position);
 
 		if (target is ISyntaxToken token && token.Kind == SyntaxKind.StringText)
 			return Task.FromResult<CompletionResponse?>(null);
@@ -66,10 +66,9 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 						AddParameterNames(completions, function.AsCallable);
 				}
 			}
-
 		}
 
-		ISyntaxNode? contextNode = target ?? bundle.LeastDetailed.Document.Search(request.Position);
+		ISyntaxNode? contextNode = target ?? tree.Document.Search(request.Position);
 		ISymbolScope? scope = contextNode.GetChain().Select(TrySelectScope).FirstOrDefault(scope => scope is not null);
 
 		AddKeywords(completions);

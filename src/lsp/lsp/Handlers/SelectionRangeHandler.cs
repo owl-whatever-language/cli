@@ -1,5 +1,4 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.SelectionRange;
-using EmmyLua.LanguageServer.Framework.Protocol.Model;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -16,7 +15,7 @@ internal sealed class SelectionRangeHandler(ILspContext context) : SelectionRang
 	}
 	protected override Task<SelectionRangeResponse?> Handle(SelectionRangeParams request, CancellationToken cancellationToken)
 	{
-		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false || bundle.LeastDetailed is null)
+		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult<SelectionRangeResponse?>(null);
 
 		List<SelectionRange> ranges = [];
@@ -24,7 +23,7 @@ internal sealed class SelectionRangeHandler(ILspContext context) : SelectionRang
 
 		foreach (Position target in request.Positions)
 		{
-			ISyntaxPart? part = bundle.LeastDetailed.Document.Search<ISyntaxPart>(target);
+			ISyntaxPart? part = tree.Document.Search<ISyntaxPart>(target);
 			if (part is not null)
 				ranges.Add(GetRange(part));
 			else

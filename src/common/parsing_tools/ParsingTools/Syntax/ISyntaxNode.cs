@@ -239,7 +239,7 @@ public static class ISyntaxNodeExtensions
 			return document.Tree;
 		}
 		public T GetTree<T>() where T : notnull, ISyntaxTree => (T)node.GetTree();
-
+		public ISourceFile GetSource() => GetTree(node).Source;
 		#endregion
 
 		#region Search methods

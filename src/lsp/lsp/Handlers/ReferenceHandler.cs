@@ -1,5 +1,4 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.Reference;
-using EmmyLua.LanguageServer.Framework.Protocol.Model;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -16,10 +15,10 @@ internal sealed class ReferenceHandler(ILspContext context) : ReferenceHandlerBa
 	}
 	protected override Task<ReferenceResponse?> Handle(ReferenceParams request, CancellationToken cancellationToken)
 	{
-		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false || bundle.LeastDetailed is null)
+		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree, out IOwlWorkspace? workspace) is false)
 			return Task.FromResult<ReferenceResponse?>(null);
 
-		ISyntaxToken? target = bundle.LeastDetailed.Document.Search<ISyntaxToken>(request.Position);
+		ISyntaxToken? target = tree.Document.Search<ISyntaxToken>(request.Position);
 		if (target is null)
 			return Task.FromResult<ReferenceResponse?>(null);
 
@@ -27,9 +26,9 @@ internal sealed class ReferenceHandler(ILspContext context) : ReferenceHandlerBa
 
 		if (target.Symbol?.IsKnown is true)
 		{
-			foreach (var current in _context.Analysis.Annotated)
+			foreach (var current in workspace.CodeContext.Annotated)
 			{
-				if (_context.TryGetUri(current.Source, out Uri? uri) is false)
+				if (current.Source.TryGetUri(out Uri? uri) is false)
 					continue;
 
 				foreach (var token in current.Document.ToTokens())

@@ -1,5 +1,4 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.FoldingRange;
-using EmmyLua.LanguageServer.Framework.Protocol.Model;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Expressions;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Statements;
 
@@ -21,16 +20,16 @@ internal sealed class FoldingRangeHandler(ILspContext context) : FoldingRangeHan
 		List<FoldingRange> ranges = [];
 		FoldingRangeResponse response = new(ranges);
 
-		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false || bundle.LeastDetailed is null)
+		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult(response);
 
-		foreach (var block in bundle.LeastDetailed.Document.Flatten<IConcreteBlockStatementSyntax>())
+		foreach (var block in tree.Document.Flatten<IConcreteBlockStatementSyntax>())
 			TryAdd(ranges, block.Start, block.End);
 
-		foreach (var declaration in bundle.LeastDetailed.Document.Flatten<IConcreteFunctionDeclarationStatementSyntax>())
+		foreach (var declaration in tree.Document.Flatten<IConcreteFunctionDeclarationStatementSyntax>())
 			TryAdd(ranges, declaration.Signature.Start, declaration.Signature.End);
 
-		foreach (var call in bundle.LeastDetailed.Document.Flatten<IConcreteFunctionCallExpressionSyntax>())
+		foreach (var call in tree.Document.Flatten<IConcreteFunctionCallExpressionSyntax>())
 			TryAdd(ranges, call.Start, call.End);
 
 		return Task.FromResult(response);

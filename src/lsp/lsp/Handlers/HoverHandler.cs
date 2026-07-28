@@ -1,5 +1,4 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.Hover;
-using EmmyLua.LanguageServer.Framework.Protocol.Model.Markup;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
@@ -19,10 +18,10 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 	}
 	protected override Task<HoverResponse?> Handle(HoverParams request, CancellationToken cancellation)
 	{
-		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false || bundle.LeastDetailed is null)
+		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult<HoverResponse?>(null);
 
-		ISyntaxToken? token = bundle.LeastDetailed.Document.Search<ISyntaxToken>(request.Position);
+		ISyntaxToken? token = tree.Document.Search<ISyntaxToken>(request.Position);
 		if (token is null)
 			return Task.FromResult<HoverResponse?>(null);
 

@@ -1,7 +1,5 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.DocumentDiagnostic;
 using EmmyLua.LanguageServer.Framework.Protocol.Model.Diagnostic;
-using OwlDomain.ParsingTools.Diagnostics;
-using OwlDomain.ParsingTools.Results;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -26,10 +24,10 @@ internal sealed class DocumentDiagnosticHandler(ILspContext context) : DocumentD
 		RelatedFullDocumentDiagnosticReport full = new() { Diagnostics = [] };
 		DocumentDiagnosticReport report = new(full);
 
-		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false)
+		if (_context.TryGetWorkspace(request.TextDocument, out ISourceFile? file, out IOwlWorkspace? workspace) is false)
 			return Task.FromResult(report);
 
-		foreach (IDiagnostic current in _context.LastAnalysis?.GetAllDiagnostics().Where(d => d.Source == bundle.Source) ?? [])
+		foreach (IDiagnostic current in workspace.LastCodeUpdate?.GetAllDiagnostics().Where(d => d.Source == file) ?? [])
 		{
 			DiagnosticSeverity severity = DiagnosticSeverity.Hint;
 
@@ -52,14 +50,8 @@ internal sealed class DocumentDiagnosticHandler(ILspContext context) : DocumentD
 
 			foreach (IDiagnosticAnnotation annotation in current.Annotations.Skip(1))
 			{
-				if (annotation.Source is null || _context.TryGetUri(annotation.Source, out Uri? uri) is false)
-					continue;
-
-
-				diagnostic.RelatedInformation.Add(new(
-					new(uri, annotation.ToLspPosition),
-					annotation.Message.ToPlainText()
-				));
+				if (annotation.Source?.TryGetLocation(annotation.ToLspPosition, out Location location) is true)
+					diagnostic.RelatedInformation.Add(new(location, annotation.Message.ToPlainText()));
 			}
 
 			full.Diagnostics.Add(diagnostic);

@@ -1,5 +1,4 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.Declaration;
-using EmmyLua.LanguageServer.Framework.Protocol.Model;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -16,17 +15,12 @@ internal sealed class DeclarationHandler(ILspContext context) : DeclarationHandl
 	}
 	protected override Task<DeclarationResponse?> Handle(DeclarationParams request, CancellationToken cancellationToken)
 	{
-		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false || bundle.LeastDetailed is null)
-			return Task.FromResult<DeclarationResponse?>(null);
-
-		ISyntaxToken? token = bundle.LeastDetailed.Document.Search<ISyntaxToken>(request.Position);
-		if (token is null)
-			return Task.FromResult<DeclarationResponse?>(null);
-
-		if (token.Symbol is IDeclaredSymbol declared)
+		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree))
 		{
-			if (_context.TryGetUri(declared.Declaration.GetTree().Source, out Uri? uri))
-				return Task.FromResult<DeclarationResponse?>(new(new Location(uri, declared.Declaration.ToLspPosition)));
+			ISyntaxToken? token = tree.Document.Search<ISyntaxToken>(request.Position);
+
+			if (token?.Symbol is IDeclaredSymbol declared && declared.Declaration.TryGetLocation(out Location location))
+				return Task.FromResult<DeclarationResponse?>(new(location));
 		}
 
 		return Task.FromResult<DeclarationResponse?>(null);

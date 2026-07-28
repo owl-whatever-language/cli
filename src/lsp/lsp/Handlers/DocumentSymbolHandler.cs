@@ -19,10 +19,10 @@ internal sealed class DocumentSymbolHandler(ILspContext context) : DocumentSymbo
 		List<DocumentSymbol> symbols = [];
 		DocumentSymbolResponse response = new(symbols);
 
-		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false || bundle.LeastDetailed is null)
+		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult(response);
 
-		foreach (var function in bundle.LeastDetailed.Document.Flatten<IDeclaredFunctionDeclarationStatementSyntax>())
+		foreach (var function in tree.Document.Flatten<IDeclaredFunctionDeclarationStatementSyntax>())
 		{
 			if (string.IsNullOrWhiteSpace(function.Function.Name))
 				continue;
@@ -36,7 +36,7 @@ internal sealed class DocumentSymbolHandler(ILspContext context) : DocumentSymbo
 			});
 		}
 
-		foreach (var variable in bundle.LeastDetailed.Document.Flatten<IDeclaredVariableDeclarationStatementSyntax>())
+		foreach (var variable in tree.Document.Flatten<IDeclaredVariableDeclarationStatementSyntax>())
 		{
 			if (string.IsNullOrWhiteSpace(variable.Variable.Name))
 				continue;

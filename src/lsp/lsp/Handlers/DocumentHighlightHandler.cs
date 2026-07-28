@@ -21,14 +21,14 @@ internal sealed class DocumentHighlightHandler(ILspContext context) : DocumentHi
 		List<DocumentHighlight> highlights = [];
 		DocumentHighlightResponse response = new(highlights);
 
-		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false || bundle.LeastDetailed is null)
+		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult(response);
 
-		ISyntaxToken? target = bundle.LeastDetailed.Document.Search<ISyntaxToken>(request.Position);
+		ISyntaxToken? target = tree.Document.Search<ISyntaxToken>(request.Position);
 		if (target is null || target.Symbol?.IsKnown is not true)
 			return Task.FromResult(response);
 
-		foreach (ISyntaxToken token in bundle.LeastDetailed.Document.ToTokens().Where(t => t.Symbol == target.Symbol))
+		foreach (ISyntaxToken token in tree.Document.ToTokens().Where(t => t.Symbol == target.Symbol))
 		{
 			DocumentHighlightKind kind = token.Parent switch
 			{

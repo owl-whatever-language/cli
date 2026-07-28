@@ -22,10 +22,10 @@ internal sealed class InlayHintHandler(ILspContext context) : InlayHintHandlerBa
 	{
 		List<InlayHint> hints = [];
 
-		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false || bundle.LeastDetailed is null)
+		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult<InlayHintResponse?>(new(hints));
 
-		foreach (var argument in bundle.LeastDetailed.Document.Flatten<IAnnotatedRegularFunctionArgumentSyntax>())
+		foreach (var argument in tree.Document.Flatten<IAnnotatedRegularFunctionArgumentSyntax>())
 		{
 			string? name = argument.Parameter?.Name;
 			if (name is null)

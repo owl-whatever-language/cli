@@ -50,14 +50,12 @@ internal sealed class SemanticTokensHandler(ILspContext context) : SemanticToken
 	}
 	protected override Task<SemanticTokens?> Handle(SemanticTokensParams semanticTokensParams, CancellationToken cancellationToken)
 	{
-		ISyntaxTreeBundle? bundle = _context.GetBundle(semanticTokensParams.TextDocument.Uri.Uri);
-
-		if (bundle?.LeastDetailed is null)
+		if (_context.TryGetTree(semanticTokensParams.TextDocument, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult<SemanticTokens?>(null);
 
 		SemanticTokensBuilder builder = new(TokenTypes, TokenModifiers);
 
-		foreach (ISyntaxPart part in bundle.LeastDetailed.Document.ToParts())
+		foreach (ISyntaxPart part in tree.Document.ToParts())
 		{
 			if (part.Classification is null)
 				continue;

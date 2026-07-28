@@ -1,5 +1,4 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.SignatureHelp;
-using EmmyLua.LanguageServer.Framework.Protocol.Model.Markup;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callable;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
@@ -27,10 +26,10 @@ internal sealed class SignatureHelpHandler(ILspContext context) : SignatureHelpH
 	{
 		SignatureHelp result = new() { Signatures = [] };
 
-		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false || bundle.LeastDetailed is null)
+		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree, out ISourceFile? file) is false)
 			return Task.FromResult(result);
 
-		var target = bundle.LeastDetailed.Document.Search<IAnnotatedFunctionCallExpressionSyntax>(request.Position);
+		var target = tree.Document.Search<IAnnotatedFunctionCallExpressionSyntax>(request.Position);
 		if (target is null)
 			return Task.FromResult(result);
 
@@ -52,7 +51,7 @@ internal sealed class SignatureHelpHandler(ILspContext context) : SignatureHelpH
 		}
 
 		LinePosition targetPosition = new(request.Position.Line + 1, request.Position.Character + 1);
-		targetPosition = bundle.Source.PositionTranslator.Convert(targetPosition, PositionKind.Utf16, PositionKind.Grapheme);
+		targetPosition = tree.Source.PositionTranslator.Convert(targetPosition, PositionKind.Utf16, PositionKind.Grapheme);
 
 		int commaCount = target.Arguments.Separators.Count(s => s.Position.WithoutIndex.Start < targetPosition);
 		foreach (ISymbol candidate in candidates)

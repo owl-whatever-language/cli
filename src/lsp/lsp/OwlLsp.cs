@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Sockets;
-using OwlDomain.Owl.Code.Execution.Builtins;
 
 namespace OwlDomain.Owl.LSP;
 
@@ -55,9 +54,7 @@ public static class OwlLsp
 			Console.Error.WriteLine($"Bye.");
 		});
 
-		BuiltinResolutionResult builtinResult = BuiltinResolver.Resolve();
-		AnalysisContext analysis = new(builtinResult.ResultScope);
-		LspContext context = new(server, analysis);
+		LspContext context = new(server);
 
 		server.AddHandler(new TextDocumentHandler(context));
 		server.AddHandler(new SemanticTokensHandler(context));

@@ -17,16 +17,49 @@ internal sealed class TextDocumentHandler(ILspContext context) : TextDocumentHan
 	}
 	protected override async Task Handle(DidOpenTextDocumentParams request, CancellationToken token)
 	{
-		_context.AddFile(request.TextDocument.Uri.Uri, request.TextDocument.Text);
+		if (_context.TryGetWorkspace(request.TextDocument, out ISourceFile? source, out IOwlWorkspace? workspace))
+		{
+			// Note(Nightowl):
+			// The current file was opened by the IDE, we need to switch
+			// from manually managing it, to letting the IDE manage it;
+			workspace.RemoveFile(source);
+		}
+		else
+			workspace = _context.NewWorkspace();
+
+		WorkspaceSourceFile file = new(request.TextDocument.Uri.Uri, request.TextDocument.Text);
+		workspace.AddFile(file);
+
+		workspace.Analyse();
 	}
 	protected override async Task Handle(DidChangeTextDocumentParams request, CancellationToken token)
 	{
 		TextDocumentContentChangeEvent change = request.ContentChanges.Single();
-		_context.UpdateFile(request.TextDocument.Uri.Uri, change.Text);
+
+		if (_context.TryGetWorkspace(request.TextDocument, out ISourceFile? file, out IOwlWorkspace? workspace))
+		{
+			WorkspaceSourceFile workspaceFile = (WorkspaceSourceFile)file;
+			workspaceFile.Text = change.Text;
+
+			workspace.UpdateFile(file);
+		}
+		else
+		{
+			workspace = _context.NewWorkspace();
+
+			file = new WorkspaceSourceFile(request.TextDocument.Uri.Uri, change.Text);
+			workspace.AddFile(file);
+		}
+
+		workspace.Analyse();
 	}
 	protected override async Task Handle(DidCloseTextDocumentParams request, CancellationToken token)
 	{
-		_context.RemoveFile(request.TextDocument.Uri.Uri);
+		if (_context.TryGetWorkspace(request.TextDocument, out ISourceFile? file, out IOwlWorkspace? workspace))
+		{
+			workspace.RemoveFile(file);
+			workspace.Analyse();
+		}
 	}
 	protected override Task Handle(WillSaveTextDocumentParams request, CancellationToken token) => Task.CompletedTask;
 	protected override Task<List<TextEdit>?> HandleRequest(WillSaveTextDocumentParams request, CancellationToken token)
