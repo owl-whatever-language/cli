@@ -2,6 +2,7 @@ using EmmyLua.LanguageServer.Framework.Protocol.Message.Hover;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
+using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.Expressions;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -25,9 +26,12 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 		if (token is null)
 			return Task.FromResult<HoverResponse?>(null);
 
-		List<string> parts = [];
+		ISymbol? symbol = token.Symbol;
 
-		string? kind = token.Symbol switch
+		if (symbol is null && token.Parent is ISemanticBinaryExpressionSyntax binary && binary.Operator == token)
+			symbol = binary.Operation?.AsFunction;
+
+		string? kind = symbol switch
 		{
 			ILocalVariable => "variable",
 			IFunction => "function",
@@ -39,13 +43,15 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 			_ => null,
 		};
 
+		List<string> parts = [];
+
 		if (kind is not null)
 			parts.Add($"`({kind})`");
 
-		if (token.Symbol is not null)
-			parts.Add($"```owl\n{token.Symbol.GetDebugText().ToPlainText()}\n```");
+		if (symbol is not null)
+			parts.Add($"```owl\n{symbol.GetDebugText().ToPlainText()}\n```");
 
-		if (token.Symbol is IDeclaredSymbol declared)
+		if (symbol is IDeclaredSymbol declared)
 		{
 			string comments = string.Join("\n",
 				declared.Declaration

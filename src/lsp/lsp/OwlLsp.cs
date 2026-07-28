@@ -52,6 +52,7 @@ public static class OwlLsp
 		server.OnShutdown(async () =>
 		{
 			Console.Error.WriteLine($"Bye.");
+			Environment.Exit(0);
 		});
 
 		LspContext context = new(server);

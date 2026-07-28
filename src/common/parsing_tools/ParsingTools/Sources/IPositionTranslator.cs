@@ -69,6 +69,9 @@ public sealed class PositionTranslator : IPositionTranslator
 		if (from == to)
 			return position;
 
+		if (_info.Length is 0)
+			return new(1, 1);
+
 		int lineIndex = position.Line - 1;
 
 		if (lineIndex < 0 || lineIndex > _info.Length - 1)
