@@ -741,62 +741,61 @@ public sealed class Parser : BaseParser<IConcreteToken>
 		List<IConcreteFunctionArgumentSyntax> arguments = [];
 		List<IConcreteToken> separators = [];
 
-		IConcreteToken? lastComma = null;
+		if (RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket)
+		{
+			IConcreteFunctionArgumentSyntax? argument = TryParseFunctionArgument();
+			if (argument is not null)
+			{
+				nodes.Add(argument);
+				arguments.Add(argument);
+			}
+			else
+			{
+				Diagnostics
+					.BuildError(this, "expected_argument")
+					.Add(start, start.Position.End, lines => lines.AddLine("Expected a function argument."));
+			}
+		}
+
+		bool complainedAboutComma = false;
+
 		while (RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket)
 		{
 			using LoopGuardScope _ = LoopGuard();
 
+			if (Match(SyntaxKind.Comma, ClassificationKind.Punctuation, out IConcreteToken? comma) is false)
+				break;
+
+			nodes.Add(comma);
+			separators.Add(comma);
+
 			IConcreteFunctionArgumentSyntax? argument = TryParseFunctionArgument();
 			if (argument is not null)
 			{
-				arguments.Add(argument);
 				nodes.Add(argument);
+				arguments.Add(argument);
 			}
-			else
+			else if (complainedAboutComma is false)
 			{
-				Diagnostic diagnostic = Diagnostics
-					.BuildError(this, "expected_function_argument")
-					.Add(Source, Current.Position, lines =>
-					{
-						lines.AddLine("Expected a function argument.");
-						if (lastComma is null && Current.Kind != SyntaxKind.CloseBracket)
-							lines.AddLine("I don't know why the parsing failed here, I'd appreciate it if you could let me know this happened.");
-					})
-					.Add(start, lines =>
-					{
-						lines.AddLine(
-							"This opening bracket '",
-							TextFragment.OpeningBracket,
-							"' is used to call a function. You end this call with a closing bracket '",
-							TextFragment.ClosingBracket,
-							"'.");
-					});
+				complainedAboutComma = true;
 
-				if (lastComma is not null)
-				{
-					diagnostic.Add(lastComma, lines =>
-					{
-						lines
-						.AddLine("This is a comma '", TextFragment.Comma, "', in this context, it is used to separate the function arguments.")
-						.AddLine("Writing it here means that you intended to pass in another argument to the function.");
-					});
-				}
-
-				RecoverFromCurrent();
-			}
-
-			if (RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket)
-			{
-				if (Match(SyntaxKind.Comma, ClassificationKind.Punctuation, out IConcreteToken? comma) is false)
-					break;
-
-				nodes.Add(comma);
-				separators.Add(comma);
-
-				lastComma = comma;
+				Diagnostics
+					.BuildError(this, "expected_argument")
+					.Add(comma, lines => lines.AddLine("Expected a function argument after this comma '", comma, "'."));
 			}
 		}
 
+		ValidateNamedArguments(arguments);
+		IConcreteToken end = ExpectClosing(start, SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "End the function call");
+
+		return new(
+			expression,
+			start,
+			new SyntaxList<IConcreteFunctionArgumentSyntax, IConcreteToken>(nodes, arguments, separators),
+			end);
+	}
+	private void ValidateNamedArguments(IReadOnlyList<IConcreteFunctionArgumentSyntax> arguments)
+	{
 		IConcreteFunctionArgumentSyntax? lastNonNamed = arguments.LastOrDefault(a => a is not IConcreteNamedFunctionArgumentSyntax);
 		IEnumerable<IConcreteNamedFunctionArgumentSyntax>? mispositionedNamed = lastNonNamed is null ? [] :
 			arguments
@@ -816,14 +815,6 @@ public sealed class Parser : BaseParser<IConcreteToken>
 			IndexedLinePosition afterLast = new(endOfLast.Index + 1, endOfLast.Line, endOfLast.Column + 1);
 			diagnostic.Add(Source, afterLast, lines => lines.AddLine("Move them here."));
 		}
-
-		IConcreteToken end = ExpectClosing(start, SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "End the function call");
-
-		return new(
-			expression,
-			start,
-			new SyntaxList<IConcreteFunctionArgumentSyntax, IConcreteToken>(nodes, arguments, separators),
-			end);
 	}
 	private IConcreteFunctionArgumentSyntax? TryParseFunctionArgument()
 	{

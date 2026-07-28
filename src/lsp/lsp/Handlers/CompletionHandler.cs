@@ -23,7 +23,7 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 	{
 		serverCapabilities.CompletionProvider = new()
 		{
-			TriggerCharacters = [".", "(", ","],
+			TriggerCharacters = ["."],
 		};
 	}
 	protected override Task<CompletionResponse?> Handle(CompletionParams request, CancellationToken cancellation)

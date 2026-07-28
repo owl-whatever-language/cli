@@ -2,8 +2,10 @@ using EmmyLua.LanguageServer.Framework.Protocol.Message.SignatureHelp;
 using EmmyLua.LanguageServer.Framework.Protocol.Model.Markup;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callable;
+using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated.Expressions;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.Expressions;
+using OwlDomain.ParsingTools.Positioning;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -18,8 +20,7 @@ internal sealed class SignatureHelpHandler(ILspContext context) : SignatureHelpH
 	{
 		serverCapabilities.SignatureHelpProvider = new()
 		{
-			TriggerCharacters = ["("],
-			RetriggerCharacters = [","]
+			TriggerCharacters = ["(", ","],
 		};
 	}
 	protected override Task<SignatureHelp> Handle(SignatureHelpParams request, CancellationToken token)
@@ -33,28 +34,60 @@ internal sealed class SignatureHelpHandler(ILspContext context) : SignatureHelpH
 		if (target is null)
 			return Task.FromResult(result);
 
+		List<ISymbol> candidates = [];
+		ISymbol? chosen = null;
+
 		if (target.Expression is ISemanticGetExpressionSyntax get)
 		{
-			foreach (ISymbol candidate in get.Candidates)
+			candidates.AddRange(get.Candidates);
+			chosen = get.Symbol;
+		}
+		else if (target.Expression is ISemanticMemberAccessExpressionSyntax member)
+		{
+			if (member.Symbol.IsKnown)
 			{
-				if (candidate is IFunction function)
-					result.Signatures.Add(GetSignature(function));
-				else if (candidate is ICallableType callable)
-					result.Signatures.Add(GetSignature(callable));
+				candidates.Add(member.Symbol);
+				chosen = member.Symbol;
 			}
 		}
+
+		LinePosition targetPosition = new(request.Position.Line + 1, request.Position.Character + 1);
+		targetPosition = bundle.Source.PositionTranslator.Convert(targetPosition, PositionKind.Utf16, PositionKind.Grapheme);
+
+		int commaCount = target.Arguments.Separators.Count(s => s.Position.WithoutIndex.Start < targetPosition);
+		foreach (ISymbol candidate in candidates)
+		{
+			SignatureInformation? signature = candidate switch
+			{
+				IFunction function => GetSignature(function, commaCount),
+				ITypeMethod method => GetSignature(method.Function, commaCount),
+				ICallableType callable => GetSignature(callable, commaCount),
+
+				_ => null
+			};
+
+			if (signature is not null)
+				result.Signatures.Add(signature);
+		}
+
+		int? index = chosen is null ? null : candidates.IndexOf(chosen);
+		if (index < 0)
+			index = null;
+
+		result.ActiveSignature = (uint?)index;
 
 		return Task.FromResult(result);
 	}
 	#endregion
 
 	#region Helpers
-	private SignatureInformation GetSignature(IFunction function)
+	private SignatureInformation GetSignature(IFunction function, int commaCount)
 	{
 		SignatureInformation signature = new()
 		{
 			Label = function.GetDebugText().ToPlainText(),
-			Parameters = []
+			Parameters = [],
+			ActiveParameter = (uint)commaCount
 		};
 
 		foreach (IFunctionParameter parameter in function.Parameters)
@@ -67,12 +100,13 @@ internal sealed class SignatureHelpHandler(ILspContext context) : SignatureHelpH
 
 		return signature;
 	}
-	private SignatureInformation GetSignature(ICallableType callable)
+	private SignatureInformation GetSignature(ICallableType callable, int commaCount)
 	{
 		SignatureInformation signature = new()
 		{
 			Label = callable.GetDebugText().ToPlainText(),
-			Parameters = []
+			Parameters = [],
+			ActiveParameter = (uint)commaCount
 		};
 
 		foreach (ICallableTypeParameter parameter in callable.Parameters)

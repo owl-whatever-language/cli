@@ -71,7 +71,7 @@ public sealed class PositionTranslator : IPositionTranslator
 
 		int lineIndex = position.Line - 1;
 
-		if (lineIndex < 0 || lineIndex >= _info.Length - 1)
+		if (lineIndex < 0 || lineIndex > _info.Length - 1)
 		{
 			ThrowHelper.ThrowArgumentException(nameof(position), $"The given position ({position}) was on an invalid line. Highest available line is {_info.Length}.");
 			return default;
