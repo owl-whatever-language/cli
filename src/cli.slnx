@@ -14,6 +14,9 @@
 		<Project Path="local/Playground/Playground.csproj" />
 	</Folder>
 	-->
+	<Folder Name="/workspaces/">
+		<Project Path="workspaces/Workspaces/Workspaces.csproj" />
+	</Folder>
 	<Project Path="cli/cli.csproj" />
 	<Folder Name="/lsp/">
 		<Project Path="lsp/lsp/lsp.csproj" />
