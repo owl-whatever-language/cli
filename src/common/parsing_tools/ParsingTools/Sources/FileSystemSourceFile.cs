@@ -18,7 +18,22 @@ public sealed class FileSystemSourceFile : ISourceFile
 	/// <summary>The system information about the source file.</summary>
 	public FileInfo FileInfo { get; }
 
-	public string Text { get; set; }
+	public string Text
+	{
+		get;
+		set
+		{
+			field = value;
+			PositionTranslator = null;
+		}
+	}
+
+	[AllowNull]
+	public IPositionTranslator PositionTranslator
+	{
+		get => field ??= new PositionTranslator(Text);
+		set;
+	}
 	#endregion
 
 	#region Constructors

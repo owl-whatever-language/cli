@@ -12,6 +12,7 @@ public interface ISourceFile : IDebugTextFactory
 	/// <summary>The full path to the source file.</summary>
 	/// <remarks>This might be <see langword="null"/> if the source file only exists in memory.</remarks>
 	string? Path { get; }
+	IPositionTranslator PositionTranslator { get; }
 	#endregion
 
 	#region Methods

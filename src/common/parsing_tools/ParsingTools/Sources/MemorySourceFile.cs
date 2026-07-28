@@ -14,7 +14,22 @@ public sealed class MemorySourceFile : ISourceFile
 	public string? Path => null;
 
 	/// <summary>The source file text.</summary>
-	public string Text { get; }
+	public string Text
+	{
+		get;
+		set
+		{
+			field = value;
+			PositionTranslator = null;
+		}
+	}
+
+	[AllowNull]
+	public IPositionTranslator PositionTranslator
+	{
+		get => field ??= new PositionTranslator(Text);
+		set;
+	}
 	#endregion
 
 	#region Constructors

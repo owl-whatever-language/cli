@@ -5,7 +5,23 @@ public class WorkspaceSourceFile : ISourceFile
 	#region Properties
 	public string Path { get; }
 	public string SimpleName { get; }
-	public string Text { get; set; }
+
+	public string Text
+	{
+		get;
+		set
+		{
+			field = value;
+			PositionTranslator = null;
+		}
+	}
+
+	[AllowNull]
+	public IPositionTranslator PositionTranslator
+	{
+		get => field ??= new PositionTranslator(Text);
+		set;
+	}
 	#endregion
 
 	#region Constructors
