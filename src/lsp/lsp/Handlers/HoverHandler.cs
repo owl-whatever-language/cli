@@ -22,7 +22,7 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false || bundle.LeastDetailed is null)
 			return Task.FromResult<HoverResponse?>(null);
 
-		ISyntaxToken? token = bundle.LeastDetailed.Document.Search<ISyntaxToken>(token => token.Position.WithoutIndex.Contains(request.Position.ToOwl));
+		ISyntaxToken? token = bundle.LeastDetailed.Document.Search<ISyntaxToken>(request.Position);
 		if (token is null)
 			return Task.FromResult<HoverResponse?>(null);
 

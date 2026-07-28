@@ -1,5 +1,5 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.SelectionRange;
-using OwlDomain.ParsingTools.Positioning;
+using EmmyLua.LanguageServer.Framework.Protocol.Model;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -22,13 +22,11 @@ internal sealed class SelectionRangeHandler(ILspContext context) : SelectionRang
 		List<SelectionRange> ranges = [];
 		SelectionRangeResponse response = new(ranges);
 
-		foreach (LinePosition target in request.Positions.Select(p => p.ToOwl))
+		foreach (Position target in request.Positions)
 		{
-			ISyntaxPart? part = bundle.LeastDetailed.Document.Search<ISyntaxPart>(part => part.Position.WithoutIndex.Contains(target));
+			ISyntaxPart? part = bundle.LeastDetailed.Document.Search<ISyntaxPart>(target);
 			if (part is not null)
-			{
 				ranges.Add(GetRange(part));
-			}
 			else
 				ranges.Add(new());
 		}
@@ -46,7 +44,7 @@ internal sealed class SelectionRangeHandler(ILspContext context) : SelectionRang
 
 		return new()
 		{
-			Range = node.Position.ToLsp,
+			Range = node.ToLspPosition,
 			Parent = GetRange(node.Parent)
 		};
 	}

@@ -24,7 +24,7 @@ internal sealed class DocumentHighlightHandler(ILspContext context) : DocumentHi
 		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false || bundle.LeastDetailed is null)
 			return Task.FromResult(response);
 
-		ISyntaxToken? target = bundle.LeastDetailed.Document.Search<ISyntaxToken>(token => token.Position.WithoutIndex.Contains(request.Position.ToOwl));
+		ISyntaxToken? target = bundle.LeastDetailed.Document.Search<ISyntaxToken>(request.Position);
 		if (target is null || target.Symbol?.IsKnown is not true)
 			return Task.FromResult(response);
 
@@ -43,7 +43,7 @@ internal sealed class DocumentHighlightHandler(ILspContext context) : DocumentHi
 			highlights.Add(new()
 			{
 				Kind = kind,
-				Range = token.Position.ToLsp,
+				Range = token.ToLspPosition,
 			});
 		}
 

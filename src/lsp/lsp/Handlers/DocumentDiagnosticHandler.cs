@@ -43,7 +43,7 @@ internal sealed class DocumentDiagnosticHandler(ILspContext context) : DocumentD
 			LspDiagnostic diagnostic = new()
 			{
 				Severity = severity,
-				Range = current.Position.ToLsp,
+				Range = current.ToLspPosition,
 				Code = current.Id,
 				Source = "OWL",
 				Message = string.Join("\n", current.FullMessage.ToPlainText()),
@@ -57,7 +57,7 @@ internal sealed class DocumentDiagnosticHandler(ILspContext context) : DocumentD
 
 
 				diagnostic.RelatedInformation.Add(new(
-					new(uri, annotation.Position.ToLsp),
+					new(uri, annotation.ToLspPosition),
 					annotation.Message.ToPlainText()
 				));
 			}

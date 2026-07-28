@@ -19,7 +19,7 @@ internal sealed class ReferenceHandler(ILspContext context) : ReferenceHandlerBa
 		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false || bundle.LeastDetailed is null)
 			return Task.FromResult<ReferenceResponse?>(null);
 
-		ISyntaxToken? target = bundle.LeastDetailed.Document.Search<ISyntaxToken>(token => token.Position.WithoutIndex.Contains(request.Position.ToOwl));
+		ISyntaxToken? target = bundle.LeastDetailed.Document.Search<ISyntaxToken>(request.Position);
 		if (target is null)
 			return Task.FromResult<ReferenceResponse?>(null);
 
@@ -35,7 +35,7 @@ internal sealed class ReferenceHandler(ILspContext context) : ReferenceHandlerBa
 				foreach (var token in current.Document.ToTokens())
 				{
 					if (token.Symbol == target.Symbol)
-						locations.Add(new(uri, token.Position.ToLsp));
+						locations.Add(new(uri, token.ToLspPosition));
 				}
 			}
 		}

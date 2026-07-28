@@ -34,7 +34,7 @@ internal sealed class InlayHintHandler(ILspContext context) : InlayHintHandlerBa
 			InlayHint hint = new()
 			{
 				Kind = InlayHintKind.Parameter,
-				Position = argument.Position.Start.ToLsp,
+				Position = argument.ToLspPosition.Start,
 				PaddingRight = true,
 				Label = $"{name}:",
 			};

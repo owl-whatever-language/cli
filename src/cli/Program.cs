@@ -45,5 +45,5 @@ root.AddGroup(args, new Command("lsp", "General action for LSP related things.")
 
 root.Add(new AnalyseCommand());
 
-ParseResult result = root.Parse("lsp host 8095");
+ParseResult result = root.Parse(args);
 return result.Invoke();

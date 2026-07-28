@@ -1,8 +1,7 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.FoldingRange;
+using EmmyLua.LanguageServer.Framework.Protocol.Model;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Expressions;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Statements;
-using OwlDomain.ParsingTools.Positioning;
-using OwlDomain.ParsingTools.Positioning.Ranges;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -46,24 +45,24 @@ internal sealed class FoldingRangeHandler(ILspContext context) : FoldingRangeHan
 		if (start.IsFabricated || end.IsFabricated)
 			return;
 
-		PositionRange range = GetRange(start, end);
-		if (range.IsMultiline is false)
+		DocumentRange range = GetRange(start, end);
+		if (range.Start.Line == range.End.Line)
 			return;
 
 		ranges.Add(GetRange(kind.Value, range));
 	}
-	private static PositionRange GetRange(ISyntaxToken startToken, ISyntaxToken endToken)
+	private static DocumentRange GetRange(ISyntaxToken startToken, ISyntaxToken endToken)
 	{
 		// Use end of start, and start of end to hopefully exclude the tokens from being folded?
-		LinePosition start = startToken.Position.WithoutIndex.End;
-		LinePosition end = endToken.Position.WithoutIndex.Start;
+		Position start = startToken.ToLspPosition.End;
+		Position end = endToken.ToLspPosition.Start;
 
 		return new(start, end);
 	}
-	private static FoldingRange GetRange(FoldingRangeKind kind, PositionRange position)
+	private static FoldingRange GetRange(FoldingRangeKind kind, DocumentRange position)
 	{
-		var start = position.Start.ToLsp;
-		var end = position.End.ToLsp;
+		var start = position.Start;
+		var end = position.End;
 
 		return new()
 		{

@@ -31,8 +31,8 @@ internal sealed class DocumentSymbolHandler(ILspContext context) : DocumentSymbo
 			{
 				Kind = SymbolKind.Function,
 				Name = function.Function.Name,
-				Range = function.Position.ToLsp,
-				SelectionRange = function.Signature.Name.Position.ToLsp
+				Range = function.ToLspPosition,
+				SelectionRange = function.Signature.Name.ToLspPosition
 			});
 		}
 
@@ -45,8 +45,8 @@ internal sealed class DocumentSymbolHandler(ILspContext context) : DocumentSymbo
 			{
 				Kind = SymbolKind.Variable,
 				Name = variable.Variable.Name,
-				Range = variable.Position.ToLsp,
-				SelectionRange = variable.Name.Position.ToLsp
+				Range = variable.ToLspPosition,
+				SelectionRange = variable.Name.ToLspPosition
 			});
 		}
 

@@ -59,8 +59,6 @@ internal sealed class SemanticTokensHandler(ILspContext context) : SemanticToken
 
 		foreach (ISyntaxPart part in bundle.LeastDetailed.Document.ToParts())
 		{
-			// Note(Nightowl): This still needs to handle encoding translation from grapheme clusters to whatever LSP uses (utf-8 I think);
-
 			if (part.Classification is null)
 				continue;
 
@@ -70,7 +68,7 @@ internal sealed class SemanticTokensHandler(ILspContext context) : SemanticToken
 				continue;
 
 			List<string> modifiers = modifier is null ? [] : [modifier];
-			builder.Push(new(part.Position.Start.Line - 1, part.Position.Start.Column - 1), part.Position.Length, type, modifiers);
+			builder.Push(part.ToLspPosition.Start, part.Position.Length, type, modifiers);
 		}
 
 		return Task.FromResult<SemanticTokens?>(new()

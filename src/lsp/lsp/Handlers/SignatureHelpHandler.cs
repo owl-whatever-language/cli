@@ -4,7 +4,6 @@ using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callable;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated.Expressions;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.Expressions;
-using OwlDomain.ParsingTools.Positioning;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -30,23 +29,7 @@ internal sealed class SignatureHelpHandler(ILspContext context) : SignatureHelpH
 		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false || bundle.LeastDetailed is null)
 			return Task.FromResult(result);
 
-		bool IsTarget(ISyntaxNode node)
-		{
-			LinePosition targetPosition = request.Position.ToOwl;
-
-			if (node.Position.WithoutIndex.Start == targetPosition)
-				return true;
-
-			if (node.Position.WithoutIndex.End == targetPosition)
-				return true;
-
-			if (node.Position.WithoutIndex.Contains(targetPosition))
-				return true;
-
-			return false;
-		}
-
-		var target = bundle.LeastDetailed.Document.Search<IAnnotatedFunctionCallExpressionSyntax>(IsTarget);
+		var target = bundle.LeastDetailed.Document.Search<IAnnotatedFunctionCallExpressionSyntax>(request.Position);
 		if (target is null)
 			return Task.FromResult(result);
 

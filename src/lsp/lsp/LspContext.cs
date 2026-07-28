@@ -1,9 +1,8 @@
 namespace OwlDomain.Owl.LSP;
 
+using OwlDomain.ParsingTools.Diagnostics;
 using LspPosition = EmmyLua.LanguageServer.Framework.Protocol.Model.Position;
 using LspRange = EmmyLua.LanguageServer.Framework.Protocol.Model.DocumentRange;
-using OwlIndexedPosition = ParsingTools.Positioning.IndexedLinePosition;
-using OwlIndexedPositionRange = ParsingTools.Positioning.Ranges.IndexedPositionRange;
 using OwlPosition = ParsingTools.Positioning.LinePosition;
 using OwlPositionRange = ParsingTools.Positioning.Ranges.PositionRange;
 
@@ -124,40 +123,70 @@ internal static class ILspContextExtensions
 		}
 		#endregion
 	}
-	extension(LspPosition position)
+	extension(ISyntaxNode node)
 	{
 		#region Properties
-		public OwlPosition ToOwl => new(position.Line + 1, position.Character + 1);
+		public LspRange ToLspPosition
+		{
+			get
+			{
+				OwlPositionRange zeroIndexed = node.GetTree().Source.PositionTranslator.Convert(node.Position, PositionKind.Grapheme, PositionKind.Utf16);
+				LspPosition start = new(zeroIndexed.Start.Line - 1, zeroIndexed.Start.Column - 1);
+				LspPosition end = new(zeroIndexed.End.Line - 1, zeroIndexed.End.Column - 1);
+
+				return new(start, end);
+			}
+		}
+		#endregion
+
+		#region Methods
+		public ISyntaxNode? Search(LspPosition position, bool includeSelf = true, Predicate<ISyntaxNode>? condition = null)
+		{
+			return Search<ISyntaxNode>(node, position, includeSelf, condition);
+		}
+		public T? Search<T>(LspPosition position, bool includeSelf = true, Predicate<T>? condition = null)
+			where T : notnull, ISyntaxNode
+		{
+			OwlPosition target = node.GetTree().Source.PositionTranslator.Convert(new(position.Line + 1, position.Character + 1), PositionKind.Utf16, PositionKind.Grapheme);
+
+			bool Condition(T node)
+			{
+				if (node.Position.WithoutIndex.Contains(target) is false)
+					return false;
+
+				if (condition is not null)
+					return condition.Invoke(node);
+
+				return true;
+			}
+
+			return node.Search<T>(Condition, includeSelf);
+		}
 		#endregion
 	}
-	extension(LspRange range)
+	extension(IDiagnosticAnnotation annotation)
 	{
 		#region Properties
-		public OwlPositionRange ToOwl => new(range.Start.ToOwl, range.End.ToOwl);
+		public LspRange ToLspPosition
+		{
+			get
+			{
+				if (annotation.Source is null)
+					return default;
+
+				OwlPositionRange oneIndexed = annotation.Source.PositionTranslator.Convert(annotation.Position, PositionKind.Grapheme, PositionKind.Utf16);
+				LspPosition start = new(oneIndexed.Start.Line - 1, oneIndexed.Start.Column - 1);
+				LspPosition end = new(oneIndexed.End.Line - 1, oneIndexed.End.Column - 1);
+
+				return new(start, end);
+			}
+		}
 		#endregion
 	}
-	extension(OwlPosition position)
+	extension(IDiagnostic diagnostic)
 	{
 		#region Properties
-		public LspPosition ToLsp => new(position.Line - 1, position.Column - 1);
-		#endregion
-	}
-	extension(OwlIndexedPosition position)
-	{
-		#region Properties
-		public LspPosition ToLsp => new(position.Line - 1, position.Column - 1);
-		#endregion
-	}
-	extension(OwlPositionRange range)
-	{
-		#region Properties
-		public LspRange ToLsp => new(range.Start.ToLsp, range.End.ToLsp);
-		#endregion
-	}
-	extension(OwlIndexedPositionRange range)
-	{
-		#region Properties
-		public LspRange ToLsp => new(range.Start.ToLsp, range.End.ToLsp);
+		public LspRange ToLspPosition => diagnostic.Annotations.FirstOrDefault(a => a.Position != default)?.ToLspPosition ?? default;
 		#endregion
 	}
 }

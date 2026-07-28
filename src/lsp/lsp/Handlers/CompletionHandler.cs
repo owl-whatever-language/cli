@@ -9,7 +9,6 @@ using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.Expressions;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.FunctionArguments;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.Nodes;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.Statements;
-using OwlDomain.ParsingTools.Positioning;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -32,23 +31,7 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 		if (_context.TryGetBundle(request.TextDocument.Uri.Uri, out ISyntaxTreeBundle? bundle) is false || bundle.LeastDetailed is null)
 			return Task.FromResult<CompletionResponse?>(null);
 
-		bool IsTargetToken(ISyntaxToken token)
-		{
-			LinePosition targetPosition = request.Position.ToOwl;
-
-			if (token.Position.WithoutIndex.Start == targetPosition)
-				return true;
-
-			if (token.Position.WithoutIndex.End == targetPosition)
-				return true;
-
-			if (token.Position.WithoutIndex.Contains(targetPosition))
-				return true;
-
-			return false;
-		}
-
-		ISyntaxNode? target = bundle.LeastDetailed.Document.Search<ISyntaxToken>(IsTargetToken);
+		ISyntaxNode? target = bundle.LeastDetailed.Document.Search<ISyntaxToken>(request.Position);
 
 		if (target is ISyntaxToken token && token.Kind == SyntaxKind.StringText)
 			return Task.FromResult<CompletionResponse?>(null);
@@ -86,7 +69,7 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 
 		}
 
-		ISyntaxNode? contextNode = target ?? bundle.LeastDetailed.Document.Search(node => node.Position.WithoutIndex.Contains(request.Position.ToOwl));
+		ISyntaxNode? contextNode = target ?? bundle.LeastDetailed.Document.Search(request.Position);
 		ISymbolScope? scope = contextNode.GetChain().Select(TrySelectScope).FirstOrDefault(scope => scope is not null);
 
 		AddKeywords(completions);
