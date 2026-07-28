@@ -19,10 +19,7 @@ internal sealed class LspHostCommand : Command
 			ushort port = parsing.GetRequiredValue(portArgument);
 			Console.WriteLine($"Running LSP server on localhost:{port}");
 
-			while (true)
-			{
-				await OwlLsp.Host(GitInfo.VersionOrMissing, port).Run();
-			}
+			await OwlLsp.Host(GitInfo.VersionOrMissing, port).Run();
 		});
 	}
 	#endregion
