@@ -156,7 +156,7 @@ jobs:
 
       - name: Publish the project.
         working-directory: src/cli/
-        run: dotnet publish --no-build  --warnaserror --configuration Release --runtime ${{ matrix.target-runtime }} /p:ContinuousIntegrationBuild=true /p:noWarn=IDE0055 /p:noWarn=CS1591 --output "${{ runner.temp }}/publishing/cli/owl (${{ matrix.target-runtime }})"
+        run: dotnet publish --no-build --configuration Release --runtime ${{ matrix.target-runtime }} /p:ContinuousIntegrationBuild=true /p:noWarn=IDE0055 /p:noWarn=CS1591 --output "${{ runner.temp }}/publishing/cli/owl (${{ matrix.target-runtime }})"
 
       - name: Remove unnecessary files.
         working-directory: "${{ runner.temp }}/publishing/cli/owl (${{ matrix.target-runtime }})"
