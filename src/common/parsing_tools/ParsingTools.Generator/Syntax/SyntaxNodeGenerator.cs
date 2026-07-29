@@ -1033,10 +1033,11 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 							writer.WriteLine();
 
 						foreach (StructuredNodeInfo node in tree.Nodes)
-							writer.WriteLine($"protected virtual bool Visit({node.Interface.Name} node) => true;");
+							writer.WriteLine($"protected virtual bool Visit({node.Interface.Name} node) => VisitGeneral(node);");
 
 						writer.WriteLine();
 						writer.WriteLine($"protected virtual bool VisitUnknown(ISyntaxNode node) => true;");
+						writer.WriteLine($"protected virtual bool VisitGeneral({tree.BaseNode.Interface.Name} node) => true;");
 					}
 				}
 			}

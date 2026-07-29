@@ -3,6 +3,7 @@ global using CommunityToolkit.Diagnostics;
 global using OwlDomain.Owl.Code.CodeAnalysis;
 global using OwlDomain.Owl.Code.CodeAnalysis.Annotation;
 global using OwlDomain.Owl.Code.CodeAnalysis.Annotation.Flags;
+global using OwlDomain.Owl.Code.CodeAnalysis.Annotation.Symbols;
 global using OwlDomain.Owl.Code.CodeAnalysis.Parsing;
 global using OwlDomain.Owl.Code.CodeAnalysis.Passes;
 global using OwlDomain.Owl.Code.CodeAnalysis.Semantics;

@@ -11,6 +11,8 @@ global using EmmyLua.LanguageServer.Framework.Server.Handler;
 
 global using OwlDomain.Owl.Code.CodeAnalysis;
 global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols;
+global using OwlDomain.Owl.Code.CodeAnalysis.Annotation.Flags;
+global using OwlDomain.Owl.Code.CodeAnalysis.Annotation.Symbols;
 global using OwlDomain.Owl.LSP.Handlers;
 global using OwlDomain.Owl.Workspaces;
 global using OwlDomain.ParsingTools;

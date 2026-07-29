@@ -99,6 +99,7 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 	{
 		AnnotatedVariableDeclarationStatementSyntax annotated = base.ConvertCore(semantic);
 		annotated.Name.MarkAsDeclarationName();
+		annotated.AddSymbolDeclaration(annotated.Variable);
 
 		semantic.Variable.Declaration = annotated;
 
@@ -111,6 +112,8 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 		{
 			AnnotatedFunctionDeclarationStatementSyntax annotated = base.ConvertCore(semantic);
 			annotated.Signature.Name.MarkAsDeclarationName();
+			annotated.AddScopeDeclaration(scope);
+			annotated.AddSymbolDeclaration(annotated.Function);
 
 			semantic.Function.Declaration = annotated;
 			scope.Declaration = annotated;
@@ -122,6 +125,7 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 	{
 		var annotated = base.ConvertCore(semantic);
 		annotated.Name.MarkAsDeclarationName();
+		annotated.AddSymbolDeclaration(annotated.Parameter);
 
 		semantic.Parameter.Declaration = annotated;
 
@@ -132,6 +136,8 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 		using (EnterScope(semantic, out IMutableDeclaredSymbolScope scope))
 		{
 			var annotated = base.ConvertCore(semantic);
+			annotated.AddScopeDeclaration(scope);
+
 			scope.Declaration = annotated;
 
 			return annotated;
@@ -142,6 +148,8 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 		using (EnterScope(semantic, out IMutableDeclaredSymbolScope scope))
 		{
 			var annotated = base.ConvertCore(semantic);
+			annotated.AddScopeDeclaration(scope);
+
 			scope.Declaration = annotated;
 
 			return annotated;
@@ -151,6 +159,7 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 	{
 		var annotated = base.ConvertCore(semantic);
 		annotated.Name.MarkAsDeclarationName();
+		annotated.AddSymbolDeclaration(annotated.Label);
 
 		semantic.Label.Declaration = annotated;
 

@@ -14,10 +14,8 @@ static partial class FlagGroupAnnotationExtensions
 		#region Methods
 		public bool IsDeclarationName()
 		{
-			if (token is IAnnotatedToken annotated)
+			if (token.MostDetailed is IAnnotatedToken annotated)
 				return annotated.GetFlag(AnnotationFlag.IsDeclarationName, false);
-			else if (token.ShadowedBy is not null)
-				return IsDeclarationName(token.ShadowedBy);
 
 			return false;
 		}

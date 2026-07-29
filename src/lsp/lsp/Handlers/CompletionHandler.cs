@@ -7,9 +7,8 @@ using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callable;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.Expressions;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.FunctionArguments;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Declared.Nodes;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Declared.Statements;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Loops;
+using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Declared.Nodes;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -86,6 +85,13 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 	#endregion
 
 	#region Helpers
+	private ISymbolScope? TrySelectScope(ISyntaxNode node)
+	{
+		if (node is IDeclaredDocumentSyntax document)
+			return document.Scope;
+
+		return node.TryGetDeclaredScope();
+	}
 	private void AddParameterNames(List<CompletionItem> items, ICallableType callable)
 	{
 		foreach (ICallableTypeParameter parameter in callable.Parameters)
@@ -116,18 +122,6 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 				Label = keyword.Name
 			});
 		}
-	}
-	private ISymbolScope? TrySelectScope(ISyntaxNode node)
-	{
-		return node switch
-		{
-			IDeclaredFunctionDeclarationStatementSyntax function => function.Scope,
-			IDeclaredDocumentSyntax document => document.Scope,
-			IDeclaredBlockStatementSyntax block => block.Scope,
-			IDeclaredWhileStatementSyntax loop => loop.Scope,
-
-			_ => null,
-		};
 	}
 	private void FromScope(List<CompletionItem> completions, ISymbolScope scope)
 	{
