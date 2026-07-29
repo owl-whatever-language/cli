@@ -9,7 +9,6 @@ internal sealed class SemanticTokensHandler(ILspContext context) : SemanticToken
 	#endregion
 
 	#region Properties
-
 	private static Dictionary<ClassificationKind, string> Classifications { get; } = new()
 	{
 		{ ClassificationKind.Comment, SemanticTokenTypes.Comment },
@@ -25,6 +24,7 @@ internal sealed class SemanticTokensHandler(ILspContext context) : SemanticToken
 		{ ClassificationKind.Function, SemanticTokenTypes.Function },
 		{ ClassificationKind.Variable, SemanticTokenTypes.Variable },
 		{ ClassificationKind.TypeMethod, SemanticTokenTypes.Method },
+		{ ClassificationKind.Label, SemanticTokenTypes.Variable },
 
 		{ ClassificationKind.Type, SemanticTokenTypes.Type},
 	};

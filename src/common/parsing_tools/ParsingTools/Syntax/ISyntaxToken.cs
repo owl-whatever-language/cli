@@ -118,12 +118,13 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 		if (Position.End > FullPosition.End)
 			ThrowHelper.ThrowArgumentException(nameof(position), "The regular position ended after the full position, this is likely a mistake in taking the end position after lexing the trivia.");
 	}
-	protected BaseSyntaxToken(SyntaxKind kind, IndexedPositionRange position)
+	protected BaseSyntaxToken(SyntaxKind kind, IndexedPositionRange position, object? value)
 	{
 		Guard.IsOfCategory(kind, SyntaxCategory.Token);
 
 		Kind = kind;
 		Position = position;
+		Value = value;
 
 		LeadingTrivia = TriviaList.Empty;
 		TrailingTrivia = TriviaList.Empty;
@@ -197,7 +198,7 @@ public sealed class SyntaxToken : BaseSyntaxToken
 	{
 	}
 
-	public SyntaxToken(SyntaxKind kind, IndexedPositionRange position) : base(kind, position)
+	public SyntaxToken(SyntaxKind kind, IndexedPositionRange position, object? value) : base(kind, position, value)
 	{
 	}
 	#endregion

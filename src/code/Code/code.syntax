@@ -36,7 +36,9 @@ block statement        : token start, list<statement> statements, token end
 expression statement   : expression expression, token terminator
 if statement           : token keyword, token start, expression condition, token end, statement true_clause
 if_else statement      : token keyword, token start, expression condition, token end, statement true_clause, token else, statement false_clause
-while statement        : token keyword, token start, expression condition, token end, statement body
+loop_label_clause      : token colon, token name
+loop_label_clause @ declared : IDeclaredLoopLabel label
+while statement        : token keyword, token start, expression condition, token end, loop_label_clause label, statement body
 return statement       : token keyword, expression? value, token terminator
 
 ### Declarations

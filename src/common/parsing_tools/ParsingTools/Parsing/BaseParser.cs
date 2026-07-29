@@ -188,7 +188,7 @@ public abstract class BaseParser : IDiagnosticProvider
 		if (Match(kind, out ISyntaxToken? token))
 			return token;
 
-		token = FabricateCore(kind);
+		token = FabricateCore(kind, null);
 		callback.Invoke(token);
 
 		return token;
@@ -198,15 +198,15 @@ public abstract class BaseParser : IDiagnosticProvider
 		if (Match(kind, out ISyntaxToken? token))
 			return token;
 
-		return FabricateCore(kind);
+		return FabricateCore(kind, null);
 	}
-	protected SyntaxToken FabricateCore(SyntaxKind kind)
+	protected SyntaxToken FabricateCore(SyntaxKind kind, object? value)
 	{
 		Debug.Assert(Tokens.Count > 0, "Must have at least one token representing the end of the input.");
 		ISyntaxNode expected = Current ?? Tokens.Last();
 
 		IndexedPositionRange position = new(expected.FullPosition.Start, expected.FullPosition.Start);
-		return new(kind, position);
+		return new(kind, position, value);
 	}
 
 	protected void RecoverUntilEndOfInput()

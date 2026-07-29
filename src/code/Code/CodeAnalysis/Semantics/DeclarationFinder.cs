@@ -78,6 +78,13 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 	#endregion
 
 	#region Methods
+	protected override bool Visit(IConcreteBlockStatementSyntax node)
+	{
+		using (EnterNewScope(node, "block"))
+			Dispatch(node.Statements);
+
+		return false;
+	}
 	protected override bool Visit(IConcreteVariableDeclarationStatementSyntax node)
 	{
 		DeclaredLocalVariable variable = new(node);
@@ -95,6 +102,25 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 
 			Dispatch(node.Body);
 		}
+
+		return false;
+	}
+	protected override bool Visit(IConcreteWhileStatementSyntax node)
+	{
+		using (EnterNewScope(node, "while"))
+		{
+			if (node.Label is not null)
+				Visit(node.Label);
+
+			Dispatch(node.Body);
+		}
+
+		return false;
+	}
+	protected override bool Visit(IConcreteLoopLabelClauseSyntax node)
+	{
+		DeclaredLoopLabel label = new(node);
+		AddSingle(label, node.Name);
 
 		return false;
 	}
@@ -126,6 +152,15 @@ public sealed class DeclarationFinder : BaseConcreteVisitor, IDiagnosticProvider
 	private DelegateScope EnterNewScope(IDeclaredSymbol symbol)
 	{
 		IMutableSymbolScope newScope = CurrentScope.AddScope(symbol);
+
+		Scopes.Push(CurrentScope);
+		CurrentScope = newScope;
+
+		return new(ExitScope);
+	}
+	private DelegateScope EnterNewScope(ISyntaxNode declaration, string name)
+	{
+		IMutableSymbolScope newScope = CurrentScope.AddScope(declaration, name);
 
 		Scopes.Push(CurrentScope);
 		CurrentScope = newScope;

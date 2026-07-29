@@ -350,9 +350,27 @@ public sealed class Parser : BaseParser<IConcreteToken>
 		IConcreteToken start = Expect(SyntaxKind.OpenBracket, ClassificationKind.Punctuation, "(", "prefix the while statement condition");
 		IConcreteExpressionSyntax condition = ParseExpression();
 		IConcreteToken end = ExpectClosing(start, SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "end the condition");
+		IConcreteLoopLabelClauseSyntax? label = ParseLoopLabel();
 		IConcreteStatementSyntax body = ParseStatement();
 
-		return new ConcreteWhileStatementSyntax(keyword, start, condition, end, body);
+		return new ConcreteWhileStatementSyntax(keyword, start, condition, end, label, body);
+	}
+	private ConcreteLoopLabelClauseSyntax ParseLoopLabel()
+	{
+		if (Match(SyntaxKind.Colon, ClassificationKind.Punctuation, out IConcreteToken? colon))
+		{
+			IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Label, "Expected the loop's label name.");
+			return new(colon, name);
+		}
+
+		return FabricateDefaultLoopLabel();
+	}
+	private ConcreteLoopLabelClauseSyntax FabricateDefaultLoopLabel()
+	{
+		IConcreteToken colon = Fabricate(SyntaxKind.Colon, ClassificationKind.Punctuation);
+		IConcreteToken name = Fabricate(SyntaxKind.Identifier, ClassificationKind.Label, "loop");
+
+		return new(colon, name);
 	}
 	#endregion
 
@@ -425,7 +443,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 					break;
 				else
 				{
-					comma = Fabricate(SyntaxKind.Comma);
+					comma = Fabricate(SyntaxKind.Comma, ClassificationKind.Punctuation, value: null);
 					ReportExpected(comma, ",", "separate the function parameters");
 				}
 			}

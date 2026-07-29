@@ -67,6 +67,7 @@ public static class OwlStyling
 			.Add(ClassificationKind.File, "#faffb0")
 			.Add(ClassificationKind.TypeProperty, "#fefefe")
 			.Add(ClassificationKind.TypeMethod, "#8054af")
+			.Add(ClassificationKind.Label, "#34d166")
 		;
 
 		return styling;

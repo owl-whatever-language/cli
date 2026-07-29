@@ -256,14 +256,36 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		return semantic;
 	}
+
+	protected override SemanticBlockStatementSyntax ConvertCore(IDeclaredBlockStatementSyntax declared)
+	{
+		using (EnterScope(declared, out IMutableDeclaredSymbolScope scope))
+		{
+			var semantic = base.ConvertCore(declared);
+			scope.Declaration = semantic;
+
+			return semantic;
+		}
+	}
 	protected override SemanticWhileStatementSyntax ConvertCore(IDeclaredWhileStatementSyntax declared)
 	{
+		using (EnterScope(declared, out IMutableDeclaredSymbolScope scope))
+		{
+			var semantic = base.ConvertCore(declared);
+			scope.Declaration = semantic;
+
+			if (CoreScope.Bool is null)
+				ReportCoreTypeNotFound(declared.Keyword, "bool", "while statements");
+
+			CheckConditionType(semantic.Condition);
+
+			return semantic;
+		}
+	}
+	protected override SemanticLoopLabelClauseSyntax ConvertCore(IDeclaredLoopLabelClauseSyntax declared)
+	{
 		var semantic = base.ConvertCore(declared);
-
-		if (CoreScope.Bool is null)
-			ReportCoreTypeNotFound(declared.Keyword, "bool", "while statements");
-
-		CheckConditionType(semantic.Condition);
+		declared.Label.Declaration = semantic;
 
 		return semantic;
 	}
@@ -922,6 +944,15 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			Diagnostics
 				.BuildError(this, "invalid_type_use")
 				.Add(node, lines => lines.AddLine("Accessing types in this way is not yet supported."));
+
+			return SpecialTypes.Error;
+		}
+
+		if (symbol is ILoopLabel)
+		{
+			Diagnostics
+				.BuildError(this, "invalid_label_use")
+				.Add(node, lines => lines.AddLine("Accessing labels in this way is not yet supported."));
 
 			return SpecialTypes.Error;
 		}

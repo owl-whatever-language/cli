@@ -367,12 +367,13 @@ public class SyntaxNodeGenerator : IIncrementalGenerator
 					writer.WriteSeparated([
 						"SyntaxKind kind",
 						"IndexedPositionRange position",
+						"object? value",
 						..token.ClassMembers.Select(m => $"{m.Type.TypeName} {m.Name.Camel}")
 					]);
 					writer.WriteLine(")");
 
 					using (writer.Indented())
-						writer.WriteLine(": base(kind, position)");
+						writer.WriteLine(": base(kind, position, value)");
 
 					using (writer.Braced())
 						writer.WriteConstructorAssignments(token.ClassMembers);

@@ -172,6 +172,39 @@ public sealed class DeclarationResolver : BaseConcreteToDeclaredTreeConverter, I
 
 		return declared;
 	}
+
+	protected override DeclaredBlockStatementSyntax ConvertCore(IConcreteBlockStatementSyntax concrete)
+	{
+		using (EnterScope(concrete, out IMutableDeclaredSymbolScope scope))
+		{
+			var declared = base.ConvertCore(concrete);
+			scope.Declaration = declared;
+
+			return declared;
+		}
+	}
+	protected override DeclaredWhileStatementSyntax ConvertCore(IConcreteWhileStatementSyntax concrete)
+	{
+		using (EnterScope(concrete, out IMutableDeclaredSymbolScope scope))
+		{
+			var declared = base.ConvertCore(concrete);
+			scope.Declaration = declared;
+
+			return declared;
+		}
+	}
+	protected override DeclaredLoopLabelClauseSyntax ConvertCore(IConcreteLoopLabelClauseSyntax concrete)
+	{
+		Get(concrete, out IDeclaredLoopLabel label);
+
+		var colon = Convert(concrete.Colon);
+		var name = Convert(concrete.Name, ClassificationKind.Label, label);
+
+		DeclaredLoopLabelClauseSyntax declared = new(colon, name, label);
+		label.Declaration = declared;
+
+		return declared;
+	}
 	#endregion
 
 	#region Type methods

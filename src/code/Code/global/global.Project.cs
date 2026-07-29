@@ -13,6 +13,7 @@ global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols;
 global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callable;
 global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
+global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Loops;
 global using OwlDomain.Owl.Code.CodeAnalysis.Text;
 global using OwlDomain.ParsingTools.Diagnostics;
 global using OwlDomain.ParsingTools.Parsing;

@@ -158,7 +158,7 @@ public abstract class BaseParser<TToken> : BaseParser
 			return token;
 		}
 
-		token = Fabricate(SyntaxKind.EndOfInput);
+		token = Fabricate(SyntaxKind.EndOfInput, classification: null);
 		diagnostic = ReportExpectedEndOfInput(token);
 
 		return token;
@@ -166,14 +166,9 @@ public abstract class BaseParser<TToken> : BaseParser
 	#endregion
 
 	#region Fabricate methods
-	protected TToken Fabricate(SyntaxKind kind)
+	protected TToken Fabricate(SyntaxKind kind, ClassificationKind? classification, object? value = null)
 	{
-		ISyntaxToken token = FabricateCore(kind);
-		return Convert(token);
-	}
-	protected TToken Fabricate(SyntaxKind kind, ClassificationKind classification)
-	{
-		ISyntaxToken token = FabricateCore(kind);
+		ISyntaxToken token = FabricateCore(kind, value);
 		return Convert(token, classification);
 	}
 	#endregion

@@ -1,5 +1,6 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.Hover;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions;
+using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Loops;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.Expressions;
@@ -39,6 +40,7 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 			ITypeProperty => "property",
 			ITypeMethod => "method",
 			IType => "type",
+			ILoopLabel => "loop label",
 
 			_ => null,
 		};

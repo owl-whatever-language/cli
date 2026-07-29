@@ -99,5 +99,8 @@ partial struct ClassificationKind
 
 	/// <summary>Represents a classification for file names.</summary>
 	public static ClassificationKind File { get; } = Identifier + "file";
+
+	/// <summary>Represents a classification for labels.</summary>
+	public static ClassificationKind Label { get; } = Identifier + "label";
 	#endregion
 }

@@ -21,6 +21,7 @@ public interface IMutableSymbolScope : ISymbolScope
 {
 	#region Methods
 	void Add(ISymbol symbol);
+	IMutableDeclaredSymbolScope AddScope(ISyntaxNode declaration, string name);
 	IMutableDeclaredSymbolScope AddScope(IDeclaredSymbol symbol);
 	#endregion
 }
@@ -196,20 +197,21 @@ public class SymbolScope : IMutableSymbolScope
 			collection.Add(symbol);
 		}
 	}
-	public IMutableDeclaredSymbolScope AddScope(IDeclaredSymbol symbol)
+	public IMutableDeclaredSymbolScope AddScope(ISyntaxNode declaration, string name)
 	{
 		Interlocked.Increment(ref _scopeCount);
 
 		using (_lock.WriteLock())
 		{
-			DeclaredSymbolScope scope = new(this, symbol.Declaration, $"{symbol.Declaration.NodeKind.Name}({symbol.Name})");
+			DeclaredSymbolScope scope = new(this, declaration, name);
 			scope.Shadowed += SymbolScopeShadowed;
 
-			_scopes.Add(symbol.Declaration, scope);
+			_scopes.Add(declaration, scope);
 
 			return scope;
 		}
 	}
+	public IMutableDeclaredSymbolScope AddScope(IDeclaredSymbol symbol) => AddScope(symbol.Declaration, $"{symbol.Declaration.NodeKind.Name}({symbol.Name})");
 	#endregion
 
 	#region Shadowing callbacks
