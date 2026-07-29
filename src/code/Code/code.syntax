@@ -33,12 +33,14 @@ group statement
 only_terminated statement : token terminator
 empty statement
 block statement        : token start, list<statement> statements, token end
+block_statement @ declared : ISymbolScope scope
 expression statement   : expression expression, token terminator
 if statement           : token keyword, token start, expression condition, token end, statement true_clause
 if_else statement      : token keyword, token start, expression condition, token end, statement true_clause, token else, statement false_clause
 loop_label_clause      : token colon, token name
 loop_label_clause @ declared : IDeclaredLoopLabel label
 while statement        : token keyword, token start, expression condition, token end, loop_label_clause label, statement body
+while @ declared       : ISymbolScope scope
 return statement       : token keyword, expression? value, token terminator
 
 ### Declarations

@@ -1,5 +1,6 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.InlayHint;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated.FunctionArguments;
+using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Nodes;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -41,6 +42,32 @@ internal sealed class InlayHintHandler(ILspContext context) : InlayHintHandlerBa
 
 			hints.Add(hint);
 		}
+
+		foreach (var signature in tree.Document.Flatten<IConcreteFunctionDeclarationSignatureSyntax>(signature => signature.Return is null))
+		{
+			InlayHint hint = new()
+			{
+				Kind = InlayHintKind.Type,
+				Position = signature.End.ToLspPosition.End,
+				PaddingLeft = true,
+				Label = ": void",
+			};
+
+			hints.Add(hint);
+		}
+
+		foreach (var label in tree.Document.Flatten<IConcreteLoopLabelClauseSyntax>(label => label.IsFabricated))
+		{
+			InlayHint hint = new()
+			{
+				Position = label.ToLspPosition.Start,
+				PaddingLeft = true,
+				Label = ": loop",
+			};
+
+			hints.Add(hint);
+		}
+
 
 		return Task.FromResult<InlayHintResponse?>(new(hints));
 	}

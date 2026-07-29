@@ -7,8 +7,9 @@ using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callable;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.Expressions;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.FunctionArguments;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.Nodes;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.Statements;
+using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Declared.Nodes;
+using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Declared.Statements;
+using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Loops;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -120,8 +121,10 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 	{
 		return node switch
 		{
-			ISemanticFunctionDeclarationStatementSyntax function => function.Scope,
-			ISemanticDocumentSyntax document => document.Scope,
+			IDeclaredFunctionDeclarationStatementSyntax function => function.Scope,
+			IDeclaredDocumentSyntax document => document.Scope,
+			IDeclaredBlockStatementSyntax block => block.Scope,
+			IDeclaredWhileStatementSyntax loop => loop.Scope,
 
 			_ => null,
 		};
@@ -160,6 +163,7 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 			IFunctionParameter => CompletionItemKind.Variable,
 			IFunction => CompletionItemKind.Function,
 			IType => CompletionItemKind.Class,
+			ILoopLabel => CompletionItemKind.Reference,
 
 			_ => ThrowHelper.ThrowArgumentException<CompletionItemKind>($"Unhandled symbol type ({symbol.GetType().Name}).")
 		};

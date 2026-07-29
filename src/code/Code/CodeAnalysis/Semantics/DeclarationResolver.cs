@@ -177,7 +177,11 @@ public sealed class DeclarationResolver : BaseConcreteToDeclaredTreeConverter, I
 	{
 		using (EnterScope(concrete, out IMutableDeclaredSymbolScope scope))
 		{
-			var declared = base.ConvertCore(concrete);
+			var start = Convert(concrete.Start);
+			var statements = Convert(concrete.Statements);
+			var end = Convert(concrete.End);
+
+			DeclaredBlockStatementSyntax declared = new(start, statements, end, scope);
 			scope.Declaration = declared;
 
 			return declared;
@@ -187,7 +191,14 @@ public sealed class DeclarationResolver : BaseConcreteToDeclaredTreeConverter, I
 	{
 		using (EnterScope(concrete, out IMutableDeclaredSymbolScope scope))
 		{
-			var declared = base.ConvertCore(concrete);
+			var keyword = Convert(concrete.Keyword);
+			var start = Convert(concrete.Start);
+			var condition = Convert(concrete.Condition);
+			var end = Convert(concrete.End);
+			var label = Convert(concrete.Label);
+			var body = Convert(concrete.Body);
+
+			DeclaredWhileStatementSyntax declared = new(keyword, start, condition, end, label, body, scope);
 			scope.Declaration = declared;
 
 			return declared;
