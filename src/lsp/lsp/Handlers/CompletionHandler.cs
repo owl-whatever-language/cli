@@ -24,7 +24,7 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 	{
 		serverCapabilities.CompletionProvider = new()
 		{
-			TriggerCharacters = [".", "(", ","],
+			TriggerCharacters = [".", "(", ",", ":"],
 		};
 	}
 	protected override Task<CompletionResponse?> Handle(CompletionParams request, CancellationToken cancellation)
@@ -39,7 +39,7 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 
 		if (target is not null)
 		{
-			if (target.Parent is ISemanticMemberAccessExpressionSyntax access)
+			if (target.Parent is ISemanticMemberAccessExpressionSyntax access && (target == access.Dot || target == access.Name))
 			{
 				if (access.Expression is ISemanticGetExpressionSyntax get && get.ResultType.IsNotError)
 				{

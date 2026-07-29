@@ -18,7 +18,7 @@ internal sealed class DefinitionHandler(ILspContext context) : DefinitionHandler
 	{
 		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree))
 		{
-			ISyntaxToken? token = tree.Document.Search<ISyntaxToken>(request.Position);
+			ISyntaxToken? token = tree.Document.Search<ISyntaxToken>(request.Position, true, token => token.Kind == SyntaxKind.Identifier);
 
 			if (token?.Symbol is IDeclaredSymbol declared && declared.Declaration.TryGetLocation(out Location location))
 				return Task.FromResult<DefinitionResponse?>(new(location));

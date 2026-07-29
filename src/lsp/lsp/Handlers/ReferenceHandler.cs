@@ -18,7 +18,7 @@ internal sealed class ReferenceHandler(ILspContext context) : ReferenceHandlerBa
 		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree, out IOwlWorkspace? workspace) is false)
 			return Task.FromResult<ReferenceResponse?>(null);
 
-		ISyntaxToken? target = tree.Document.Search<ISyntaxToken>(request.Position);
+		ISyntaxToken? target = tree.Document.Search<ISyntaxToken>(request.Position, true, token => token.Kind == SyntaxKind.Identifier);
 		if (target is null)
 			return Task.FromResult<ReferenceResponse?>(null);
 

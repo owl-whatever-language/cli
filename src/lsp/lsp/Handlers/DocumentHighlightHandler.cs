@@ -24,7 +24,7 @@ internal sealed class DocumentHighlightHandler(ILspContext context) : DocumentHi
 		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult(response);
 
-		ISyntaxToken? target = tree.Document.Search<ISyntaxToken>(request.Position);
+		ISyntaxToken? target = tree.Document.Search<ISyntaxToken>(request.Position, true, token => token.Kind == SyntaxKind.Identifier);
 		if (target is null)
 			return Task.FromResult(response);
 
