@@ -98,6 +98,8 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 	protected override AnnotatedVariableDeclarationStatementSyntax ConvertCore(ISemanticVariableDeclarationStatementSyntax semantic)
 	{
 		AnnotatedVariableDeclarationStatementSyntax annotated = base.ConvertCore(semantic);
+		annotated.Name.MarkAsDeclarationName();
+
 		semantic.Variable.Declaration = annotated;
 
 		return annotated;
@@ -108,6 +110,7 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 		using (EnterScope(semantic, out IMutableDeclaredSymbolScope scope))
 		{
 			AnnotatedFunctionDeclarationStatementSyntax annotated = base.ConvertCore(semantic);
+			annotated.Signature.Name.MarkAsDeclarationName();
 
 			semantic.Function.Declaration = annotated;
 			scope.Declaration = annotated;
@@ -118,7 +121,38 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 	protected override IAnnotatedFunctionParameterSyntax ConvertCore(ISemanticFunctionParameterSyntax semantic)
 	{
 		var annotated = base.ConvertCore(semantic);
+		annotated.Name.MarkAsDeclarationName();
+
 		semantic.Parameter.Declaration = annotated;
+
+		return annotated;
+	}
+	protected override AnnotatedBlockStatementSyntax ConvertCore(ISemanticBlockStatementSyntax semantic)
+	{
+		using (EnterScope(semantic, out IMutableDeclaredSymbolScope scope))
+		{
+			var annotated = base.ConvertCore(semantic);
+			scope.Declaration = annotated;
+
+			return annotated;
+		}
+	}
+	protected override AnnotatedWhileStatementSyntax ConvertCore(ISemanticWhileStatementSyntax semantic)
+	{
+		using (EnterScope(semantic, out IMutableDeclaredSymbolScope scope))
+		{
+			var annotated = base.ConvertCore(semantic);
+			scope.Declaration = annotated;
+
+			return annotated;
+		}
+	}
+	protected override AnnotatedLoopLabelClauseSyntax ConvertCore(ISemanticLoopLabelClauseSyntax semantic)
+	{
+		var annotated = base.ConvertCore(semantic);
+		annotated.Name.MarkAsDeclarationName();
+
+		semantic.Label.Declaration = annotated;
 
 		return annotated;
 	}

@@ -39,6 +39,13 @@ public sealed class FlagGroupAnnotation : CodeAnnotation
 		ThrowHelper.ThrowArgumentException(nameof(flag), $"The flag '{flag}' hasn't been set yet.");
 		return default;
 	}
+	public bool GetFlag(string flag, bool fallback)
+	{
+		if (_flags.TryGetValue(flag, out bool value))
+			return value;
+
+		return fallback;
+	}
 	#endregion
 }
 
@@ -78,6 +85,13 @@ public static partial class FlagGroupAnnotationExtensions
 			ThrowHelper.ThrowArgumentException(nameof(flag), $"The flag '{flag}' hasn't been set yet.");
 			return default;
 		}
+		public bool GetFlag(string flag, bool fallback)
+		{
+			if (annotations.TryGet(out FlagGroupAnnotation? group))
+				return group.GetFlag(flag, fallback);
+
+			return fallback;
+		}
 		#endregion
 	}
 	extension(IAnnotatedSyntaxNode node)
@@ -91,6 +105,7 @@ public static partial class FlagGroupAnnotationExtensions
 		public bool TryGetFlag(string flag, out bool value) => node.Annotations.TryGetFlag(flag, out value);
 		public bool? TryGetFlag(string flag) => node.Annotations.TryGetFlag(flag);
 		public bool GetFlag(string flag) => node.Annotations.GetFlag(flag);
+		public bool GetFlag(string flag, bool fallback) => node.Annotations.GetFlag(flag, fallback);
 		#endregion
 	}
 }

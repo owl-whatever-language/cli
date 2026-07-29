@@ -41,12 +41,12 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 		{
 			if (target.Parent is ISemanticMemberAccessExpressionSyntax access && (target == access.Dot || target == access.Name))
 			{
-				if (access.Expression is ISemanticGetExpressionSyntax get && get.ResultType.IsNotError)
-				{
-					List<CompletionItem> members = [];
-					FromTypeAccess(members, get, access);
-					return Task.FromResult<CompletionResponse?>(new(members));
-				}
+				List<CompletionItem> members = [];
+
+				if (access.Expression.ResultType.IsNotError)
+					FromTypeAccess(members, access.Expression.ResultType, access);
+
+				return Task.FromResult<CompletionResponse?>(new(members));
 			}
 		}
 
@@ -140,9 +140,9 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 			completions.Add(completion);
 		}
 	}
-	private void FromTypeAccess(List<CompletionItem> completions, ISemanticGetExpressionSyntax get, ISemanticMemberAccessExpressionSyntax access)
+	private void FromTypeAccess(List<CompletionItem> completions, IType type, ISemanticMemberAccessExpressionSyntax access)
 	{
-		foreach (ITypeMember member in get.ResultType.Members)
+		foreach (ITypeMember member in type.Members)
 		{
 			if (string.IsNullOrWhiteSpace(member.Name))
 				continue;

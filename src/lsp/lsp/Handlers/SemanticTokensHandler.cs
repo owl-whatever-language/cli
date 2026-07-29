@@ -1,4 +1,6 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.SemanticToken;
+using OwlDomain.Owl.Code.CodeAnalysis.Annotation.Flags;
+using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -31,6 +33,8 @@ internal sealed class SemanticTokensHandler(ILspContext context) : SemanticToken
 	private static List<string> TokenTypes { get; } = Classifications.Values.ToList();
 	private static List<string> TokenModifiers { get; } =
 	[
+		SemanticTokenModifiers.Declaration, SemanticTokenModifiers.Definition,
+		SemanticTokenModifiers.Readonly,
 	];
 	#endregion
 
@@ -65,8 +69,21 @@ internal sealed class SemanticTokensHandler(ILspContext context) : SemanticToken
 			if (type is null)
 				continue;
 
-			List<string> modifiers = modifier is null ? [] : [modifier];
-			builder.Push(part.ToLspPosition.Start, part.Position.Length, type, modifiers);
+			HashSet<string> modifiers = modifier is null ? [] : [modifier];
+
+			if (part is ISyntaxToken token)
+			{
+				if (token.IsDeclarationName())
+				{
+					modifiers.Add(SemanticTokenModifiers.Declaration);
+					modifiers.Add(SemanticTokenModifiers.Definition);
+				}
+
+				if (token.Symbol is ITypeProperty)
+					modifiers.Add(SemanticTokenModifiers.Readonly);
+			}
+
+			builder.Push(part.ToLspPosition.Start, part.Position.Length, type, modifiers.ToList());
 		}
 
 		return Task.FromResult<SemanticTokens?>(new()
