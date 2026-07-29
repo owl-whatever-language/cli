@@ -319,11 +319,11 @@ public sealed class Parser : BaseParser<IConcreteToken>
 			IConcreteExpressionSyntax value = ParseExpression();
 			terminator = ExpectStatementTerminator(value);
 
-			return new ConcreteValueReturnStatementSyntax(keyword, value, terminator);
+			return new ConcreteReturnStatementSyntax(keyword, value, terminator);
 		}
 
 		terminator = ExpectStatementTerminator(null);
-		return new ConcreteReturnStatementSyntax(keyword, terminator);
+		return new ConcreteReturnStatementSyntax(keyword, null, terminator);
 	}
 	private IConcreteStatementSyntax? TryParseIfStatement()
 	{

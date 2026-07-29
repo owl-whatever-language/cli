@@ -25,7 +25,22 @@ internal sealed class DocumentHighlightHandler(ILspContext context) : DocumentHi
 			return Task.FromResult(response);
 
 		ISyntaxToken? target = tree.Document.Search<ISyntaxToken>(request.Position);
-		if (target is null || target.Symbol?.IsKnown is not true)
+		if (target is null)
+			return Task.FromResult(response);
+
+		if (target.Parent is IConcreteReturnStatementSyntax @return && @return.Keyword == target)
+		{
+			var function = target.GetChain().OfType<IConcreteFunctionDeclarationStatementSyntax>().FirstOrDefault();
+			if (function is not null)
+			{
+				highlights.Add(new() { Kind = DocumentHighlightKind.Text, Range = target.ToLspPosition });
+				highlights.Add(new() { Kind = DocumentHighlightKind.Text, Range = function.Signature.Name.ToLspPosition });
+			}
+
+			return Task.FromResult(response);
+		}
+
+		if (target.Symbol?.IsKnown is not true)
 			return Task.FromResult(response);
 
 		foreach (ISyntaxToken token in tree.Document.ToTokens().Where(t => t.Symbol == target.Symbol))

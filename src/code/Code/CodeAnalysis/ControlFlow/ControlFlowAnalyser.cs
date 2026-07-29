@@ -89,18 +89,14 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 					EndBlock();
 					blocks.Add(construct);
 				}
-				else if (statement is IAnnotatedReturnStatementSyntax)
+				else if (statement is IAnnotatedReturnStatementSyntax @return)
 				{
-					block.Add(statement);
-					Connect(block, _graph.End);
+					if (@return.Value is not null)
+						IfBranching(@return, @return.Value);
+					else
+						block.Add(statement);
 
-					EndBlock();
-				}
-				else if (statement is IAnnotatedValueReturnStatementSyntax @return)
-				{
-					IfBranching(@return, @return.Value);
 					Connect(block, _graph.End);
-
 					EndBlock();
 				}
 				else if (statement is IAnnotatedExpressionStatementSyntax expr)
@@ -415,8 +411,10 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 
 			Diagnostic diagnostic = Diagnostics
 				.BuildError(Analyser, "missing_return")
-				.Add(node.Signature.Name, lines => lines.AddLine("Function is missing a return statement."))
-				.Add(node.Signature.Return, lines => lines.AddLine("This is where the function defined that it needs a return type."));
+				.Add(node.Signature.Name, lines => lines.AddLine("Function is missing a return statement."));
+
+			if (node.Signature.Return is not null)
+				diagnostic.Add(node.Signature.Return, lines => lines.AddLine("This is where the function defined that it needs a return type."));
 
 			// Note(Nightowl):
 			// Isn't this just always going to be the very last block anyway?

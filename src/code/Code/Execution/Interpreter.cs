@@ -189,11 +189,9 @@ public class Interpreter : IDiagnosticProvider
 			InterpreterValue value = Evaluate(variable.Value);
 			Values.Declare(variable.Variable, value);
 		}
-		else if (statement is IAnnotatedReturnStatementSyntax)
-			throw new ReturnControlException(InterpreterValue.Void);
-		else if (statement is IAnnotatedValueReturnStatementSyntax @return)
+		else if (statement is IAnnotatedReturnStatementSyntax @return)
 		{
-			InterpreterValue value = Evaluate(@return.Value);
+			InterpreterValue value = @return.Value is not null ? Evaluate(@return.Value) : InterpreterValue.Void;
 			throw new ReturnControlException(value);
 		}
 		else if (statement is IAnnotatedWhileStatementSyntax @while)

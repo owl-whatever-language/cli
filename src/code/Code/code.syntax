@@ -37,8 +37,7 @@ expression statement   : expression expression, token terminator
 if statement           : token keyword, token start, expression condition, token end, statement true_clause
 if_else statement      : token keyword, token start, expression condition, token end, statement true_clause, token else, statement false_clause
 while statement        : token keyword, token start, expression condition, token end, statement body
-return statement       : token keyword, token terminator
-value_return statement : token keyword, expression value, token terminator
+return statement       : token keyword, expression? value, token terminator
 
 ### Declarations
 variable_declaration statement        : type type, token name, token assignment, expression value, token terminator

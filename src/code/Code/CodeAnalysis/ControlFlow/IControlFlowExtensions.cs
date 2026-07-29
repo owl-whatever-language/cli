@@ -86,7 +86,7 @@ public static class IControlFlowExtensions
 				break;
 			}
 
-			if (last?.NodeEnum is SyntaxNodeEnum.ReturnStatement or SyntaxNodeEnum.ValueReturnStatement)
+			if (last?.NodeEnum is SyntaxNodeEnum.ReturnStatement)
 				return true;
 
 			return false;

@@ -18,7 +18,6 @@ public static class ExecutableSyntaxExtensions
 					case SyntaxNodeEnum.ExpressionStatement:
 					case SyntaxNodeEnum.VariableDeclarationStatement:
 					case SyntaxNodeEnum.ReturnStatement:
-					case SyntaxNodeEnum.ValueReturnStatement:
 						return true;
 
 					default:
