@@ -132,13 +132,7 @@ public sealed class DeclarationResolver : BaseConcreteToDeclaredTreeConverter, I
 			var signature = Convert(concrete.Signature);
 			var body = Convert(concrete.Body);
 
-			function.Return.Type = signature.Return switch
-			{
-				IDeclaredRegularFunctionReturnSyntax regular => regular.ReturnType.TypeInfo,
-				IDeclaredEmptyFunctionReturnSyntax => SpecialTypes.Void,
-
-				_ => ThrowHelper.ThrowInvalidOperationException<IType>($"Unhandled function return type {signature.Return.GetType().Name}"),
-			};
+			function.Return.Type = signature.Return?.ReturnType.TypeInfo ?? SpecialTypes.Void;
 
 			DeclaredFunctionDeclarationStatementSyntax declared = new(signature, body, function, scope);
 			function.Declaration = declared;
@@ -154,7 +148,7 @@ public sealed class DeclarationResolver : BaseConcreteToDeclaredTreeConverter, I
 		IDeclaredToken start = Convert(concrete.Start);
 		ISyntaxList<IDeclaredFunctionParameterSyntax, IDeclaredToken> parameters = Convert(concrete.Parameters);
 		IDeclaredToken end = Convert(concrete.End);
-		IDeclaredFunctionReturnSyntax @return = Convert(concrete.Return);
+		IDeclaredFunctionDeclarationReturnClauseSyntax? @return = Convert(concrete.Return);
 
 		return new(
 			keyword,

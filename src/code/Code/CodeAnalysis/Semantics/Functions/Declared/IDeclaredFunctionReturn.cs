@@ -3,7 +3,7 @@ namespace OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions.Declared;
 public interface IDeclaredFunctionReturn : IFunctionReturn
 {
 	#region Properties
-	IConcreteFunctionReturnSyntax Declaration { get; set; }
+	IConcreteFunctionDeclarationReturnClauseSyntax? Declaration { get; set; }
 	new IType Type { get; set; }
 	#endregion
 }
@@ -11,7 +11,7 @@ public interface IDeclaredFunctionReturn : IFunctionReturn
 public sealed class DeclaredFunctionReturn : IDeclaredFunctionReturn
 {
 	#region Properties
-	public IConcreteFunctionReturnSyntax Declaration
+	public IConcreteFunctionDeclarationReturnClauseSyntax? Declaration
 	{
 		get;
 		set
@@ -33,7 +33,7 @@ public sealed class DeclaredFunctionReturn : IDeclaredFunctionReturn
 	#endregion
 
 	#region Constructors
-	public DeclaredFunctionReturn(IConcreteFunctionReturnSyntax declaration)
+	public DeclaredFunctionReturn(IConcreteFunctionDeclarationReturnClauseSyntax? declaration)
 	{
 		Declaration = declaration;
 		Type = SpecialTypes.Unknown;

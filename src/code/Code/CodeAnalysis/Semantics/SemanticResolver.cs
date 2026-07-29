@@ -146,6 +146,13 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			return semantic;
 		}
 	}
+	protected override SemanticFunctionDeclarationReturnClauseSyntax ConvertCore(IDeclaredFunctionDeclarationReturnClauseSyntax declared)
+	{
+		var colon = Convert(declared.Colon);
+		var type = Convert(declared.ReturnType);
+
+		return new(colon, type, type.TypeInfo);
+	}
 	#endregion
 
 	#region Statements
@@ -160,8 +167,9 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		if (_currentFunction.Return.Type != SpecialTypes.Void && _currentFunction.Return.Type.IsNotError)
 		{
-			ReportIncompatibleType(semantic.Keyword, $"The function '{(_currentFunction.Name, ClassificationKind.Function)}' specifies a return type, so a return value was expected.")
-				.Add(_currentFunction.Declaration.Signature.Return, lines => lines.AddLine("This is where the function specifies the return type."));
+			Diagnostic diagnostic = ReportIncompatibleType(semantic.Keyword, $"The function '{(_currentFunction.Name, ClassificationKind.Function)}' specifies a return type, so a return value was expected.");
+			if (_currentFunction.Declaration.Signature.Return is not null)
+				diagnostic.Add(_currentFunction.Declaration.Signature.Return, lines => lines.AddLine("This is where the function specifies the return type."));
 		}
 
 		return semantic;
@@ -180,18 +188,25 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		if (ShouldReportIncompatibleType(valueType, targetType))
 		{
-			ReportIncompatibleType(declared.Value, $"A return value of the type '", valueType, "' cannot be assigned to the function's return type '", targetType, "'.")
-				.Add(_currentFunction.Declaration.Signature.Return, lines =>
+			Diagnostic diagnostic = ReportIncompatibleType(declared.Value, $"A return value of the type '", valueType, "' cannot be assigned to the function's return type '", targetType, "'.");
+
+			var signature = _currentFunction.Declaration.Signature;
+			if (signature.Return is not null)
+			{
+				diagnostic.Add(signature.Return, lines =>
 				{
-					if (targetType.IsVoid)
-					{
-						lines
-							.AddLine("If you want to return a value, specify the return type here like so:")
-							.AddLine($"{(_currentFunction.Name, ClassificationKind.Function)}(): ", targetType);
-					}
-					else
-						lines.AddLine("This is where you specified the '", targetType, "' return type.");
+					lines.AddLine("This is where you specified the '", targetType, "' return type.");
 				});
+			}
+			else
+			{
+				diagnostic.Add(signature.End, lines =>
+				{
+					lines
+						.AddLine("If you want to return a value, specify the return type here like so:")
+						.AddLine((_currentFunction.Name, ClassificationKind.Function), "(): ", valueType);
+				});
+			}
 		}
 
 		return semantic;
@@ -209,11 +224,14 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 
 		if (ShouldReportIncompatibleType(valueType, targetType))
 		{
-			ReportIncompatibleType(declared.Expression, $"A return value of the type '", valueType, "' cannot be assigned to the function's return type '", targetType, "'.")
-				.Add(_currentFunction.Declaration.Signature.Return, lines =>
+			Diagnostic diagnostic = ReportIncompatibleType(declared.Expression, $"A return value of the type '", valueType, "' cannot be assigned to the function's return type '", targetType, "'.");
+			if (_currentFunction.Declaration.Signature.Return is not null)
+			{
+				diagnostic.Add(_currentFunction.Declaration.Signature.Return, lines =>
 				{
 					lines.AddLine("This is where you specified the '", targetType, "' return type.");
 				});
+			}
 		}
 
 		return semantic;

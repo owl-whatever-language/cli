@@ -449,7 +449,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 		else
 			end = ExpectClosing(start, SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "end the function parameters");
 
-		IConcreteFunctionReturnSyntax @return = ParseFunctionReturn();
+		IConcreteFunctionDeclarationReturnClauseSyntax? @return = TryParseFunctionReturn();
 
 		return new(
 			keyword,
@@ -473,13 +473,13 @@ public sealed class Parser : BaseParser<IConcreteToken>
 
 		return new ConcreteRegularFunctionParameterSyntax(type, name);
 	}
-	private IConcreteFunctionReturnSyntax ParseFunctionReturn()
+	private ConcreteFunctionDeclarationReturnClauseSyntax? TryParseFunctionReturn()
 	{
 		if (Match(SyntaxKind.Colon, ClassificationKind.Punctuation, out IConcreteToken? colon) is false)
-			return new ConcreteEmptyFunctionReturnSyntax();
+			return null;
 
 		IConcreteTypeSyntax type = ParseType();
-		return new ConcreteRegularFunctionReturnSyntax(colon, type);
+		return new(colon, type);
 	}
 	private IConcreteFunctionBodySyntax ParseFunctionBody()
 	{

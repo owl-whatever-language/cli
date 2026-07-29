@@ -104,7 +104,7 @@ internal sealed class StructuredTreeInfo : IStructuredShadowedInfo<StructuredTre
 			return new StructuredSyntaxTypeInfo(Token.Interface.Name, Token.Class.Name, false);
 
 		if (key is "token?")
-			return new StructuredSyntaxTypeInfo(Token.Interface.Name + "?", Token.Class.Name + "?", true);
+			return new StructuredSyntaxTypeInfo(Token.Interface.Name, Token.Class.Name, true);
 
 		if (key.EndsWith("?") && Name.Keywords.Contains(key.Substring(0, key.Length - 1)))
 			return new StructuredTypeInfo(key);

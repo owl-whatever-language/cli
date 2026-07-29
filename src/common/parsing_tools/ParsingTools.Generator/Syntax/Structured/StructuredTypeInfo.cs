@@ -43,6 +43,12 @@ internal sealed class StructuredSyntaxTypeInfo : IStructuredSyntaxTypeInfo
 		InterfaceType = interfaceType;
 		ImplementationType = implementationType;
 		IsNullable = isNullable;
+
+		if (isNullable)
+		{
+			InterfaceType += "?";
+			implementationType += "?";
+		}
 	}
 	#endregion
 }

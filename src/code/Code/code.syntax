@@ -45,17 +45,15 @@ variable_declaration statement        : type type, token name, token assignment,
 variable_declaration @ declared       : IDeclaredLocalVariable variable
 
 #### Functions
-function_declaration_signature        : token? keyword, token name, token start, list<function_parameter, token> parameters, token end, function_return return
+function_declaration_return_clause    : token colon, type return_type
+function_declaration_return_clause @ semantic : IType type
+function_declaration_signature        : token? keyword, token name, token start, list<function_parameter, token> parameters, token end, function_declaration_return_clause? return
 function_declaration statement        : function_declaration_signature signature, function_body body
 function_declaration @ declared       : IDeclaredFunction function, ISymbolScope scope
 
 group function_parameter : token name
 function_parameter @ declared : IDeclaredFunctionParameter parameter
 regular function_parameter : type type
-
-group function_return
-empty function_return
-regular function_return : token colon, type return_type
 
 group function_body
 only_terminated function_body : token terminator
