@@ -1,5 +1,4 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.SemanticToken;
-using OwlDomain.Owl.Code.CodeAnalysis.Annotation.Flags;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
 
 namespace OwlDomain.Owl.LSP.Handlers;
