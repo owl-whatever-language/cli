@@ -439,7 +439,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 					nodes.Add(comma);
 					separators.Add(comma);
 				}
-				else if (IsCurrentAny(SyntaxKind.Semicolon, SyntaxKind.OpenBrace, SyntaxKind.EqualArrow)) // missing ')' but body started
+				else if (IsCurrentAny(SyntaxKind.Semicolon, SyntaxKind.OpenBrace, SyntaxKind.EqualArrow, SyntaxKind.Colon)) // missing ')' but body / return started
 					break;
 				else
 				{
@@ -779,10 +779,10 @@ public sealed class Parser : BaseParser<IConcreteToken>
 
 		while (RealisticHasRemaining && Current.Kind != SyntaxKind.CloseBracket)
 		{
-			using LoopGuardScope _ = LoopGuard();
-
 			if (Match(SyntaxKind.Comma, ClassificationKind.Punctuation, out IConcreteToken? comma) is false)
 				break;
+
+			using LoopGuardScope _ = LoopGuard();
 
 			nodes.Add(comma);
 			separators.Add(comma);
@@ -792,6 +792,8 @@ public sealed class Parser : BaseParser<IConcreteToken>
 			{
 				nodes.Add(argument);
 				arguments.Add(argument);
+
+				continue;
 			}
 			else if (complainedAboutComma is false)
 			{
@@ -801,10 +803,12 @@ public sealed class Parser : BaseParser<IConcreteToken>
 					.BuildError(this, "expected_argument")
 					.Add(comma, lines => lines.AddLine("Expected a function argument after this comma '", comma, "'."));
 			}
+
+			SkipCurrent();
 		}
 
 		ValidateNamedArguments(arguments);
-		IConcreteToken end = ExpectClosing(start, SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "End the function call");
+		IConcreteToken end = ExpectClosing(start, SyntaxKind.CloseBracket, ClassificationKind.Punctuation, ")", "end the function call");
 
 		return new(
 			expression,
