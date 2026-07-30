@@ -2,13 +2,13 @@ using CommunityToolkit.Diagnostics;
 using EmmyLua.LanguageServer.Framework.Protocol.Message.Completion;
 using OwlDomain.Owl.Code.CodeAnalysis.Parsing;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions;
+using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Loops;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callable;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
+using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Declared.Nodes;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.Expressions;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.FunctionArguments;
-using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Loops;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Declared.Nodes;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
