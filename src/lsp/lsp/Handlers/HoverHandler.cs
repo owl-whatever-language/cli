@@ -1,6 +1,7 @@
 using System.CodeDom.Compiler;
 using System.IO;
 using EmmyLua.LanguageServer.Framework.Protocol.Message.Hover;
+using OwlDomain.Owl.Code.CodeAnalysis.Passes.LocalCapture;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Loops;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
@@ -84,15 +85,36 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 	}
 	private void WriteHover(IndentedTextWriter writer, ISyntaxNode target)
 	{
-		if (target is IDeclaredToken token && token.Symbol is not null)
-			WriteDeclaration(writer, token.Symbol);
-		else if (target.TryGetDeclaredSymbol(out IDeclaredSymbol? symbol))
+		if (target.TryGetDeclaredSymbol(out IDeclaredSymbol? symbol))
 			WriteDeclaration(writer, symbol);
+		else if (target is IDeclaredToken token)
+		{
+			if (token.Symbol is IDeclaredSymbol declared)
+				WriteDeclaration(writer, declared);
+			else if (token.Symbol is not null)
+				WriteDeclaration(writer, token.Symbol);
+		}
 
 		if (target is IAnnotatedSyntaxNode node)
 			WriteAnnotations(writer, node);
 	}
 
+	private void WriteDeclaration(IndentedTextWriter writer, IDeclaredSymbol symbol)
+	{
+		if (symbol.Declaration is IAnnotatedFunctionDeclarationStatementSyntax function && function.Signature.Keyword is not null)
+		{
+			writer.WriteLine($"## Declaration (function)");
+
+			writer.WriteLine("```owl");
+			writer.WriteLine($"fun {symbol.GetDebugText().ToPlainText()}");
+			writer.WriteLine("```");
+			writer.WriteLine();
+
+			return;
+		}
+
+		WriteDeclaration(writer, (ISymbol)symbol);
+	}
 	private void WriteDeclaration(IndentedTextWriter writer, ISymbol symbol)
 	{
 		string? kind = symbol switch
@@ -121,14 +143,16 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 	private void WriteAnnotations(IndentedTextWriter writer, IAnnotatedSyntaxNode node)
 	{
 		TryWriteScopeDeclaration(writer, node);
+		TryWriteLocalCapture(writer, node);
 	}
+
 	private void TryWriteScopeDeclaration(IndentedTextWriter writer, IAnnotatedSyntaxNode node)
 	{
 		IReadOnlyCollection<ISymbol> symbols = GetDeclaredSymbols(node);
 		if (symbols.Count is 0)
 			return;
 
-		writer.WriteLine("### Scope declaration");
+		writer.WriteLine("### Declares");
 
 		foreach (ISymbol symbol in symbols)
 		{
@@ -184,6 +208,29 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 		}
 
 		return symbols;
+	}
+
+	private void TryWriteLocalCapture(IndentedTextWriter writer, IAnnotatedSyntaxNode node)
+	{
+		if (node is not IAnnotatedFunctionDeclarationStatementSyntax function)
+			return;
+
+		LocalCaptureAnnotation capture = function.GetLocalCapture();
+		if (capture.Variables.Any(v => v.Variable.Name is not null) is false)
+			return;
+
+		writer.WriteLine("### Captures");
+
+		foreach (IUsedVariableInfo usage in capture.Variables)
+		{
+			if (usage.Variable.Name is null)
+				continue;
+
+			writer.Write($"`{usage.Variable.Name}` ");
+		}
+
+		writer.WriteLine();
+		writer.WriteLine();
 	}
 	#endregion
 }
