@@ -6,6 +6,10 @@ namespace OwlDomain.Owl.LSP.Handlers;
 
 internal sealed class InlayHintHandler(ILspContext context) : InlayHintHandlerBase
 {
+	#region Constants
+	private const string ReplaceWithLexeme = "replace_with_lexeme";
+	#endregion
+
 	#region Fields
 	private readonly ILspContext _context = context;
 	#endregion
@@ -18,13 +22,38 @@ internal sealed class InlayHintHandler(ILspContext context) : InlayHintHandlerBa
 			ResolveProvider = true
 		};
 	}
-	protected override Task<InlayHint> Resolve(InlayHint request, CancellationToken cancellationToken) => Task.FromResult(request);
+	protected override Task<InlayHint> Resolve(InlayHint request, CancellationToken cancellationToken)
+	{
+		if (request.Data?.Value as string == ReplaceWithLexeme && request.Label.String is string label)
+		{
+			if (request.PaddingLeft is true)
+				label = " " + label;
+
+			if (request.PaddingRight is true)
+				label += " ";
+
+			request.TextEdits ??= [];
+			request.TextEdits.Add(new()
+			{
+				Range = new(request.Position, request.Position),
+				NewText = label
+			});
+		}
+
+		return Task.FromResult(request);
+	}
 	protected override Task<InlayHintResponse?> Handle(InlayHintParams request, CancellationToken cancellationToken)
 	{
 		List<InlayHint> hints = [];
 
 		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult<InlayHintResponse?>(new(hints));
+
+		// Note(Nightowl): 
+		// This is a cool idea, but disable it for now since it makes writing the code very confusing.
+		// Perhaps it could be added back in later on, when adding a debounce on the text edits to 
+		// make this only show up when not actively typing...
+		// AddMissingTokens(hints, tree);
 
 		foreach (var argument in tree.Document.Flatten<IAnnotatedRegularFunctionArgumentSyntax>())
 		{
@@ -38,6 +67,7 @@ internal sealed class InlayHintHandler(ILspContext context) : InlayHintHandlerBa
 				Position = argument.ToLspPosition.Start,
 				PaddingRight = true,
 				Label = $"{name}:",
+				Data = ReplaceWithLexeme
 			};
 
 			hints.Add(hint);
@@ -49,8 +79,8 @@ internal sealed class InlayHintHandler(ILspContext context) : InlayHintHandlerBa
 			{
 				Kind = InlayHintKind.Type,
 				Position = signature.End.ToLspPosition.End,
-				PaddingLeft = true,
 				Label = ": void",
+				// Data = ReplaceWithLexeme // Note(Nightowl): Don't allow replacing this yet since typing void as a type isn't actually supported yet;
 			};
 
 			hints.Add(hint);
@@ -61,15 +91,60 @@ internal sealed class InlayHintHandler(ILspContext context) : InlayHintHandlerBa
 			InlayHint hint = new()
 			{
 				Position = label.ToLspPosition.Start,
-				PaddingLeft = true,
 				Label = ": loop",
 			};
 
 			hints.Add(hint);
 		}
 
-
 		return Task.FromResult<InlayHintResponse?>(new(hints));
+	}
+	#endregion
+
+	#region Helpers
+	private static void AddMissingTokens(List<InlayHint> hints, ICodeSyntaxTree tree)
+	{
+		foreach (var token in tree.Document.Flatten<ISyntaxToken>(token => token.IsFabricated))
+		{
+			if (token.Parent is IConcreteLoopLabelClauseSyntax)
+				continue;
+
+			string? lexeme = GetMissingLexeme(token.Kind);
+
+			if (lexeme is null)
+				continue;
+
+			InlayHint hint = new()
+			{
+				Position = token.ToLspPosition.Start,
+				Label = lexeme,
+				Data = ReplaceWithLexeme
+			};
+
+			hints.Add(hint);
+		}
+	}
+	private static string? GetMissingLexeme(SyntaxKind kind)
+	{
+		if (kind == SyntaxKind.Semicolon)
+			return ";";
+
+		if (kind == SyntaxKind.EqualSign)
+			return "=";
+
+		if (kind == SyntaxKind.OpenBracket)
+			return "(";
+
+		if (kind == SyntaxKind.CloseBracket)
+			return ")";
+
+		if (kind == SyntaxKind.OpenBrace)
+			return "{";
+
+		if (kind == SyntaxKind.CloseBrace)
+			return "}";
+
+		return null;
 	}
 	#endregion
 }
