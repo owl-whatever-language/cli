@@ -56,6 +56,7 @@ public sealed class UnknownType : SpecialType<UnknownType>
 	public override bool Equals([NotNullWhen(true)] IType? other) => false;
 	public override bool Equals([NotNullWhen(true)] object? obj) => false;
 	public override int GetHashCode() => base.GetHashCode();
+	public override TextFragmentCollection GetDebugText() => [new($"<{Name}>", Classification)];
 	#endregion
 }
 
@@ -70,6 +71,7 @@ public sealed class ErrorType : SpecialType<ErrorType>
 	public override bool Equals([NotNullWhen(true)] IType? other) => false;
 	public override bool Equals([NotNullWhen(true)] object? obj) => false;
 	public override int GetHashCode() => base.GetHashCode();
+	public override TextFragmentCollection GetDebugText() => [new($"<{Name}>", Classification)];
 	#endregion
 }
 

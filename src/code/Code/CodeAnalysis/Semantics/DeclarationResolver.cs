@@ -222,7 +222,7 @@ public sealed class DeclarationResolver : BaseConcreteToDeclaredTreeConverter, I
 	protected override DeclaredRegularTypeSyntax ConvertCore(IConcreteRegularTypeSyntax concrete)
 	{
 		INamedType? type = GetSingle<INamedType>(concrete.Name, "type", "types");
-		var name = Convert(concrete.Name, type);
+		var name = Convert(concrete.Name, type?.Classification ?? concrete.Name.Classification, type);
 
 		return new(
 			name,
@@ -230,7 +230,18 @@ public sealed class DeclarationResolver : BaseConcreteToDeclaredTreeConverter, I
 			(IType?)type ?? SpecialTypes.Error);
 	}
 	protected override DeclaredEmptyTypeSyntax ConvertCore(IConcreteEmptyTypeSyntax concrete) => new(SpecialTypes.Error);
-	protected override DeclaredNestedTypeSyntax ConvertCore(IConcreteNestedTypeSyntax concrete) => throw new NotImplementedException();
+	protected override DeclaredNestedTypeSyntax ConvertCore(IConcreteNestedTypeSyntax concrete)
+	{
+		var left = Convert(concrete.Left);
+		var dot = Convert(concrete.Dot);
+		var name = Convert(concrete.Name, ClassificationKind.Type, Symbol.Unknown);
+
+		Diagnostics
+			.BuildError(this, "nested_types_not_supported")
+			.Add(dot, lines => lines.AddLine("Accessing nested types is not yet supported."));
+
+		return new(left, dot, name, SpecialTypes.Error);
+	}
 	protected override DeclaredGenericTypeSyntax ConvertCore(IConcreteGenericTypeSyntax concrete) => throw new NotImplementedException();
 	#endregion
 

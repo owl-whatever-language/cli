@@ -42,17 +42,7 @@ public abstract class BaseSyntaxToken : ISyntaxToken
 
 	/// <inheritdoc/>
 	[DisallowNull]
-	public ISyntaxNode? Parent
-	{
-		get;
-		set
-		{
-			if (field is not null)
-				ThrowHelper.ThrowInvalidOperationException("The parent node has already been set.");
-
-			field = value;
-		}
-	}
+	public ISyntaxNode? Parent { get; set; }
 
 	/// <inheritdoc/>
 	public IndexedPositionRange Position { get; }

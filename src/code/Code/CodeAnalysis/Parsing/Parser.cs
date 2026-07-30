@@ -245,13 +245,19 @@ public sealed class Parser : BaseParser<IConcreteToken>
 	{
 		return
 			TryParseOnlyTerminatedStatement() ??
+			TryParseBlockStatement() ??
+			TryParseKeywordStatement() ??
+			TryParseExpressionStatement()
+		;
+	}
+	private IConcreteStatementSyntax? TryParseKeywordStatement()
+	{
+		return
 			TryParseLocalFunctionDeclaration() ??
 			TryParseIfStatement() ??
 			TryParseWhileStatement() ??
-			TryParseBlockStatement() ??
-			TryParseVariableDeclaration() ??
-			TryParseReturnStatement() ??
-			TryParseExpressionStatement();
+			TryParseReturnStatement()
+		;
 	}
 	#endregion
 
@@ -277,19 +283,17 @@ public sealed class Parser : BaseParser<IConcreteToken>
 		if (TryParseExpression(out IConcreteExpressionSyntax? expression) is false)
 			return null;
 
+		if (Current?.Kind == SyntaxKind.Identifier && Next?.Kind == SyntaxKind.EqualSign)
+		{
+			if (TryConvertToType(expression, out IConcreteTypeSyntax? type))
+				return ParseVariableDeclaration(type);
+		}
 
 		IConcreteToken terminator = ExpectStatementTerminator(expression);
 		return new ConcreteExpressionStatementSyntax(expression, terminator);
 	}
-	private IConcreteStatementSyntax? TryParseVariableDeclaration()
+	private IConcreteStatementSyntax ParseVariableDeclaration(IConcreteTypeSyntax type)
 	{
-		// Todo(Nightowl): Currently this is the easiest approach, but parser needs to be able to distinguish handle the ambiguity better;
-		if ((Current?.Kind == SyntaxKind.Identifier && Next?.Kind == SyntaxKind.Identifier) is false)
-			return null;
-
-		if (TryParseType(out IConcreteTypeSyntax? type) is false)
-			return null;
-
 		IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Variable, "Expected the name of the new variable.");
 		IConcreteToken assignment = Expect(SyntaxKind.EqualSign, ClassificationKind.Punctuation, "=", "separate the variable name and its value");
 
@@ -549,6 +553,49 @@ public sealed class Parser : BaseParser<IConcreteToken>
 			return null;
 
 		return new ConcreteBlockFunctionBodySyntax(block);
+	}
+	#endregion
+
+	#region Type conversion methods
+	private bool TryConvertToType(IConcreteExpressionSyntax expression, [NotNullWhen(true)] out IConcreteTypeSyntax? type)
+	{
+		if (CanConvertToType(expression))
+		{
+			type = ConvertToType(expression);
+			return true;
+		}
+
+		type = default;
+		return false;
+	}
+	private bool CanConvertToType(IConcreteExpressionSyntax expression)
+	{
+		return expression switch
+		{
+			IConcreteGetExpressionSyntax => true,
+			IConcreteMemberAccessExpressionSyntax => true,
+
+			_ => false,
+		};
+	}
+	private IConcreteTypeSyntax ConvertToType(IConcreteExpressionSyntax expression)
+	{
+		return expression switch
+		{
+			IConcreteGetExpressionSyntax get => ConvertToType(get),
+			IConcreteMemberAccessExpressionSyntax access => ConvertToType(access),
+
+			_ => ThrowHelper.ThrowArgumentException<IConcreteTypeSyntax>($"Unhandled expression type ({expression.GetType().Name}).")
+		};
+	}
+	private ConcreteRegularTypeSyntax ConvertToType(IConcreteGetExpressionSyntax expression)
+	{
+		return new(expression.Name);
+	}
+	private ConcreteNestedTypeSyntax ConvertToType(IConcreteMemberAccessExpressionSyntax expression)
+	{
+		var left = ConvertToType(expression.Expression);
+		return new(left, expression.Dot, expression.Name);
 	}
 	#endregion
 
