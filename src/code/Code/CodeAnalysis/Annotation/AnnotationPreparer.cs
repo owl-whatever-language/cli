@@ -237,6 +237,17 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 	}
 	#endregion
 
+	#region Methods
+	protected override AnnotatedBinaryExpressionSyntax ConvertCore(ISemanticBinaryExpressionSyntax semantic)
+	{
+		var left = Convert(semantic.Left);
+		var op = Convert(semantic.Operator, semantic.Operation?.AsFunction);
+		var right = Convert(semantic.Right);
+
+		return new(left, op, right, semantic.ResultType, semantic.Operation);
+	}
+	#endregion
+
 	#region Scope helpers
 	private DelegateScope EnterScope(ISemanticSyntaxNode declaration, out IMutableDeclaredSymbolScope scope)
 	{

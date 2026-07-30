@@ -381,6 +381,7 @@ public sealed class SemanticResolver : BaseDeclaredToSemanticTreeConverter, IDia
 			left.ResultType.FindOperation(left.ResultType, right.ResultType, kind) ??
 			right.ResultType.FindOperation(left.ResultType, right.ResultType, kind)
 		;
+
 		TryReportUnknownOperator("binary expression", op, operation, left.ResultType, right.ResultType);
 
 		return new(left, op, right, operation, operation?.Result ?? SpecialTypes.Error);

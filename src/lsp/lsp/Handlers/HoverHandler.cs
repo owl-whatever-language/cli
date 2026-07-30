@@ -7,11 +7,11 @@ using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated.FunctionBodies;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated.Nodes;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated.Statements;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Declared.Nodes;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Declared.Statements;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.Expressions;
+using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.FunctionBodies;
+using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Nodes;
+using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Statements;
+using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Declared;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -31,21 +31,18 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult<HoverResponse?>(null);
 
-		ISyntaxToken? token = tree.Document.Search<ISyntaxToken>(request.Position);
-		if (token is null)
+		ISyntaxNode? target = tree.Document.Search<ISyntaxToken>(request.Position);
+		if (target is null)
 			return Task.FromResult<HoverResponse?>(null);
 
-		ISymbol? symbol = token.Symbol;
 
-		if (symbol is null && token.Parent is ISemanticBinaryExpressionSyntax binary && binary.Operator == token)
-			symbol = binary.Operation?.AsFunction;
-		else if (symbol is null && token.Parent is IDeclaredFunctionDeclarationSignatureSyntax signature && signature.Keyword == token)
-			symbol = ((IDeclaredFunctionDeclarationStatementSyntax?)signature.Parent)?.Function;
+		target = CorrectTarget(target);
+
 
 		using (StringWriter stringWriter = new())
 		using (IndentedTextWriter writer = new(stringWriter, "  "))
 		{
-			WriteHover(writer, token, symbol);
+			WriteHover(writer, target);
 
 			string output = stringWriter.ToString();
 			if (string.IsNullOrWhiteSpace(output) is false)
@@ -66,12 +63,33 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 	#endregion
 
 	#region Helpers
-	private void WriteHover(IndentedTextWriter writer, ISyntaxToken token, ISymbol? symbol)
+	private ISyntaxNode CorrectTarget(ISyntaxNode target)
 	{
-		if (symbol is not null)
+		if (target is ISyntaxToken token)
+		{
+			if (token.Parent is IConcreteWhileStatementSyntax)
+				return token.Parent;
+
+			if (token.Parent is IConcreteVariableDeclarationStatementSyntax)
+				return token.Parent;
+
+			if (token.Parent is IConcreteFunctionDeclarationSignatureSyntax signature && signature.Parent is not null)
+				return signature.Parent;
+
+			if (token.Parent is IConcreteFunctionBodySyntax body && body.Parent is not null)
+				return body.Parent;
+		}
+
+		return target;
+	}
+	private void WriteHover(IndentedTextWriter writer, ISyntaxNode target)
+	{
+		if (target is IDeclaredToken token && token.Symbol is not null)
+			WriteDeclaration(writer, token.Symbol);
+		else if (target.TryGetDeclaredSymbol(out IDeclaredSymbol? symbol))
 			WriteDeclaration(writer, symbol);
 
-		if (token is IAnnotatedSyntaxNode node)
+		if (target is IAnnotatedSyntaxNode node)
 			WriteAnnotations(writer, node);
 	}
 
@@ -142,27 +160,19 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 
 		TryAddScope(node);
 
+		if (node is IAnnotatedWhileStatementSyntax @while)
+			TryAddScope(@while.Body);
+		else if (node is IAnnotatedFunctionDeclarationStatementSyntax function)
+		{
+			if (function.Body is IAnnotatedBlockFunctionBodySyntax body)
+				TryAddScope(body.Block);
+			else
+				TryAddScope(function.Body);
+		}
+
 		if (node is IAnnotatedToken token)
 		{
-			if (token.IsDeclarationName() && token.Symbol is IDeclaredSymbol declared && declared is IAnnotatedSyntaxNode typed)
-				TryAddScope(typed);
-
-			if (token.Parent is IAnnotatedWhileStatementSyntax @while && token == @while.Keyword)
-				TryAddScope(@while.Body);
-
-			else if (token.Parent is IAnnotatedFunctionDeclarationSignatureSyntax signature && (token == signature.Keyword || token == signature.Name))
-			{
-				var function = (IAnnotatedFunctionDeclarationStatementSyntax?)signature.Parent;
-				Debug.Assert(function is not null);
-
-				TryAddScope(function);
-
-				if (function.Body is IAnnotatedBlockFunctionBodySyntax body)
-					TryAddScope(body.Block);
-				else
-					TryAddScope(function.Body);
-			}
-			else if (token.Parent is IAnnotatedIfStatementSyntax @if && @if.Keyword == token)
+			if (token.Parent is IAnnotatedIfStatementSyntax @if && @if.Keyword == token)
 				TryAddScope(@if.TrueClause);
 			else if (token.Parent is IAnnotatedIfElseStatementSyntax @ifElse)
 			{
