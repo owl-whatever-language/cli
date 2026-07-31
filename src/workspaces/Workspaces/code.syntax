@@ -1,0 +1,13 @@
+namespace: OwlDomain.Owl.Workspaces.CodeAnalysis.Syntax
+
+# Define the shadowing order
+shadow: concrete
+
+# Define what's on each token
+token concrete:
+
+# Define what's on each node in the tree
+tree concrete:
+
+# Define the root node in the tree
+document: token end_of_input
