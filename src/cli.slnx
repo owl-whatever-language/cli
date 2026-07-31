@@ -9,6 +9,9 @@
 		<Project Path="common/parsing_tools/ParsingTools.Tests/ParsingTools.Tests.csproj" />
 		<Project Path="common/parsing_tools/ParsingTools/ParsingTools.csproj" />
 	</Folder>
+	<Folder Name="/compiler/">
+		<Project Path="compiler/Compiler/Compiler.csproj" />
+	</Folder>
 	<!--
 	<Folder Name="/local/">
 		<Project Path="local/Playground/Playground.csproj" />
