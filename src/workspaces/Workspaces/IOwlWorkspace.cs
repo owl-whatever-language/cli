@@ -181,7 +181,12 @@ public sealed class OwlWorkspace : IOwlWorkspace
 	{
 		using (_lock.WriteLock())
 		{
-			_lastCodeUpdate = _codeContext.Update(_added, _removed, _changed);
+			_lastCodeUpdate = _codeContext.Update(new()
+			{
+				Added = _added,
+				Removed = _removed,
+				Changed = _changed
+			});
 
 			_added.Clear();
 			_removed.Clear();
@@ -198,7 +203,7 @@ public static class IOwlWorkspaceExtensions
 		#region Methods
 		public bool TryGetCodeBundle(ISourceFile source, [NotNullWhen(true)] out Code.Syntax.ISyntaxTreeBundle? bundle)
 		{
-			if (workspace.CodeContext.TryGet(source, out bundle) && bundle.LeastDetailed is not null)
+			if (Code.IAnalysisContextExtensions.TryGet(workspace.CodeContext, source, out bundle) && bundle.LeastDetailed is not null)
 				return true;
 
 			bundle = default;
@@ -206,7 +211,7 @@ public static class IOwlWorkspaceExtensions
 		}
 		public bool TryGetTree(ISourceFile source, [NotNullWhen(true)] out Code.Syntax.Concrete.IConcreteSyntaxTree? tree)
 		{
-			if (workspace.CodeContext.TryGet(source, out Code.Syntax.ISyntaxTreeBundle? bundle) && bundle.LeastDetailed is not null)
+			if (Code.IAnalysisContextExtensions.TryGet(workspace.CodeContext, source, out Code.Syntax.ISyntaxTreeBundle? bundle) && bundle.LeastDetailed is not null)
 			{
 				tree = bundle.LeastDetailed;
 				return true;

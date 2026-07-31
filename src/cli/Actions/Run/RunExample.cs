@@ -45,7 +45,7 @@ public class RunExample : Command
 
 			BuiltinResolutionResult builtinResult = BuiltinResolver.Resolve();
 			AnalysisContext context = new(builtinResult.ResultScope);
-			AnalysisUpdateResult analysis = context.Update(added: [source]);
+			AnalysisUpdateResult analysis = context.Update(new() { Added = [source] });
 
 			List<IStageResult> results = [builtinResult, analysis];
 

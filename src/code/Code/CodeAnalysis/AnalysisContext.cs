@@ -1,5 +1,59 @@
 namespace OwlDomain.Owl.Code.CodeAnalysis;
 
+public interface IAnalysisContext
+{
+	#region Properties
+	IReadOnlyCollection<ISyntaxTreeBundle> Bundles { get; }
+	#endregion
+}
+
+public interface IMutableAnalysisContext : IAnalysisContext
+{
+	#region Methods
+	IMutableAnalysisContext RegisterPass(IAnalysisPass pass);
+	AnalysisUpdateResult Update(AnalysisUpdate update);
+	#endregion
+}
+
+public static class IAnalysisContextExtensions
+{
+	extension(IAnalysisContext context)
+	{
+		#region Properties
+		public IReadOnlyCollection<IConcreteSyntaxTree> Trees => context.Bundles.GetAvailableTrees().ToArray();
+		public IReadOnlyCollection<IAnnotatedSyntaxTree> Annotated => context.Bundles.GetMostDetailedTrees().ToArray();
+		#endregion
+
+		#region Methods
+		public bool TryGet(ISourceFile source, [NotNullWhen(true)] out ISyntaxTreeBundle? bundle)
+		{
+			foreach (ISyntaxTreeBundle current in context.Bundles)
+			{
+				if (current.Source == source)
+				{
+					bundle = current;
+					return true;
+				}
+			}
+
+			bundle = default;
+			return false;
+		}
+		#endregion
+	}
+	extension(IMutableAnalysisContext context)
+	{
+		#region Methods
+		public IMutableAnalysisContext RegisterPass<T>() where T : notnull, IAnalysisPass, new()
+		{
+			T pass = new();
+			return context.RegisterPass(pass);
+		}
+		#endregion
+	}
+}
+
+
 public sealed class AnalysisUpdateResult : IStageResultDiagnostics, IStageResultPerformance, IStageResultParent
 {
 	#region Properties
@@ -7,45 +61,67 @@ public sealed class AnalysisUpdateResult : IStageResultDiagnostics, IStageResult
 	public IDiagnosticBag Diagnostics { get; }
 	public IPerformanceResult Performance { get; }
 	public IReadOnlyCollection<IStageResult> Children { get; }
+	public ParallelParsingResult Parsing { get; }
+	public SemanticResultGroup Semantics { get; }
+	public ParallelAnnotationPreparingResult Annotations { get; }
+	public AnalysisPassResultGroup? Passes { get; }
 	#endregion
 
 	#region Constructors
 	public AnalysisUpdateResult(
 		IDiagnosticBag diagnostics,
 		IPerformanceResult performance,
-		params IReadOnlyCollection<IStageResult> children)
+		ParallelParsingResult parsing,
+		SemanticResultGroup semantics,
+		ParallelAnnotationPreparingResult annotations,
+		AnalysisPassResultGroup? passes)
 	{
 		Diagnostics = diagnostics;
 		Performance = performance;
-		Children = children;
+
+		Children = passes is not null ? [parsing, semantics, annotations, passes] : [parsing, semantics, annotations];
+
+		Parsing = parsing;
+		Semantics = semantics;
+		Annotations = annotations;
+		Passes = passes;
 	}
 	#endregion
 }
 
-public delegate void AnalysisStageCompleteDelegate(AnalysisContext context, IStageResult result);
-
-public interface IAnalysisContext
+public readonly struct AnalysisUpdate
 {
 	#region Properties
-	IReadOnlyCollection<IAnnotatedSyntaxTree> Annotated { get; }
-	#endregion
-
-	#region Methods
-	bool TryGet(ISourceFile source, [NotNullWhen(true)] out ISyntaxTreeBundle? bundle);
+	public IReadOnlyCollection<ISourceFile> Removed
+	{
+		get => field ?? [];
+		init;
+	}
+	public IReadOnlyCollection<ISourceFile> Added
+	{
+		get => field ?? [];
+		init;
+	}
+	public IReadOnlyCollection<ISourceFile> Changed
+	{
+		get => field ?? [];
+		init;
+	}
 	#endregion
 }
 
-public sealed class AnalysisContext : IAnalysisContext
+public sealed class AnalysisContext : IMutableAnalysisContext
 {
 	#region Fields
-	private readonly Dictionary<ISourceFile, SyntaxTreeBundle> _trees = [];
+	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+	private readonly Dictionary<ISourceFile, SyntaxTreeBundle> _bundles = [];
 	private readonly Dictionary<ISourceFile, IDiagnosticBag> _parsingDiagnostics = [];
 	private readonly List<IAnalysisPass> _passes = [];
 	#endregion
 
 	#region Properties
 	public ISymbolScope BaseScope { get; }
-	public IEnumerable<ISyntaxTreeBundle> Bundles => _trees.Values;
+	public IReadOnlyCollection<ISyntaxTreeBundle> Bundles => _bundles.Values;
 	public IEnumerable<IConcreteSyntaxTree> Trees => Bundles.GetAvailableTrees();
 	public IReadOnlyCollection<IConcreteSyntaxTree> Concrete => Bundles.GetConcreteTrees().ToArray();
 	public IReadOnlyCollection<IDeclaredSyntaxTree> Declared => Bundles.GetDeclaredTrees().ToArray();
@@ -59,76 +135,39 @@ public sealed class AnalysisContext : IAnalysisContext
 		BaseScope = baseScope;
 
 		// Note(Nightowl): Preamble;
-		RegisterPass<ControlFlow.ControlFlowAnalyser>();
+		this.RegisterPass<ControlFlow.ControlFlowAnalyser>();
 
 		// Note(Nightowl): Annotators;
-		RegisterPass<Passes.LocalCapture.LocalCaptureAnnotator>();
+		this.RegisterPass<Passes.LocalCapture.LocalCaptureAnnotator>();
 
 		// Note(Nightowl): Checkers;
-		RegisterPass<Passes.LocalCapture.LocalCaptureChecker>();
-		RegisterPass<Passes.EntryPoint.EntryPointAnalyser>();
+		this.RegisterPass<Passes.LocalCapture.LocalCaptureChecker>();
+		this.RegisterPass<Passes.EntryPoint.EntryPointAnalyser>();
 	}
 	#endregion
 
 	#region Methods
-	public bool TryGet(ISourceFile source, [NotNullWhen(true)] out ISyntaxTreeBundle? bundle)
+	public AnalysisUpdateResult Update(AnalysisUpdate update)
 	{
-		if (_trees.TryGetValue(source, out SyntaxTreeBundle? typed))
-		{
-			bundle = typed;
-			return true;
-		}
-
-		bundle = default;
-		return false;
-	}
-
-	public AnalysisContext RegisterPass(IAnalysisPass pass)
-	{
-		_passes.Add(pass);
-		return this;
-	}
-	public AnalysisContext RegisterPass<T>() where T : notnull, IAnalysisPass, new()
-	{
-		T pass = new();
-		_passes.Add(pass);
-
-		return this;
-	}
-
-	public AnalysisUpdateResult Update(
-		IReadOnlyCollection<ISourceFile>? added = null,
-		IReadOnlyCollection<ISourceFile>? removed = null,
-		IReadOnlyCollection<ISourceFile>? changed = null,
-		AnalysisStageCompleteDelegate? stageCompleteCallback = null)
-	{
-		added ??= [];
-		removed ??= [];
-		changed ??= [];
-
 		using PerformanceScope _ = PerformanceResult.Scope(out IPerformanceResult performance);
 
-		foreach (ISourceFile file in removed)
+		foreach (ISourceFile file in update.Removed)
 		{
-			_trees.Remove(file);
+			_bundles.Remove(file);
 			_parsingDiagnostics.Remove(file);
 		}
 
-		foreach (ISourceFile file in added)
+		foreach (ISourceFile file in update.Added)
 		{
 			SyntaxTreeBundle bundle = new(file);
-			_trees.Add(file, bundle);
+			_bundles.Add(file, bundle);
 		}
 
-		HashSet<ISourceFile> toReparse = [.. added, .. changed];
-		ParallelParsingResult parsing = Parse(stageCompleteCallback, toReparse);
-		SemanticResultGroup semantics = RunSemanticGroup(stageCompleteCallback, out ISymbolScope userScope);
-		ParallelAnnotationPreparingResult annotations = PrepareAnnotations(stageCompleteCallback, userScope);
-
-		List<IStageResult> results = [parsing, semantics, annotations];
-
-		if (TryRunPasses(out AnalysisPassResultGroup? passResults))
-			results.Add(passResults);
+		HashSet<ISourceFile> toReparse = [.. update.Added, .. update.Changed];
+		ParallelParsingResult parsing = Parse(toReparse);
+		SemanticResultGroup semantics = RunSemanticGroup(out ISymbolScope userScope);
+		ParallelAnnotationPreparingResult annotations = PrepareAnnotations(userScope);
+		AnalysisPassResultGroup? passes = TryRunPasses();
 
 		DiagnosticBag diagnostics = _parsingDiagnostics.Values.Combine();
 
@@ -136,91 +175,87 @@ public sealed class AnalysisContext : IAnalysisContext
 		foreach (LexingAndParsingResult result in parsing.GetByFile().Values)
 			_parsingDiagnostics.Add(result.Source, result.GetAllDiagnostics());
 
-		return new(diagnostics, performance, results);
+		return new(diagnostics, performance, parsing, semantics, annotations, passes);
 	}
-	private ParallelParsingResult Parse(AnalysisStageCompleteDelegate? callback, IReadOnlyCollection<ISourceFile> files)
+
+	private ParallelParsingResult Parse(IReadOnlyCollection<ISourceFile> files)
 	{
 		ParallelParsingResult result = Parser.Parse(files);
 		foreach (LexingAndParsingResult current in result.GetByFile().Values)
 		{
 			_parsingDiagnostics.Remove(current.Source);
 
-			SyntaxTreeBundle bundle = _trees[current.Source];
+			SyntaxTreeBundle bundle = _bundles[current.Source];
 			bundle.Concrete = current.Parsing.Tree;
 		}
 
-		callback?.Invoke(this, result);
 		return result;
 	}
-	private DeclarationDiscoveryResult DiscoverDeclarations(AnalysisStageCompleteDelegate? callback, out ISymbolScope userScope)
+	private DeclarationDiscoveryResult DiscoverDeclarations(out ISymbolScope userScope)
 	{
 		DeclarationDiscoveryResult result = DeclarationFinder.Discover(BaseScope, Concrete);
 		userScope = result.ResultScope;
 
-		callback?.Invoke(this, result);
 		return result;
 	}
-	private ParallelDeclarationResolutionResult ResolveSymbols(AnalysisStageCompleteDelegate? callback, ISymbolScope userScope)
+	private ParallelDeclarationResolutionResult ResolveSymbols(ISymbolScope userScope)
 	{
 		ParallelDeclarationResolutionResult result = DeclarationResolver.Resolve(userScope, Concrete);
 		foreach (IDeclaredSyntaxTree tree in result.Trees)
 		{
-			SyntaxTreeBundle bundle = _trees[tree.Source];
+			SyntaxTreeBundle bundle = _bundles[tree.Source];
 			bundle.Declared = tree;
 		}
 
-		callback?.Invoke(this, result);
 		return result;
 	}
-	private ParallelSemanticResolutionResult ResolveSemantics(AnalysisStageCompleteDelegate? callback, ISymbolScope userScope)
+	private ParallelSemanticResolutionResult ResolveSemantics(ISymbolScope userScope)
 	{
 		ParallelSemanticResolutionResult result = SemanticResolver.Resolve(userScope, Declared);
 		foreach (ISemanticSyntaxTree tree in result.Trees)
 		{
-			SyntaxTreeBundle bundle = _trees[tree.Source];
+			SyntaxTreeBundle bundle = _bundles[tree.Source];
 			bundle.Semantic = tree;
 		}
 
-		callback?.Invoke(this, result);
 		return result;
 	}
-	private SemanticResultGroup RunSemanticGroup(AnalysisStageCompleteDelegate? callback, out ISymbolScope userScope)
+	private SemanticResultGroup RunSemanticGroup(out ISymbolScope userScope)
 	{
-		SemanticResultGroup result;
 		using (PerformanceResult.Scope(out IPerformanceResult semanticPerformance))
 		{
-			DeclarationDiscoveryResult declarations = DiscoverDeclarations(callback, out userScope);
-			ParallelDeclarationResolutionResult symbols = ResolveSymbols(callback, userScope);
-			ParallelSemanticResolutionResult semantics = ResolveSemantics(callback, userScope);
+			DeclarationDiscoveryResult declarations = DiscoverDeclarations(out userScope);
+			ParallelDeclarationResolutionResult symbols = ResolveSymbols(userScope);
+			ParallelSemanticResolutionResult semantics = ResolveSemantics(userScope);
 
-			result = new(semanticPerformance, declarations, symbols, semantics);
+			return new(semanticPerformance, declarations, symbols, semantics);
 		}
-
-		callback?.Invoke(this, result);
-		return result;
 	}
-	private ParallelAnnotationPreparingResult PrepareAnnotations(AnalysisStageCompleteDelegate? callback, ISymbolScope userScope)
+	private ParallelAnnotationPreparingResult PrepareAnnotations(ISymbolScope userScope)
 	{
 		ParallelAnnotationPreparingResult result = AnnotationPreparer.Prepare(userScope, Semantic);
 		foreach (IAnnotatedSyntaxTree tree in result.Trees)
 		{
-			SyntaxTreeBundle bundle = _trees[tree.Source];
+			SyntaxTreeBundle bundle = _bundles[tree.Source];
 			bundle.Annotated = tree;
 		}
 
-		callback?.Invoke(this, result);
 		return result;
 	}
-	private bool TryRunPasses([NotNullWhen(true)] out AnalysisPassResultGroup? result)
+	#endregion
+
+	#region Pass methods
+	public IMutableAnalysisContext RegisterPass(IAnalysisPass pass)
+	{
+		_passes.Add(pass);
+		return this;
+	}
+	private AnalysisPassResultGroup? TryRunPasses()
 	{
 		if (_passes.Any())
-		{
-			result = RunPasses();
-			return true;
-		}
+			return RunPasses();
 
-		result = default;
-		return false;
+		return default;
 	}
 	private AnalysisPassResultGroup RunPasses()
 	{
@@ -237,5 +272,6 @@ public sealed class AnalysisContext : IAnalysisContext
 			return new(performance, results);
 		}
 	}
+
 	#endregion
 }
