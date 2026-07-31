@@ -1,0 +1,13 @@
+type: package // package type will maybe be implied in the future
+id: owl.standard
+
+uses {
+	// version of each package can be implied:
+	// - If in the same workspace then it's the current version
+	// - Otherwise the workspace (and potentially directory configuration formats?) will be checked for the version
+	// - Not sure what other version resolution attempts there will be.
+
+	// The core package is a special package type, hence it can be listed like a regular dependency
+	// without needing to specify that it's a core package
+	owl.core // owl.core will eventually be implied
+}
