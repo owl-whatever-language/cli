@@ -1,4 +1,5 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.DocumentHighlight;
+using OwlDomain.Owl.Code.CodeAnalysis.Parsing;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Expressions;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.FunctionArguments;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Statements;
@@ -24,7 +25,7 @@ internal sealed class DocumentHighlightHandler(ILspContext context) : DocumentHi
 		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult(response);
 
-		ISyntaxToken? target = tree.Document.Search<ISyntaxToken>(request.Position, true, token => token.Kind == SyntaxKind.Identifier);
+		ISyntaxToken? target = tree.Document.Search<ISyntaxToken>(request.Position, true, token => token.Kind == SyntaxKind.Identifier || SyntaxKind.AllKeywords.Contains(token.Kind));
 		if (target is null)
 			return Task.FromResult(response);
 

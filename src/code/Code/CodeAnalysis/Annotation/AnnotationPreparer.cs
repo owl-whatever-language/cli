@@ -246,6 +246,14 @@ public sealed class AnnotationPreparer : BaseSemanticToAnnotatedTreeConverter, I
 
 		return new(left, op, right, semantic.ResultType, semantic.Operation);
 	}
+	protected override AnnotatedCompoundAssignmentExpressionSyntax ConvertCore(ISemanticCompoundAssignmentExpressionSyntax semantic)
+	{
+		var expression = Convert(semantic.Expression);
+		var op = Convert(semantic.Operator, semantic.Operation?.AsFunction);
+		var value = Convert(semantic.Value);
+
+		return new(expression, op, value, semantic.ResultType, semantic.Symbol, semantic.Operation);
+	}
 	#endregion
 
 	#region Scope helpers

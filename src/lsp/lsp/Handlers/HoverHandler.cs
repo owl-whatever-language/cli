@@ -9,10 +9,12 @@ using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated.FunctionBodies;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated.Statements;
+using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Expressions;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.FunctionBodies;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Nodes;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Statements;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Declared;
+using OwlDomain.ParsingTools.Syntax.Printing;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -36,14 +38,12 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 		if (target is null)
 			return Task.FromResult<HoverResponse?>(null);
 
-
-		target = CorrectTarget(target);
-
+		ISyntaxNode improvedTarget = CorrectTarget(target);
 
 		using (StringWriter stringWriter = new())
 		using (IndentedTextWriter writer = new(stringWriter, "  "))
 		{
-			WriteHover(writer, target);
+			WriteHover(writer, target, improvedTarget);
 
 			string output = stringWriter.ToString();
 			if (string.IsNullOrWhiteSpace(output) is false)
@@ -59,31 +59,23 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 			}
 		}
 
-		return Task.FromResult<HoverResponse?>(null);
+		return Task.FromResult<HoverResponse?>(GetBasicResponse());
+	}
+	private HoverResponse GetBasicResponse()
+	{
+		return new()
+		{
+			Contents = new()
+			{
+				Kind = MarkupKind.Markdown,
+				Value = "*Nothing interesting to show.*"
+			}
+		};
 	}
 	#endregion
 
-	#region Helpers
-	private ISyntaxNode CorrectTarget(ISyntaxNode target)
-	{
-		if (target is ISyntaxToken token)
-		{
-			if (token.Parent is IConcreteWhileStatementSyntax)
-				return token.Parent;
-
-			if (token.Parent is IConcreteVariableDeclarationStatementSyntax)
-				return token.Parent;
-
-			if (token.Parent is IConcreteFunctionDeclarationSignatureSyntax signature && signature.Parent is not null)
-				return signature.Parent;
-
-			if (token.Parent is IConcreteFunctionBodySyntax body && body.Parent is not null)
-				return body.Parent;
-		}
-
-		return target;
-	}
-	private void WriteHover(IndentedTextWriter writer, ISyntaxNode target)
+	#region Declaration methods
+	private void TryWriteDeclaration(IndentedTextWriter writer, ISyntaxNode target)
 	{
 		if (target.TryGetDeclaredSymbol(out IDeclaredSymbol? symbol))
 			WriteDeclaration(writer, symbol);
@@ -94,11 +86,18 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 			else if (token.Symbol is not null)
 				WriteDeclaration(writer, token.Symbol);
 		}
+		else if (target is IConcreteWhileStatementSyntax @while)
+		{
+			string condition = @while.Condition.GetDebugSource();
+			string label = @while.Label.Name.Value as string ?? "loop";
 
-		if (target is IAnnotatedSyntaxNode node)
-			WriteAnnotations(writer, node);
+			writer.WriteLine("## Declaration (while loop)");
+			writer.WriteLine("```owl");
+			writer.WriteLine($"while ({condition}): {label}");
+			writer.WriteLine("```");
+			writer.WriteLine();
+		}
 	}
-
 	private void WriteDeclaration(IndentedTextWriter writer, IDeclaredSymbol symbol)
 	{
 		if (symbol.Declaration is IAnnotatedFunctionDeclarationStatementSyntax function && function.Signature.Keyword is not null)
@@ -117,6 +116,14 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 	}
 	private void WriteDeclaration(IndentedTextWriter writer, ISymbol symbol)
 	{
+		if (symbol.IsKnown is false)
+		{
+			writer.WriteLine("*Unknown symbol.*");
+			writer.WriteLine();
+
+			return;
+		}
+
 		string? kind = symbol switch
 		{
 			ILocalVariable => "variable",
@@ -139,6 +146,14 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 		writer.WriteLine(symbol.GetDebugText().ToPlainText());
 		writer.WriteLine("```");
 		writer.WriteLine();
+	}
+	#endregion
+
+	#region Annotation methods
+	private void TryWriteAnnotations(IndentedTextWriter writer, ISyntaxNode target)
+	{
+		if (target is IAnnotatedSyntaxNode node)
+			WriteAnnotations(writer, node);
 	}
 	private void WriteAnnotations(IndentedTextWriter writer, IAnnotatedSyntaxNode node)
 	{
@@ -164,6 +179,8 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 	}
 	private IReadOnlyCollection<ISymbol> GetDeclaredSymbols(IAnnotatedSyntaxNode node)
 	{
+		// Note(Nightowl): Turn this is into a proper annotation;
+
 		HashSet<ISymbol> symbols = [];
 
 		void Add(ISymbol symbol)
@@ -231,6 +248,71 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 
 		writer.WriteLine();
 		writer.WriteLine();
+	}
+	#endregion
+
+	#region Helpers
+	private ISyntaxNode CorrectTarget(ISyntaxNode target)
+	{
+		if (target is ISyntaxToken token)
+		{
+			if (token.Kind == SyntaxKind.Semicolon && token.Parent is IConcreteStatementSyntax statement)
+			{
+				if (statement is IConcreteExpressionStatementSyntax expression)
+				{
+					if (expression.Expression is IConcreteBinaryExpressionSyntax binary)
+						return binary.Operator;
+
+					if (expression.Expression is IConcreteCompoundAssignmentExpressionSyntax compound)
+						return compound.Operator;
+
+					return expression.Expression;
+				}
+
+				return token.Parent;
+			}
+
+			if (token.Parent is IConcreteWhileStatementSyntax)
+				return token.Parent;
+
+			if (token.Parent is IConcreteVariableDeclarationStatementSyntax)
+				return token.Parent;
+
+			if (token.Parent is IConcreteFunctionDeclarationSignatureSyntax signature && signature.Parent is not null)
+				return signature.Parent;
+
+			if (token.Parent is IConcreteFunctionBodySyntax body && body.Parent is not null)
+				return body.Parent;
+
+			if (token.Parent is IConcreteBlockStatementSyntax block)
+			{
+				if (block.Parent is IConcreteFunctionBodySyntax body2 && body2.Parent is not null)
+					return body2.Parent;
+
+				bool isInterestingParent = block.Parent switch
+				{
+					IConcreteFunctionBodySyntax => true,
+					IConcreteIfStatementSyntax => true,
+					IConcreteIfElseStatementSyntax => true,
+					IConcreteWhileStatementSyntax => true,
+
+					_ => false,
+				};
+
+				if (isInterestingParent)
+				{
+					Debug.Assert(block.Parent is not null);
+					return block.Parent;
+				}
+			}
+		}
+
+		return target;
+	}
+	private void WriteHover(IndentedTextWriter writer, ISyntaxNode originalTarget, ISyntaxNode target)
+	{
+		TryWriteDeclaration(writer, target);
+		TryWriteAnnotations(writer, target);
 	}
 	#endregion
 }

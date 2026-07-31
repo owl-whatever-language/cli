@@ -49,9 +49,9 @@ internal sealed class InlayHintHandler(ILspContext context) : InlayHintHandlerBa
 		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult<InlayHintResponse?>(new(hints));
 
-		// Note(Nightowl): 
+		// Note(Nightowl):
 		// This is a cool idea, but disable it for now since it makes writing the code very confusing.
-		// Perhaps it could be added back in later on, when adding a debounce on the text edits to 
+		// Perhaps it could be added back in later on, when adding a debounce on the text edits to
 		// make this only show up when not actively typing...
 		// AddMissingTokens(hints, tree);
 
@@ -92,6 +92,7 @@ internal sealed class InlayHintHandler(ILspContext context) : InlayHintHandlerBa
 			{
 				Position = label.ToLspPosition.Start,
 				Label = ": loop",
+				Data = ReplaceWithLexeme
 			};
 
 			hints.Add(hint);
