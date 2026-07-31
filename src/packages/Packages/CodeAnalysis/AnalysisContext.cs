@@ -41,7 +41,6 @@ public static class IAnalysisContextExtensions
 	}
 }
 
-
 public sealed class AnalysisUpdateResult : IStageResultDiagnostics, IStageResultPerformance, IStageResultParent
 {
 	#region Properties
@@ -120,9 +119,29 @@ public sealed class AnalysisContext : IMutableAnalysisContext
 		}
 
 		HashSet<ISourceFile> toReparse = [.. update.Added, .. update.Changed];
+		ParallelParsingResult parsing = Parse(toReparse);
+
 		DiagnosticBag diagnostics = _parsingDiagnostics.Values.Combine();
 
+		// Note(Nightowl): Add diagnostics for the next update, to make sure we don't duplicate them for this update;
+		foreach (LexingAndParsingResult result in parsing.GetByFile().Values)
+			_parsingDiagnostics.Add(result.Source, result.GetAllDiagnostics());
+
 		return new(diagnostics, performance);
+	}
+
+	private ParallelParsingResult Parse(IReadOnlyCollection<ISourceFile> files)
+	{
+		ParallelParsingResult result = Parser.Parse(files);
+		foreach (LexingAndParsingResult current in result.GetByFile().Values)
+		{
+			_parsingDiagnostics.Remove(current.Source);
+
+			SyntaxTreeBundle bundle = _bundles[current.Source];
+			bundle.Concrete = current.Parsing.Tree;
+		}
+
+		return result;
 	}
 	#endregion
 }
