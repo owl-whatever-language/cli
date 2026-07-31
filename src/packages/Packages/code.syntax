@@ -10,4 +10,23 @@ token concrete:
 tree concrete:
 
 # Define the root node in the tree
-document: token end_of_input
+document: list<statement> statements, token end_of_input
+
+## Property keys
+group property_key
+empty property_key:
+named property_key: token name
+nested property_key: property_key left, token accessor, token name
+
+## Property values
+group property_value
+empty property_value:
+named property_value: token name
+nested property_value: property_value left, token accessor, token name
+
+
+## Statements
+group statement
+empty statement:
+only_terminated statement: token terminator
+property statement: property_key key, token separator, property_value value, token? terminator

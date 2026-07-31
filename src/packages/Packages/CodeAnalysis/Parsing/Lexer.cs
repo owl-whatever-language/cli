@@ -65,6 +65,7 @@ public sealed class Lexer : BaseLexer, IDiagnosticProvider
 
 			TryLexSimpleToken(":", SyntaxKind.Colon) ||
 			TryLexSimpleToken(";", SyntaxKind.Semicolon) ||
+			TryLexSimpleToken(".", SyntaxKind.Period) ||
 			TryLexIdentifierOrKeyword()
 		;
 	}

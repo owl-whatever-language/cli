@@ -134,15 +134,281 @@ public sealed class Parser : BaseParser<IConcreteToken>
 	}
 	private ConcreteDocumentSyntax ParseDocument()
 	{
+		SyntaxList<IConcreteStatementSyntax> statements = ParseDocumentStatements();
+
+		Debug.Assert(Current is not null);
+		if (Current.Kind != SyntaxKind.EndOfInput)
+			ReportExpectedSimple(Current, "statement", "Expected a statement here.");
+
 		RecoverUntilEndOfInput();
 		IConcreteToken endOfInput = ExpectEndOfInput();
 
-		return new(endOfInput);
+		return new(statements, endOfInput);
+	}
+	private SyntaxList<IConcreteStatementSyntax> ParseDocumentStatements() => ParseStatements();
+	private SyntaxList<IConcreteStatementSyntax> ParseStatements(params ReadOnlySpan<SyntaxKind> stopAt)
+	{
+		List<IConcreteStatementSyntax> statements = [];
+
+		while (RealisticHasRemaining && (IsCurrentAny(stopAt) is false))
+		{
+			using LoopGuardScope _ = LoopGuard();
+
+			IConcreteStatementSyntax? statement = TryParseStatement();
+			if (statement is not null)
+			{
+				if (statement.IsFabricated is false)
+					statements.Add(statement);
+			}
+			else if (Current.Kind == SyntaxKind.CloseBrace && (stopAt.Contains(SyntaxKind.CloseBrace) is false))
+			{
+				// Note(Nightowl):
+				// When possible, use the previous, correctly parsed brace
+				// so that the "smart" diagnostic shows a better location;
+				ISyntaxToken target = Current;
+				ISyntaxToken? last = statements.LastOrDefault()?.Flatten().LastOrDefault();
+				if (last?.Kind == SyntaxKind.CloseBrace)
+					target = last;
+
+				ReportDuplicate(target);
+				RecoverFromCurrent();
+			}
+			else
+			{
+				Debug.Assert(Current is not null, "EOF should still be here.");
+				ReportExpectedSimple(Current, "statement", "Expected a statement here.");
+				RecoverFromCurrent();
+			}
+		}
+
+		return new(statements);
+	}
+	#endregion
+
+	#region Statement methods
+	private IConcreteToken ExpectStatementTerminator(IConcreteSyntaxNode? value)
+	{
+		if (Match(SyntaxKind.Semicolon, ClassificationKind.Punctuation, out IConcreteToken? terminator))
+			return terminator;
+
+		terminator = Fabricate(SyntaxKind.Semicolon, ClassificationKind.Punctuation);
+
+		ISyntaxToken token =
+			Previous ??
+			value?.Flatten()?.LastOrDefault() ??
+			terminator;
+
+		Diagnostics
+			.BuildError(this, "expected_terminator")
+			.Add(token, token.Position.End, lines => lines.AddLine("Expected a semi-colon '", TextFragment.Semicolon, "' here to end the statement."));
+
+		return terminator;
+	}
+	private IConcreteToken? ExpectOptionalStatementTerminator(IConcreteSyntaxNode value)
+	{
+		if (Match(SyntaxKind.Semicolon, ClassificationKind.Punctuation, out IConcreteToken? terminator))
+			return terminator;
+
+		ISyntaxToken token = Previous ?? value.Flatten().Last();
+		if (token.TrailingTrivia.Any(t => t.Kind == SyntaxKind.LineBreak))
+			return null;
+
+		terminator = Fabricate(SyntaxKind.Semicolon, ClassificationKind.Punctuation);
+
+		Diagnostics
+			.BuildError(this, "expected_terminator")
+			.Add(token, token.Position.End, lines => lines.AddLine("Expected either a line break, or a semi-colon '", TextFragment.Semicolon, "' here to end the statement."));
+
+		return terminator;
+	}
+	private IConcreteStatementSyntax ParseStatement()
+	{
+		if (TryParseStatement(out IConcreteStatementSyntax? statement))
+			return statement;
+
+		Debug.Assert(Current is not null, "EOF should still be there.");
+		ReportExpectedSimple(Current, "statement", "Expected a statement here.");
+
+		return new ConcreteEmptyStatementSyntax();
+	}
+	private bool TryParseStatement([NotNullWhen(true)] out IConcreteStatementSyntax? statement)
+	{
+		statement = TryParseStatement();
+		return statement is not null;
+	}
+	private IConcreteStatementSyntax? TryParseStatement()
+	{
+		return
+			TryParseOnlyTerminatedStatement() ??
+			TryParseKeywordStatement() ??
+			TryParsePropertyStatement()
+		;
+	}
+	private IConcreteStatementSyntax? TryParseKeywordStatement()
+	{
+		return
+			null
+		;
+	}
+	#endregion
+
+	#region Statement variant methods
+	private IConcreteStatementSyntax? TryParseOnlyTerminatedStatement()
+	{
+		if (Match(SyntaxKind.Semicolon, ClassificationKind.Punctuation, out IConcreteToken? terminator) is false)
+			return null;
+
+		Diagnostics
+			.BuildSuggestion(this, "remove_empty_statement")
+			.Add(terminator, lines =>
+			{
+				lines
+					.AddLine("Remove the empty statement.")
+					.AddLine("This statement only contains the terminator, it does nothing, and you probably included it by accident.");
+			});
+
+		return new ConcreteOnlyTerminatedStatementSyntax(terminator);
+	}
+	private IConcreteStatementSyntax? TryParsePropertyStatement()
+	{
+		if (TryParsePropertyKey(out IConcretePropertyKeySyntax? key) is false)
+			return null;
+
+		IConcreteToken separator = Expect(SyntaxKind.Colon, ClassificationKind.Punctuation, ";", "separate the property key from the value");
+		IConcretePropertyValueSyntax value = ParsePropertyValue();
+		IConcreteToken? terminator = ExpectOptionalStatementTerminator(value);
+
+		return new ConcretePropertyStatementSyntax(key, separator, value, terminator);
+	}
+	#endregion
+
+	#region Property key methods
+	private IConcretePropertyKeySyntax ParsePropertyKey(ExpressionPower precedence = default)
+	{
+		if (TryParsePropertyKey(out IConcretePropertyKeySyntax? key, precedence))
+			return key;
+
+		Debug.Assert(Current is not null, "EOF should still be there.");
+		ReportExpectedSimple(Current, "property_key", "Expected a property key here.");
+
+		return new ConcreteEmptyPropertyKeySyntax();
+	}
+	private bool TryParsePropertyKey([NotNullWhen(true)] out IConcretePropertyKeySyntax? key, ExpressionPower precedence = default)
+	{
+		key = TryParsePropertyKey(precedence);
+		return key is not null;
+	}
+	private IConcretePropertyKeySyntax? TryParsePropertyKey(ExpressionPower precedence = default)
+	{
+		IConcretePropertyKeySyntax? primitive = TryParsePrimitivePropertyKey();
+
+		if (primitive is null)
+			return null;
+
+		return ParsePropertyKey(primitive, precedence);
+	}
+	private IConcretePropertyKeySyntax ParsePropertyKey(IConcretePropertyKeySyntax key, ExpressionPower precedence = default)
+	{
+		// Note(Nightowl): This was changed from the primary parser as I'm not sure why the original parser was written the way that it is...;
+
+		while (RealisticHasRemaining)
+		{
+			ExpressionPower power = ExpressionPower.PropertyKeyPowerOf(Current.Kind);
+
+			if (precedence.Value >= power.Value)
+				break;
+
+			if (Match(SyntaxKind.Period, ClassificationKind.Punctuation, out IConcreteToken? accessor))
+			{
+				IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Identifier, "Expected a key name.");
+				key = new ConcreteNestedPropertyKeySyntax(key, accessor, name);
+			}
+		}
+
+		return key;
+	}
+	private IConcretePropertyKeySyntax? TryParsePrimitivePropertyKey()
+	{
+		return
+			TryParseNamedPropertyKey()
+		;
+	}
+	private IConcretePropertyKeySyntax? TryParseNamedPropertyKey()
+	{
+		if (Match(SyntaxKind.Identifier, ClassificationKind.Identifier, out IConcreteToken? name) is false)
+			return null;
+
+		return new ConcreteNamedPropertyKeySyntax(name);
+	}
+	#endregion
+
+	#region Property value methods
+	private IConcretePropertyValueSyntax ParsePropertyValue(ExpressionPower precedence = default)
+	{
+		if (TryParsePropertyValue(out IConcretePropertyValueSyntax? value, precedence))
+			return value;
+
+		Debug.Assert(Current is not null, "EOF should still be there.");
+		ReportExpectedSimple(Current, "property_value", "Expected a property value here.");
+
+		return new ConcreteEmptyPropertyValueSyntax();
+	}
+	private bool TryParsePropertyValue([NotNullWhen(true)] out IConcretePropertyValueSyntax? value, ExpressionPower precedence = default)
+	{
+		value = TryParsePropertyValue(precedence);
+		return value is not null;
+	}
+	private IConcretePropertyValueSyntax? TryParsePropertyValue(ExpressionPower precedence = default)
+	{
+		IConcretePropertyValueSyntax? primitive = TryParsePrimitivePropertyValue();
+
+		if (primitive is null)
+			return null;
+
+		return ParsePropertyValue(primitive, precedence);
+	}
+	private IConcretePropertyValueSyntax ParsePropertyValue(IConcretePropertyValueSyntax value, ExpressionPower precedence = default)
+	{
+		// Note(Nightowl): This was changed from the primary parser as I'm not sure why the original parser was written the way that it is...;
+
+		while (RealisticHasRemaining)
+		{
+			ExpressionPower power = ExpressionPower.PropertyValuePowerOf(Current.Kind);
+
+			if (precedence.Value >= power.Value)
+				break;
+
+			if (Match(SyntaxKind.Period, ClassificationKind.Punctuation, out IConcreteToken? accessor))
+			{
+				IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Identifier, "Expected a value name.");
+				value = new ConcreteNestedPropertyValueSyntax(value, accessor, name);
+			}
+		}
+
+		return value;
+	}
+	private IConcretePropertyValueSyntax? TryParsePrimitivePropertyValue()
+	{
+		return
+			TryParseNamedPropertyValue()
+		;
+	}
+	private IConcretePropertyValueSyntax? TryParseNamedPropertyValue()
+	{
+		if (Match(SyntaxKind.Identifier, ClassificationKind.Identifier, out IConcreteToken? name) is false)
+			return null;
+
+		return new ConcreteNamedPropertyValueSyntax(name);
 	}
 	#endregion
 
 	#region Error recovery methods
-	protected override ISyntaxNode? TryParseBadSyntaxCore() => null;
+	protected override ISyntaxNode? TryParseBadSyntaxCore()
+	{
+		return
+			TryParseKeywordStatement()
+		;
+	}
 
 	[return: NotNullIfNotNull(nameof(token))]
 	protected override IConcreteToken? Convert(ISyntaxToken? token, ClassificationKind? classification = null)

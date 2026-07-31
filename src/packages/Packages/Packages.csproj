@@ -23,8 +23,6 @@
 	<ItemGroup Label="projects">
 		<ProjectReference Include="../../common/parsing_tools/ParsingTools.Generator/ParsingTools.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 		<ProjectReference Include="../../common/parsing_tools/ParsingTools/ParsingTools.csproj" />
-
-		<ProjectReference Include="../../code/Code/Code.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
