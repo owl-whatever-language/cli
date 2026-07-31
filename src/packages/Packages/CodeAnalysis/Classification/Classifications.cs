@@ -6,6 +6,7 @@ public static class ClassificationExtensions
 	{
 		#region Properties
 		public static ClassificationKind Key => ClassificationKind.Identifier + "key";
+		public static ClassificationKind Value => ClassificationKind.Identifier + "value";
 		#endregion
 	}
 }

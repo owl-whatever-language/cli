@@ -210,7 +210,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 			return terminator;
 
 		ISyntaxToken token = Previous ?? value.Flatten().Last();
-		if (token.TrailingTrivia.Any(t => t.Kind == SyntaxKind.LineBreak))
+		if (token.TrailingTrivia.Any(t => t.Kind == SyntaxKind.LineBreak) || Current?.Kind == SyntaxKind.EndOfInput)
 			return null;
 
 		terminator = Fabricate(SyntaxKind.Semicolon, ClassificationKind.Punctuation);
@@ -274,11 +274,21 @@ public sealed class Parser : BaseParser<IConcreteToken>
 		if (TryParsePropertyKey(out IConcretePropertyKeySyntax? key) is false)
 			return null;
 
+		if (Match(SyntaxKind.OpenBrace, ClassificationKind.Punctuation, out IConcreteToken? start))
+			return ParsePropertyScopeStatement(key, start);
+
 		IConcreteToken separator = Expect(SyntaxKind.Colon, ClassificationKind.Punctuation, ";", "separate the property key from the value");
 		IConcretePropertyValueSyntax value = ParsePropertyValue();
 		IConcreteToken? terminator = ExpectOptionalStatementTerminator(value);
 
 		return new ConcretePropertyStatementSyntax(key, separator, value, terminator);
+	}
+	private IConcreteStatementSyntax ParsePropertyScopeStatement(IConcretePropertyKeySyntax key, IConcreteToken start)
+	{
+		SyntaxList<IConcreteStatementSyntax> statements = ParseStatements(SyntaxKind.CloseBrace);
+		IConcreteToken end = ExpectClosing(start, SyntaxKind.CloseBrace, ClassificationKind.Punctuation, "}", "end the property scope");
+
+		return new ConcretePropertyScopeStatementSyntax(key, start, statements, end);
 	}
 	#endregion
 
@@ -320,7 +330,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 
 			if (Match(SyntaxKind.Period, ClassificationKind.Punctuation, out IConcreteToken? accessor))
 			{
-				IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Identifier, "Expected a key name.");
+				IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Key, "Expected a key name.");
 				key = new ConcreteNestedPropertyKeySyntax(key, accessor, name);
 			}
 		}
@@ -335,7 +345,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 	}
 	private IConcretePropertyKeySyntax? TryParseNamedPropertyKey()
 	{
-		if (Match(SyntaxKind.Identifier, ClassificationKind.Identifier, out IConcreteToken? name) is false)
+		if (Match(SyntaxKind.Identifier, ClassificationKind.Key, out IConcreteToken? name) is false)
 			return null;
 
 		return new ConcreteNamedPropertyKeySyntax(name);
@@ -380,7 +390,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 
 			if (Match(SyntaxKind.Period, ClassificationKind.Punctuation, out IConcreteToken? accessor))
 			{
-				IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Identifier, "Expected a value name.");
+				IConcreteToken name = Expect(SyntaxKind.Identifier, ClassificationKind.Value, "Expected a value name.");
 				value = new ConcreteNestedPropertyValueSyntax(value, accessor, name);
 			}
 		}
@@ -395,7 +405,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 	}
 	private IConcretePropertyValueSyntax? TryParseNamedPropertyValue()
 	{
-		if (Match(SyntaxKind.Identifier, ClassificationKind.Identifier, out IConcreteToken? name) is false)
+		if (Match(SyntaxKind.Identifier, ClassificationKind.Value, out IConcreteToken? name) is false)
 			return null;
 
 		return new ConcreteNamedPropertyValueSyntax(name);

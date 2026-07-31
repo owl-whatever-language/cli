@@ -30,3 +30,4 @@ group statement
 empty statement:
 only_terminated statement: token terminator
 property statement: property_key key, token separator, property_value value, token? terminator
+property_scope statement: property_key key, token start, list<statement> statements, token end
