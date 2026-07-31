@@ -25,8 +25,11 @@ contexts:
         1: keyword.other.owl
         2: entity.name.function.owl
 
-    - match: \b[\d-]+(\.\d+)?\b
-      scope: constant.numeric.owl
+    - match: \b\d+\.\d+\b
+      scope: constant.numeric.float.owl
+
+    - match: \b\d+\b
+      scope: constant.numeric.integer.owl
 
     - match: (&&|\|\|)
       scope: keyword.control.owl
@@ -37,11 +40,23 @@ contexts:
     - match: \,
       scope: punctuation.separator.owl
 
-    - match: (==|!=|<|<=|>|>=|\+=?|-=?|\*=?|/=?|%=?)
-      scope: keyword.operator.arithmetic
-
     - match: (=>)
-      scope: keyword.operator
+      scope: keyword.operator.owl
+
+    - match: (==|!=|<=|>=|\+=?|-=?|\*=?|/=?|%=?|>|<)
+      scope: keyword.operator.arithmetic.owl
+
+    - match: (\(|\)|\{|\})
+      scope: punctuation.owl
+
+    - match: ;
+      scope: punctuation.terminator.owl
+
+    - match: \,
+      scope: punctuation.separator.owl
+
+    - match: \.
+      scope: punctuation.accessor.owl
 
     - match: \b(\w+)\s+(\w+)\s*(=)
       captures:
@@ -49,6 +64,10 @@ contexts:
         2: variable.other.owl
         3: keyword.operator.assignment.owl
 
+    - match: \b(\w+)\s*(\()
+      captures:
+        1: entity.name.function.owl
+        2: punctuation.operator.owl
 
   comment:
     - meta_scope: comment.line.double-slash.owl
