@@ -134,18 +134,53 @@ public sealed class Parser : BaseParser<IConcreteToken>
 	}
 	private ConcreteDocumentSyntax ParseDocument()
 	{
+		IConcreteDocumentUnitSyntax unit = ParseDocumentUnit();
+
+		RecoverUntilEndOfInput();
+		IConcreteToken endOfInput = ExpectEndOfInput();
+
+		return new(unit, endOfInput);
+	}
+	#endregion
+
+	#region Document unit methods
+	private IConcreteDocumentUnitSyntax ParseDocumentUnit()
+	{
+		return Source.SimpleName switch
+		{
+			"owl.package" => ParsePackageDocument(),
+			"owl.workspace" => ParseWorkspaceDocument(),
+			_ => ParseConfigDocument()
+		};
+	}
+	private ConcretePackageDocumentUnitSyntax ParsePackageDocument()
+	{
+		var statements = ParseDocumentStatements();
+		return new(statements);
+	}
+	private ConcreteWorkspaceDocumentUnitSyntax ParseWorkspaceDocument()
+	{
+		var statements = ParseDocumentStatements();
+		return new(statements);
+	}
+	private ConcreteConfigDocumentUnitSyntax ParseConfigDocument()
+	{
+		var statements = ParseDocumentStatements();
+		return new(statements);
+	}
+	#endregion
+
+	#region Statement methods
+	private SyntaxList<IConcreteStatementSyntax> ParseDocumentStatements()
+	{
 		SyntaxList<IConcreteStatementSyntax> statements = ParseDocumentStatements();
 
 		Debug.Assert(Current is not null);
 		if (Current.Kind != SyntaxKind.EndOfInput)
 			ReportExpectedSimple(Current, "statement", "Expected a statement here.");
 
-		RecoverUntilEndOfInput();
-		IConcreteToken endOfInput = ExpectEndOfInput();
-
-		return new(statements, endOfInput);
+		return statements;
 	}
-	private SyntaxList<IConcreteStatementSyntax> ParseDocumentStatements() => ParseStatements();
 	private SyntaxList<IConcreteStatementSyntax> ParseStatements(params ReadOnlySpan<SyntaxKind> stopAt)
 	{
 		List<IConcreteStatementSyntax> statements = [];
@@ -183,9 +218,6 @@ public sealed class Parser : BaseParser<IConcreteToken>
 
 		return new(statements);
 	}
-	#endregion
-
-	#region Statement methods
 	private IConcreteToken ExpectStatementTerminator(IConcreteSyntaxNode? value)
 	{
 		if (Match(SyntaxKind.Semicolon, ClassificationKind.Punctuation, out IConcreteToken? terminator))

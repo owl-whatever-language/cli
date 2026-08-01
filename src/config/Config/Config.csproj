@@ -26,4 +26,8 @@
 		<ProjectReference Include="../../common/parsing_tools/ParsingTools/ParsingTools.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<AdditionalFiles Include="code.syntax" />
+	</ItemGroup>
+
 </Project>
