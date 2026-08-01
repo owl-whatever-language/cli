@@ -12,6 +12,9 @@
 	<Folder Name="/compiler/">
 		<Project Path="compiler/Compiler/Compiler.csproj" />
 	</Folder>
+	<Folder Name="/config/">
+		<Project Path="config/Config/Config.csproj" />
+	</Folder>
 	<!--
 	<Folder Name="/local/">
 		<Project Path="local/Playground/Playground.csproj" />
