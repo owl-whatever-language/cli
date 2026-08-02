@@ -310,11 +310,19 @@ public sealed class Parser : BaseParser<IConcreteToken>
 		if (Match(SyntaxKind.OpenBrace, ClassificationKind.Punctuation, out IConcreteToken? start))
 			return ParsePropertyScopeStatement(key, start);
 
-		IConcreteToken separator = Expect(SyntaxKind.Colon, ClassificationKind.Punctuation, ";", "separate the property key from the value");
+		if (Current?.Kind != SyntaxKind.Colon)
+			return ParseImplicitPropertyStatement(key);
+
+		IConcreteToken separator = Expect(SyntaxKind.Colon, ClassificationKind.Punctuation, ":", "separate the property key from the value");
 		IConcretePropertyValueSyntax value = ParsePropertyValue();
 		IConcreteToken? terminator = ExpectOptionalStatementTerminator(value);
 
 		return new ConcretePropertyStatementSyntax(key, separator, value, terminator);
+	}
+	private IConcreteStatementSyntax ParseImplicitPropertyStatement(IConcretePropertyKeySyntax key)
+	{
+		IConcreteToken? terminator = ExpectOptionalStatementTerminator(key);
+		return new ConcreteImplicitPropertyStatementSyntax(key, terminator);
 	}
 	private IConcreteStatementSyntax ParsePropertyScopeStatement(IConcretePropertyKeySyntax key, IConcreteToken start)
 	{

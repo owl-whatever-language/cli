@@ -49,16 +49,20 @@ public sealed class AnalysisUpdateResult : IStageResultDiagnostics, IStageResult
 	public IDiagnosticBag Diagnostics { get; }
 	public IPerformanceResult Performance { get; }
 	public IReadOnlyCollection<IStageResult> Children { get; }
+	public ParallelParsingResult Parsing { get; }
 	#endregion
 
 	#region Constructors
 	public AnalysisUpdateResult(
 		IDiagnosticBag diagnostics,
-		IPerformanceResult performance)
+		IPerformanceResult performance,
+		ParallelParsingResult parsing)
 	{
 		Diagnostics = diagnostics;
 		Performance = performance;
-		Children = [];
+		Children = [parsing];
+
+		Parsing = parsing;
 	}
 	#endregion
 }
@@ -139,7 +143,7 @@ public sealed class AnalysisContext : IMutableAnalysisContext
 		foreach (LexingAndParsingResult result in parsing.GetByFile().Values)
 			_parsingDiagnostics.Add(result.Source, result.GetAllDiagnostics());
 
-		return new(diagnostics, performance);
+		return new(diagnostics, performance, parsing);
 	}
 
 	private ParallelParsingResult Parse(IReadOnlyCollection<ISourceFile> files)
