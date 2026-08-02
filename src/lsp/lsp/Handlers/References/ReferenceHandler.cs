@@ -13,7 +13,7 @@ internal sealed partial class ReferenceHandler : ReferenceHandlerBase
 	{
 		_bundle = new(context, request => request.TextDocument.SourcePath)
 		{
-			CodeHandler = null,
+			CodeHandler = new CodeHandler(),
 			ConfigHandler = null
 		};
 	}
