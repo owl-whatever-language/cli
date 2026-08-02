@@ -1,20 +1,7 @@
 using System.CodeDom.Compiler;
 using System.IO;
 using EmmyLua.LanguageServer.Framework.Protocol.Message.Hover;
-using OwlDomain.Owl.Code.CodeAnalysis.Passes.LocalCapture;
-using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions;
-using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Loops;
-using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
-using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated.FunctionBodies;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated.Statements;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Expressions;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.FunctionBodies;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Nodes;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Statements;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Declared;
-using OwlDomain.ParsingTools.Syntax.Printing;
+using OwlDomain.Owl.Code.CodeAnalysis.Parsing;
 
 namespace OwlDomain.Owl.LSP.Handlers.Hovers;
 
@@ -26,276 +13,193 @@ partial class HoverHandler
 		#region Methods
 		protected override HoverResponse? Handle(HandlerRequest<HoverParams> request, ICodeSyntaxTree tree, CancellationToken cancellation)
 		{
-			ISyntaxNode? target = tree.Document.Search<ISyntaxToken>(request.Request.Position);
-			if (target is null)
+			ISyntaxNode? original = tree.Document.Search<ISyntaxToken>(request.Request.Position);
+			if (original is null)
 				return null;
 
-			ISyntaxNode improvedTarget = CorrectTarget(target);
-
-			using (StringWriter stringWriter = new())
-			using (IndentedTextWriter writer = new(stringWriter, "  "))
+			using (IndentedTextWriter writer = GetWriter(out StringWriter result))
 			{
-				WriteHover(writer, target, improvedTarget);
+				ISyntaxNode corrected = CorrectTarget(original);
+				WriteHover(writer, original, original);
 
-				string output = stringWriter.ToString();
-				if (string.IsNullOrWhiteSpace(output) is false)
+				return ResultFromMarkdown(result);
+			}
+		}
+		private void WriteHover(IndentedTextWriter writer, ISyntaxNode original, ISyntaxNode target)
+		{
+			WriteDocumentation(writer, original, target);
+			WriteExample(writer, original, target);
+		}
+		private ISyntaxNode CorrectTarget(ISyntaxNode node)
+		{
+			return node;
+		}
+		#endregion
+
+		#region Documentation methods
+		private static void WriteDocumentation(IndentedTextWriter writer, ISyntaxNode original, ISyntaxNode target)
+		{
+			if (IsKeyword(original, out ISyntaxToken? keyword))
+			{
+				WriteDocumentationForKeyword(writer, keyword);
+				return;
+			}
+		}
+		private static void WriteDocumentationForKeyword(IndentedTextWriter writer, ISyntaxToken keyword)
+		{
+			using (writer.Documentation())
+			{
+				if (keyword.Kind == SyntaxKind.If || keyword.Kind == SyntaxKind.Else)
 				{
-					return new()
-					{
-						Contents = new()
-						{
-							Kind = MarkupKind.Markdown,
-							Value = output
-						}
-					};
+					writer.WriteLine($"The `if` and `else` keywords are used for controlling *if* code should run, based on a condition that you give it.");
 				}
-			}
-
-			return null;
-		}
-		#endregion
-
-		#region Declaration methods
-		private void TryWriteDeclaration(IndentedTextWriter writer, ISyntaxNode target)
-		{
-			if (target.TryGetDeclaredSymbol(out IDeclaredSymbol? symbol))
-				WriteDeclaration(writer, symbol);
-			else if (target is IDeclaredToken token)
-			{
-				if (token.Symbol is IDeclaredSymbol declared)
-					WriteDeclaration(writer, declared);
-				else if (token.Symbol is not null)
-					WriteDeclaration(writer, token.Symbol);
-			}
-			else if (target is IConcreteWhileStatementSyntax @while)
-			{
-				string condition = @while.Condition.GetDebugSource();
-				string label = @while.Label.Name.Value as string ?? "loop";
-
-				writer.WriteLine("## Declaration (while loop)");
-				writer.WriteLine("```owl");
-				writer.WriteLine($"while ({condition}): {label}");
-				writer.WriteLine("```");
-				writer.WriteLine();
-			}
-		}
-		private void WriteDeclaration(IndentedTextWriter writer, IDeclaredSymbol symbol)
-		{
-			if (symbol.Declaration is IAnnotatedFunctionDeclarationStatementSyntax function && function.Signature.Keyword is not null)
-			{
-				writer.WriteLine($"## Declaration (function)");
-
-				writer.WriteLine("```owl");
-				writer.WriteLine($"fun {symbol.GetDebugText().ToPlainText()}");
-				writer.WriteLine("```");
-				writer.WriteLine();
-
-				return;
-			}
-
-			WriteDeclaration(writer, (ISymbol)symbol);
-		}
-		private void WriteDeclaration(IndentedTextWriter writer, ISymbol symbol)
-		{
-			if (symbol.IsKnown is false)
-			{
-				writer.WriteLine("*Unknown symbol.*");
-				writer.WriteLine();
-
-				return;
-			}
-
-			string? kind = symbol switch
-			{
-				ILocalVariable => "variable",
-				IFunction => "function",
-				IFunctionParameter => "parameter",
-				ITypeProperty => "property",
-				ITypeMethod => "method",
-				IType => "type",
-				ILoopLabel => "loop label",
-
-				_ => null,
-			};
-
-			if (kind is not null)
-				writer.WriteLine($"## Declaration ({kind})");
-			else
-				writer.WriteLine($"## Declaration");
-
-			writer.WriteLine("```owl");
-			writer.WriteLine(symbol.GetDebugText().ToPlainText());
-			writer.WriteLine("```");
-			writer.WriteLine();
-		}
-		#endregion
-
-		#region Annotation methods
-		private void TryWriteAnnotations(IndentedTextWriter writer, ISyntaxNode target)
-		{
-			if (target is IAnnotatedSyntaxNode node)
-				WriteAnnotations(writer, node);
-		}
-		private void WriteAnnotations(IndentedTextWriter writer, IAnnotatedSyntaxNode node)
-		{
-			TryWriteScopeDeclaration(writer, node);
-			TryWriteLocalCapture(writer, node);
-		}
-
-		private void TryWriteScopeDeclaration(IndentedTextWriter writer, IAnnotatedSyntaxNode node)
-		{
-			IReadOnlyCollection<ISymbol> symbols = GetDeclaredSymbols(node);
-			if (symbols.Count is 0)
-				return;
-
-			writer.WriteLine("### Declares");
-
-			foreach (ISymbol symbol in symbols)
-			{
-				Debug.Assert(symbol is not null);
-				writer.Write($"`{symbol.Name}` ");
-			}
-
-			writer.WriteLine();
-		}
-		private IReadOnlyCollection<ISymbol> GetDeclaredSymbols(IAnnotatedSyntaxNode node)
-		{
-			// Note(Nightowl): Turn this is into a proper annotation;
-
-			HashSet<ISymbol> symbols = [];
-
-			void Add(ISymbol symbol)
-			{
-				if (symbol.Name is not null)
-					symbols.Add(symbol);
-			}
-			void AddRange(IEnumerable<ISymbol> range)
-			{
-				foreach (ISymbol symbol in range)
-					Add(symbol);
-			}
-			void TryAddScope(IAnnotatedSyntaxNode node)
-			{
-				if (node.TryGetDeclaredScope(out IDeclaredSymbolScope? scope))
-					AddRange(scope.GetNamed(includeParents: false).FromCurrent);
-			}
-
-			TryAddScope(node);
-
-			if (node is IAnnotatedWhileStatementSyntax @while)
-				TryAddScope(@while.Body);
-			else if (node is IAnnotatedFunctionDeclarationStatementSyntax function)
-			{
-				if (function.Body is IAnnotatedBlockFunctionBodySyntax body)
-					TryAddScope(body.Block);
+				else if (keyword.Kind == SyntaxKind.While)
+				{
+					writer.WriteLine($"The `while` keyword is used for repeatedly executing a block of code, as long as a condition you give it continues to be true.");
+				}
+				else if (keyword.Kind == SyntaxKind.Fun)
+				{
+					writer.WriteLine($"The `fun` keyword is used to declared a new function.");
+				}
+				else if (keyword.Kind == SyntaxKind.Return)
+				{
+					writer.WriteLine($"The `return` keyword is used to return from a function *(optionally with a value).*");
+				}
 				else
-					TryAddScope(function.Body);
-			}
-
-			if (node is IAnnotatedToken token)
-			{
-				if (token.Parent is IAnnotatedIfStatementSyntax @if && @if.Keyword == token)
-					TryAddScope(@if.TrueClause);
-				else if (token.Parent is IAnnotatedIfElseStatementSyntax @ifElse)
 				{
-					if (@ifElse.Keyword == token)
-						TryAddScope(@ifElse.TrueClause);
-					else if (@ifElse.Else == token)
-						TryAddScope(ifElse.FalseClause);
+					writer.WriteLine($"*There's no documentation for the `{keyword.Kind.Name}` keyword yet.*<br>");
+					writer.WriteLine("Please report this to the developers on [GitHub issues](https://github.com/owl-whatever-language/cli/issues).");
 				}
 			}
-
-			return symbols;
 		}
+		#endregion
 
-		private void TryWriteLocalCapture(IndentedTextWriter writer, IAnnotatedSyntaxNode node)
+		#region Example methods
+		private static void WriteExample(IndentedTextWriter writer, ISyntaxNode original, ISyntaxNode target)
 		{
-			if (node is not IAnnotatedFunctionDeclarationStatementSyntax function)
-				return;
-
-			LocalCaptureAnnotation capture = function.GetLocalCapture();
-			if (capture.Variables.Any(v => v.Variable.Name is not null) is false)
-				return;
-
-			writer.WriteLine("### Captures");
-
-			foreach (IUsedVariableInfo usage in capture.Variables)
+			if (IsKeyword(original, out ISyntaxToken? keyword))
 			{
-				if (usage.Variable.Name is null)
-					continue;
-
-				writer.Write($"`{usage.Variable.Name}` ");
+				WriteExampleForKeyword(writer, keyword);
+				return;
 			}
+		}
+		private static void WriteExampleForKeyword(IndentedTextWriter writer, ISyntaxToken keyword)
+		{
+			using (_ = writer.Examples())
+			{
+				if (keyword.Kind == SyntaxKind.If || keyword.Kind == SyntaxKind.Else)
+				{
+					writer.MarkdownCode("owl",
+					"""
+					int value = MyCustomFunction();
 
-			writer.WriteLine();
-			writer.WriteLine();
+					if (value < 10) // The if keyword checks the condition.
+					{
+						// The code in this block will run if the value is less than 10.
+					}
+					else // Optionally, you can specify what to do if the condition failed.
+					{
+						// The code in this block will run if the value is NOT less than 10.
+					}
+					""");
+
+					writer.WriteLine("You can also chain these `if`/`else` statements together like so:");
+					writer.MarkdownCode("owl",
+					"""
+						int value = MyCustomFunction();
+
+						if (value < 10)
+						{
+							// Code runs if the value is less than 10.
+						}
+						else if (value < 100)
+						{
+							// Code runs if the value is less than 100, but not less than 10.
+							// This is because the if statements are checked in order.
+						}
+						else
+						{
+							// Code runs if both conditions failed.
+							// This means that the value is greater than or equal to 100.
+						}
+						""");
+				}
+				else if (keyword.Kind == SyntaxKind.While)
+				{
+					writer.MarkdownCode("owl",
+					"""
+					int value = MyCustomFunction();
+
+					while (value > 10) // The while keyword checks the condition each iteration.
+					{
+						// The code in this block will continue to repeat,
+						// as long the value is greater than 10.
+						value -= 1;
+					}
+					""");
+				}
+				else if (keyword.Kind == SyntaxKind.Fun || keyword.Kind == SyntaxKind.Return)
+				{
+					writer.MarkdownCode("owl",
+					"""
+					// The fun keyword declares a new function.
+					// This function can optionally take in some parameters.
+					fun MyCustomFunction(int value)
+					{
+						if (value > 10)
+						{
+							// If the value is greater than 10, then we exit the function.
+							return;
+						}
+
+						// This code will only run when value is less than or equal to 10.
+						DoSomethingWithValue(value);
+					}
+
+					// You can then call the function, and provide the value for the parameter.
+					MyCustomFunction(5);
+					""");
+
+					writer.MarkdownCode("owl",
+					"""
+					// Functions can also specify a return type.
+					// This means that they HAVE to return a value.
+					fun MyCustomFunction2(int value): int
+					{
+						if (value > 10)
+						{
+							// This is NOT allowed and it will ERROR.
+							// A value MUST be specified.
+							return;
+						}
+
+						// We return the provided value, but we add 5 to it.
+						return value + 5;
+					}
+
+					int result = MyCustomFunction2(3); // Results in 8.
+					""");
+				}
+				else
+				{
+					writer.WriteLine($"*There are no examples for the `{keyword.Kind.Name}` keyword yet.*<br>");
+					writer.WriteLine("Please report this to the developers on [GitHub issues](https://github.com/owl-whatever-language/cli/issues).");
+				}
+			}
 		}
 		#endregion
 
 		#region Helpers
-		private ISyntaxNode CorrectTarget(ISyntaxNode target)
+		private static bool IsKeyword(ISyntaxNode node, [NotNullWhen(true)] out ISyntaxToken? keyword)
 		{
-			if (target is ISyntaxToken token)
+			if (node is ISyntaxToken token && SyntaxKind.AllKeywords.Contains(token.Kind))
 			{
-				if (token.Kind == SyntaxKind.Semicolon && token.Parent is IConcreteStatementSyntax statement)
-				{
-					if (statement is IConcreteExpressionStatementSyntax expression)
-					{
-						if (expression.Expression is IConcreteBinaryExpressionSyntax binary)
-							return binary.Operator;
-
-						if (expression.Expression is IConcreteCompoundAssignmentExpressionSyntax compound)
-							return compound.Operator;
-
-						return expression.Expression;
-					}
-
-					return token.Parent;
-				}
-
-				if (token.Parent is IConcreteWhileStatementSyntax)
-					return token.Parent;
-
-				if (token.Parent is IConcreteVariableDeclarationStatementSyntax)
-					return token.Parent;
-
-				if (token.Parent is IConcreteFunctionDeclarationSignatureSyntax signature && signature.Parent is not null)
-					return signature.Parent;
-
-				if (token.Parent is IConcreteFunctionBodySyntax body && body.Parent is not null)
-					return body.Parent;
-
-				if (token.Parent is IConcreteBlockStatementSyntax block)
-				{
-					if (block.Parent is IConcreteFunctionBodySyntax body2 && body2.Parent is not null)
-						return body2.Parent;
-
-					bool isInterestingParent = block.Parent switch
-					{
-						IConcreteFunctionBodySyntax => true,
-						IConcreteIfStatementSyntax => true,
-						IConcreteIfElseStatementSyntax => true,
-						IConcreteWhileStatementSyntax => true,
-
-						_ => false,
-					};
-
-					if (isInterestingParent)
-					{
-						Debug.Assert(block.Parent is not null);
-						return block.Parent;
-					}
-				}
+				keyword = token;
+				return true;
 			}
 
-			return target;
-		}
-		private void WriteHover(IndentedTextWriter writer, ISyntaxNode originalTarget, ISyntaxNode target)
-		{
-			TryWriteDeclaration(writer, target);
-			writer.WriteLine("---");
-			TryWriteAnnotations(writer, target);
-			writer.WriteLine("---");
+			keyword = default;
+			return false;
 		}
 		#endregion
 	}

@@ -1,3 +1,5 @@
+using System.CodeDom.Compiler;
+using System.IO;
 using EmmyLua.LanguageServer.Framework.Protocol.Message.Hover;
 
 namespace OwlDomain.Owl.LSP.Handlers.Hovers;
@@ -31,12 +33,11 @@ internal sealed partial class HoverHandler : HoverHandlerBase
 		{
 			string text = response.Contents.Value;
 			text = FixContent(text);
-
-			if (string.IsNullOrWhiteSpace(text))
-				response = null;
-			else
-				response.Contents.Value = text;
+			response.Contents.Value = text;
 		}
+
+		if (string.IsNullOrWhiteSpace(response?.Contents.Value))
+			response = null;
 
 		return response ?? GetBasicResponse();
 	}
@@ -51,6 +52,30 @@ internal sealed partial class HoverHandler : HoverHandlerBase
 
 		return content;
 	}
+	#endregion
+
+	#region Helpers
+	private static HoverResponse ResultFromMarkdown(StringWriter result)
+	{
+		string text = result.ToString();
+		return ResultFromMarkdown(text);
+	}
+	private static HoverResponse ResultFromMarkdown(string text)
+	{
+		return new()
+		{
+			Contents = new()
+			{
+				Kind = MarkupKind.Markdown,
+				Value = text
+			}
+		};
+	}
+	private static IndentedTextWriter GetWriter(out StringWriter result, string indent = "  ")
+	{
+		result = new();
+		return new(result, indent);
+	}
 	private static HoverResponse GetBasicResponse()
 	{
 		return new()
@@ -63,4 +88,27 @@ internal sealed partial class HoverHandler : HoverHandlerBase
 		};
 	}
 	#endregion
+}
+
+internal static class IndentedTextWriterExtensions
+{
+	extension(IndentedTextWriter writer)
+	{
+		#region Methods
+		public CustomWriterScope MainSection(string header)
+		{
+			static void Callback(IndentedTextWriter writer)
+			{
+				writer.WriteLine();
+				writer.WriteLine("---");
+				writer.WriteLine();
+			}
+
+			writer.MarkdownSection(2, header);
+			return new(writer, Callback);
+		}
+		public CustomWriterScope Documentation() => MainSection(writer, "Documentation");
+		public CustomWriterScope Examples() => MainSection(writer, "Examples");
+		#endregion
+	}
 }
