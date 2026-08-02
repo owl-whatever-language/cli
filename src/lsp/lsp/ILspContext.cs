@@ -104,7 +104,7 @@ internal sealed class LspContext : ILspContext
 						workspace.AddFile(new FileSystemSourceFile(path));
 				}
 
-				if (workspace.IsEmpty)
+				if (workspace.IsEmpty || (workspace.Files.OfType<WorkspaceSourceFile>().Any() is false))
 				{
 					_workspaces.Remove(workspace);
 					Console.Error.WriteLine($"Removed workspace #{workspace.Id:n0}: {workspace.Directory ?? path}.");
@@ -208,6 +208,38 @@ internal sealed class LspContext : ILspContext
 		{
 			FileSystemSourceFile source = new(file);
 			workspace.AddFile(source);
+		}
+
+		HashSet<IOwlWorkspace> inlined = [];
+
+		foreach (IOwlWorkspace current in _workspaces)
+		{
+			if (current.Directory is null)
+			{
+				string? path = current.Files.FirstOrDefault()?.Path;
+				if (path is not null && workspace.IsRelevant(path, out _))
+					inlined.Add(current);
+
+				continue;
+			}
+
+			if (workspace.IsRelevant(current.Directory, out _))
+				inlined.Add(current);
+		}
+
+		foreach (IOwlWorkspace current in inlined)
+		{
+			_workspaces.Remove(current);
+
+			foreach (WorkspaceSourceFile source in current.Files.OfType<WorkspaceSourceFile>())
+			{
+				if (workspace.IsRelevantFile(source.Path, out ISourceFile? manual))
+					workspace.RemoveFile(manual);
+
+				workspace.AddFile(source);
+			}
+
+			Console.Error.WriteLine($"Inlined workspace #{current.Id:n0} into workspace #{workspace.Id:n0}");
 		}
 
 		return workspace;
