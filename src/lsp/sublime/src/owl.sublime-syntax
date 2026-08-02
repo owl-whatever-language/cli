@@ -69,6 +69,11 @@ contexts:
         1: entity.name.function.owl
         2: punctuation.operator.owl
 
+    - match: \b(\w+)\s+(\w+)
+      captures:
+        1: entity.name.type.owl
+        2: variable.other.owl
+
   comment:
     - meta_scope: comment.line.double-slash.owl
 
