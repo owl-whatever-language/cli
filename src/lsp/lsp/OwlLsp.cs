@@ -90,7 +90,7 @@ public static class OwlLsp
 		server.AddHandler(new FoldingRangeHandler(context));
 		server.AddHandler(new CodeLensHandler(context));
 		server.AddHandler(new RenameHandler(context));
-		server.AddHandler(new DidChangeWatchedFilesHandler());
+		server.AddHandler(new DidChangeWatchedFilesHandler(context));
 	}
 	#endregion
 }

@@ -93,7 +93,10 @@ internal sealed class LspContext : ILspContext
 			if (TryGet(path, out IOwlWorkspace? workspace))
 			{
 				if (workspace.IsRelevantFile(path, out ISourceFile? source))
+				{
 					workspace.RemoveFile(source);
+					workspace.AddFile(new FileSystemSourceFile(path));
+				}
 
 				if (workspace.IsEmpty)
 					_workspaces.Remove(workspace);
@@ -152,19 +155,46 @@ internal sealed class LspContext : ILspContext
 		{
 			string packagePath = Path.Combine(directory, "owl.package");
 			if (File.Exists(packagePath))
-				lastPackage = packagePath;
+				lastPackage = directory;
 
 			string workspacePath = Path.Combine(directory, "owl.workspace");
 			if (File.Exists(workspacePath))
-				return new OwlWorkspace(directory);
+				return CreateFromDirectory(directory);
 
 			directory = Path.GetDirectoryName(directory);
 		}
 
 		if (lastPackage is not null)
-			return new OwlWorkspace(Path.GetDirectoryName(lastPackage));
+			return CreateFromDirectory(lastPackage);
 
 		return new OwlWorkspace(null);
+	}
+	private IOwlWorkspace CreateFromDirectory(string directory)
+	{
+		IReadOnlyCollection<string> GetFiles(params ReadOnlySpan<string> filters)
+		{
+			List<string> files = [];
+
+			foreach (string filter in filters)
+			{
+				string[] current = Directory.GetFiles(directory, filter, SearchOption.AllDirectories);
+				files.AddRange(current);
+			}
+
+			return files;
+		}
+
+		OwlWorkspace workspace = new(directory);
+
+		IReadOnlyCollection<string> files = GetFiles("*.owl", "owl.workspace", "owl.config", "owl.package");
+
+		foreach (string file in files)
+		{
+			FileSystemSourceFile source = new(file);
+			workspace.AddFile(source);
+		}
+
+		return workspace;
 	}
 	#endregion
 }

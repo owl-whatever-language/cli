@@ -17,6 +17,7 @@ internal sealed class TextDocumentHandler(ILspContext context) : TextDocumentHan
 	}
 	protected override Task Handle(DidOpenTextDocumentParams request, CancellationToken token)
 	{
+		Console.Error.WriteLine($"Client wants to manage: {request.TextDocument.SourcePath}");
 		_context.AddFile(request.TextDocument.SourcePath, request.TextDocument.Text);
 		return Task.CompletedTask;
 	}
@@ -27,6 +28,7 @@ internal sealed class TextDocumentHandler(ILspContext context) : TextDocumentHan
 	}
 	protected override async Task Handle(DidCloseTextDocumentParams request, CancellationToken token)
 	{
+		Console.Error.WriteLine($"Client wants to stop managing: {request.TextDocument.SourcePath}");
 		_context.RemoveFile(request.TextDocument.SourcePath);
 	}
 	protected override Task Handle(WillSaveTextDocumentParams request, CancellationToken token) => Task.CompletedTask;

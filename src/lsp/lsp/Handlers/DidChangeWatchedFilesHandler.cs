@@ -3,8 +3,12 @@ using EmmyLua.LanguageServer.Framework.Protocol.Message.WorkspaceWatchedFile.Wat
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
-internal sealed class DidChangeWatchedFilesHandler : DidChangeWatchedFilesHandlerBase
+internal sealed class DidChangeWatchedFilesHandler(ILspContext context) : DidChangeWatchedFilesHandlerBase
 {
+	#region Fields
+	private readonly ILspContext _context = context;
+	#endregion
+
 	#region Methods
 	public override void RegisterCapability(ServerCapabilities serverCapabilities, ClientCapabilities clientCapabilities) { }
 	public override void RegisterDynamicCapability(LanguageServer server, ClientCapabilities clientCapabilities)
@@ -15,22 +19,12 @@ internal sealed class DidChangeWatchedFilesHandler : DidChangeWatchedFilesHandle
 			[
 				new FileSystemWatcher()
 				{
-					GlobalPattern = "owl.workspace",
+					GlobalPattern = "**/owl.{workspace,package,config}",
 					Kind = WatchKind.Create | WatchKind.Change | WatchKind.Delete
 				},
 				new FileSystemWatcher()
 				{
-					GlobalPattern = "owl.package",
-					Kind = WatchKind.Create | WatchKind.Change | WatchKind.Delete
-				},
-				new FileSystemWatcher()
-				{
-					GlobalPattern = "owl.config",
-					Kind = WatchKind.Create | WatchKind.Change | WatchKind.Delete
-				},
-				new FileSystemWatcher()
-				{
-					GlobalPattern = "*.owl",
+					GlobalPattern = "**/*.owl",
 					Kind = WatchKind.Create | WatchKind.Change | WatchKind.Delete
 				},
 			]
@@ -51,6 +45,24 @@ internal sealed class DidChangeWatchedFilesHandler : DidChangeWatchedFilesHandle
 	}
 	protected override Task Handle(DidChangeWatchedFilesParams request, CancellationToken token)
 	{
+		foreach (FileEvent change in request.Changes)
+		{
+			string path = change.Uri.SourcePath;
+
+			if (change.Type is FileChangeType.Created)
+			{
+				string text = System.IO.File.ReadAllText(path);
+				_context.AddFile(path, text);
+			}
+			else if (change.Type is FileChangeType.Changed)
+			{
+				string text = System.IO.File.ReadAllText(path);
+				_context.UpdateFile(path, text);
+			}
+			else if (change.Type is FileChangeType.Deleted)
+				_context.RemoveFile(path);
+		}
+
 		return Task.CompletedTask;
 	}
 	#endregion
