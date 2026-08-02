@@ -13,35 +13,30 @@ partial class HoverHandler
 		#region Methods
 		protected override HoverResponse? Handle(HandlerRequest<HoverParams> request, ICodeSyntaxTree tree, CancellationToken cancellation)
 		{
-			ISyntaxNode? original = tree.Document.Search<ISyntaxToken>(request.Request.Position);
-			if (original is null)
+			ISyntaxToken? target = tree.Document.Search<ISyntaxToken>(request.Request.Position);
+			if (target is null)
 				return null;
 
 			using (IndentedTextWriter writer = GetWriter(out StringWriter result))
 			{
-				ISyntaxNode corrected = CorrectTarget(original);
-				WriteHover(writer, original, original);
+				WriteHover(writer, target);
 
 				return ResultFromMarkdown(result);
 			}
 		}
-		private void WriteHover(IndentedTextWriter writer, ISyntaxNode original, ISyntaxNode target)
+		private void WriteHover(IndentedTextWriter writer, ISyntaxToken target)
 		{
-			WriteDocumentation(writer, original, target);
-			WriteExample(writer, original, target);
-		}
-		private ISyntaxNode CorrectTarget(ISyntaxNode node)
-		{
-			return node;
+			WriteDocumentation(writer, target);
+			WriteExample(writer, target);
 		}
 		#endregion
 
 		#region Documentation methods
-		private static void WriteDocumentation(IndentedTextWriter writer, ISyntaxNode original, ISyntaxNode target)
+		private static void WriteDocumentation(IndentedTextWriter writer, ISyntaxToken target)
 		{
-			if (IsKeyword(original, out ISyntaxToken? keyword))
+			if (IsKeyword(target))
 			{
-				WriteDocumentationForKeyword(writer, keyword);
+				WriteDocumentationForKeyword(writer, target);
 				return;
 			}
 		}
@@ -75,11 +70,11 @@ partial class HoverHandler
 		#endregion
 
 		#region Example methods
-		private static void WriteExample(IndentedTextWriter writer, ISyntaxNode original, ISyntaxNode target)
+		private static void WriteExample(IndentedTextWriter writer, ISyntaxToken target)
 		{
-			if (IsKeyword(original, out ISyntaxToken? keyword))
+			if (IsKeyword(target))
 			{
-				WriteExampleForKeyword(writer, keyword);
+				WriteExampleForKeyword(writer, target);
 				return;
 			}
 		}
@@ -190,17 +185,7 @@ partial class HoverHandler
 		#endregion
 
 		#region Helpers
-		private static bool IsKeyword(ISyntaxNode node, [NotNullWhen(true)] out ISyntaxToken? keyword)
-		{
-			if (node is ISyntaxToken token && SyntaxKind.AllKeywords.Contains(token.Kind))
-			{
-				keyword = token;
-				return true;
-			}
-
-			keyword = default;
-			return false;
-		}
+		private static bool IsKeyword(ISyntaxToken token) => SyntaxKind.AllKeywords.Contains(token.Kind);
 		#endregion
 	}
 	#endregion
