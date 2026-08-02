@@ -50,7 +50,9 @@ internal sealed class LspContext : ILspContext
 
 			WorkspaceSourceFile source = new(path, text);
 			workspace.AddFile(source);
+
 			workspace.Analyse();
+			PrintAnalysisInfo(workspace);
 		}
 	}
 	public void UpdateFile(string path, string text)
@@ -81,6 +83,7 @@ internal sealed class LspContext : ILspContext
 			}
 
 			workspace.Analyse();
+			PrintAnalysisInfo(workspace);
 		}
 	}
 	public void RemoveFile(string path)
@@ -94,12 +97,26 @@ internal sealed class LspContext : ILspContext
 
 				if (workspace.IsEmpty)
 					_workspaces.Remove(workspace);
+				else
+				{
+					workspace.Analyse();
+					PrintAnalysisInfo(workspace);
+				}
 			}
 		}
 	}
 	#endregion
 
 	#region Helpers
+	private void PrintAnalysisInfo(IOwlWorkspace workspace)
+	{
+		int code = workspace.ConfigContext.Bundles.Count;
+		int workspaces = workspace.WorkspaceContext.Bundles.Count;
+		int configs = workspace.ConfigContext.Bundles.Count;
+		int packages = workspace.PackageContext.Bundles.Count;
+
+		Console.Error.WriteLine($"Analysed: {code:n0} source(s) {workspaces:n0} workspace(s) {configs:n0} config(s) {packages:n0} package(s)");
+	}
 	public bool TryGet(string filePath, [NotNullWhen(true)] out IOwlWorkspace? workspace)
 	{
 		foreach (IOwlWorkspace current in _workspaces)

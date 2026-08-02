@@ -1,15 +1,19 @@
 namespace: OwlDomain.Owl.Config.CodeAnalysis.Syntax
 
 # Define the shadowing order
-shadow: concrete declared
+shadow: concrete declared semantic annotated
 
 # Define what's on each token
 token concrete:
 token declared:
+token semantic:
+token annotated:
 
 # Define what's on each node in the tree
 tree concrete:
 tree declared:
+tree semantic:
+tree annotated:
 
 # Define the root node in the tree
 document: document_unit unit, token end_of_input
