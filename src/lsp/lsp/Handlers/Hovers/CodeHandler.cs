@@ -293,7 +293,9 @@ partial class HoverHandler
 		private void WriteHover(IndentedTextWriter writer, ISyntaxNode originalTarget, ISyntaxNode target)
 		{
 			TryWriteDeclaration(writer, target);
+			writer.WriteLine("---");
 			TryWriteAnnotations(writer, target);
+			writer.WriteLine("---");
 		}
 		#endregion
 	}

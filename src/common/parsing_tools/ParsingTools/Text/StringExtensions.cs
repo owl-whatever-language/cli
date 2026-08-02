@@ -43,6 +43,40 @@ public static class StringExtensions
 
 			return interned;
 		}
+
+		[return: NotNullIfNotNull(nameof(value))]
+		public string? RemovePrefix(string suffix, bool allowMultiple = false)
+		{
+			if (value is null)
+				return null;
+
+			if (allowMultiple)
+			{
+				while (value.StartsWith(suffix))
+					value = value[suffix.Length..];
+			}
+			else if (value.StartsWith(suffix))
+				return value[suffix.Length..];
+
+			return value;
+		}
+
+		[return: NotNullIfNotNull(nameof(value))]
+		public string? RemoveSuffix(string suffix, bool allowMultiple = false)
+		{
+			if (value is null)
+				return null;
+
+			if (allowMultiple)
+			{
+				while (value.EndsWith(suffix))
+					value = value[..^suffix.Length];
+			}
+			else if (value.EndsWith(suffix))
+				return value[..^suffix.Length];
+
+			return value;
+		}
 		#endregion
 	}
 	extension(Guard)

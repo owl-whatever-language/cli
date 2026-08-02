@@ -26,7 +26,30 @@ internal sealed partial class HoverHandler : HoverHandlerBase
 	}
 	protected override async Task<HoverResponse?> Handle(HoverParams request, CancellationToken cancellation)
 	{
-		return await _bundle.HandleAsync(request, cancellation) ?? GetBasicResponse();
+		HoverResponse? response = await _bundle.HandleAsync(request, cancellation);
+		if (response is not null && response.Contents.Kind == MarkupKind.Markdown)
+		{
+			string text = response.Contents.Value;
+			text = FixContent(text);
+
+			if (string.IsNullOrWhiteSpace(text))
+				response = null;
+			else
+				response.Contents.Value = text;
+		}
+
+		return response ?? GetBasicResponse();
+	}
+	private string FixContent(string content)
+	{
+		content = content.Trim();
+		content = content.RemoveSuffix("\n---", allowMultiple: true);
+		content = content.RemovePrefix("---\n", allowMultiple: true);
+
+		if (content == "---")
+			content = "";
+
+		return content;
 	}
 	private static HoverResponse GetBasicResponse()
 	{
