@@ -47,6 +47,23 @@ public static class OwlLsp
 		{
 			await server.Client.LogInfo("Server initialised!");
 			Console.Error.WriteLine();
+
+			Console.Error.WriteLine("Client support:");
+			if (server.ClientCapabilities.TextDocument?.SemanticTokens is not null)
+			{
+				var semantic = server.ClientCapabilities.TextDocument.SemanticTokens;
+
+				Console.Error.WriteLine($"- Semantic tokens ({semantic.TokenTypes.Count:n0}):");
+				foreach (string token in semantic.TokenTypes)
+					Console.Error.WriteLine($"  - {token}");
+
+				Console.Error.WriteLine($"- Semantic token modifiers ({semantic.TokenModifiers.Count:n0}):");
+				foreach (string modifier in semantic.TokenModifiers)
+					Console.Error.WriteLine($"  - {modifier}");
+			}
+
+			Console.Error.WriteLine();
+
 		});
 
 		server.OnShutdown(async () =>
