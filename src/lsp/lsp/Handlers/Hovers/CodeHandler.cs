@@ -39,6 +39,15 @@ partial class HoverHandler
 				WriteDocumentationForKeyword(writer, target);
 				return;
 			}
+
+			if (target.Symbol is not null)
+			{
+				// Note(Nightowl): No documentation comment support yet, so always showing a fallback for now;
+				using (writer.Documentation())
+				{
+					writer.WriteLine("*No documentation has been provided.*");
+				}
+			}
 		}
 		private static void WriteDocumentationForKeyword(IndentedTextWriter writer, ISyntaxToken keyword)
 		{
