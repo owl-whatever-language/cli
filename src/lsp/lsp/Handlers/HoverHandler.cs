@@ -31,7 +31,11 @@ internal sealed class HoverHandler(ILspContext context) : HoverHandlerBase
 	}
 	protected override Task<HoverResponse?> Handle(HoverParams request, CancellationToken cancellation)
 	{
-		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
+		string path = request.TextDocument.SourcePath;
+		if (_context.TryGet(path, out IOwlWorkspace? workspace) is false)
+			return Task.FromResult<HoverResponse?>(null);
+
+		if (workspace.IsCode(path, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult<HoverResponse?>(null);
 
 		ISyntaxNode? target = tree.Document.Search<ISyntaxToken>(request.Position);

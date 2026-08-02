@@ -25,9 +25,10 @@ internal sealed class CodeLensHandler(ILspContext context) : CodeLensHandlerBase
 		List<CodeLens> lenses = [];
 		CodeLensResponse response = new(lenses);
 
-		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
-			return Task.FromResult(response);
-
+		if (_context.TryGet(request.TextDocument.SourcePath, out IOwlWorkspace? workspace))
+		{
+			// Note(Nightowl): To fill later;
+		}
 
 		return Task.FromResult(response);
 	}

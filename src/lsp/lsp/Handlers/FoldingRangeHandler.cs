@@ -17,11 +17,22 @@ internal sealed class FoldingRangeHandler(ILspContext context) : FoldingRangeHan
 	}
 	protected override Task<FoldingRangeResponse> Handle(FoldingRangeParams request, CancellationToken token)
 	{
+		FoldingRangeResponse? response = null;
+
+		string path = request.TextDocument.SourcePath;
+		if (_context.TryGet(path, out IOwlWorkspace? workspace))
+		{
+			if (workspace.IsCode(path, out ICodeSyntaxTree? code))
+				response = ForCode(code);
+		}
+
+		response ??= new([]);
+		return Task.FromResult(response);
+	}
+	private FoldingRangeResponse ForCode(ICodeSyntaxTree tree)
+	{
 		List<FoldingRange> ranges = [];
 		FoldingRangeResponse response = new(ranges);
-
-		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
-			return Task.FromResult(response);
 
 		foreach (var block in tree.Document.Flatten<IConcreteBlockStatementSyntax>())
 			TryAdd(ranges, block.Start, block.End);
@@ -32,7 +43,7 @@ internal sealed class FoldingRangeHandler(ILspContext context) : FoldingRangeHan
 		foreach (var call in tree.Document.Flatten<IConcreteFunctionCallExpressionSyntax>())
 			TryAdd(ranges, call.Start, call.End);
 
-		return Task.FromResult(response);
+		return response;
 	}
 	#endregion
 

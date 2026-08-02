@@ -44,10 +44,14 @@ internal sealed class InlayHintHandler(ILspContext context) : InlayHintHandlerBa
 	}
 	protected override Task<InlayHintResponse?> Handle(InlayHintParams request, CancellationToken cancellationToken)
 	{
-		List<InlayHint> hints = [];
+		string path = request.TextDocument.SourcePath;
+		if (_context.TryGet(path, out IOwlWorkspace? workspace) is false)
+			return Task.FromResult<InlayHintResponse?>(null);
 
-		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
-			return Task.FromResult<InlayHintResponse?>(new(hints));
+		if (workspace.IsCode(path, out ICodeSyntaxTree? tree) is false)
+			return Task.FromResult<InlayHintResponse?>(null);
+
+		List<InlayHint> hints = [];
 
 		// Note(Nightowl):
 		// This is a cool idea, but disable it for now since it makes writing the code very confusing.

@@ -1,0 +1,17 @@
+%YAML 1.2
+---
+name: OWL-config
+file_extensions: [owl.workspace, owl.config, owl.package]
+scope: source.owl-config
+version: 2
+
+contexts:
+  main:
+    - match: //
+      push: comment
+
+  comment:
+    - meta_scope: comment.line.double-slash.owl
+
+    - match: $
+      pop: true

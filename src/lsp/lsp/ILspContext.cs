@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace OwlDomain.Owl.LSP;
 
 internal interface ILspContext
@@ -8,10 +10,10 @@ internal interface ILspContext
 	#endregion
 
 	#region Methods
-	IOwlWorkspace NewWorkspace();
-	bool TryGetWorkspace(string filePath, [NotNullWhen(true)] out ISourceFile? file, [NotNullWhen(true)] out IOwlWorkspace? workspace);
-	bool TryGetWorkspace(ISourceFile file, [NotNullWhen(true)] out IOwlWorkspace? workspace);
-	void RemoveWorkspace(IOwlWorkspace workspace);
+	void AddFile(string path, string text);
+	void UpdateFile(string path, string text);
+	void RemoveFile(string path);
+	bool TryGet(string path, [NotNullWhen(true)] out IOwlWorkspace? workspace);
 	#endregion
 }
 
@@ -37,205 +39,115 @@ internal sealed class LspContext : ILspContext
 	#endregion
 
 	#region Methods
-	public IOwlWorkspace NewWorkspace()
+	public void AddFile(string path, string text)
 	{
 		using (_lock.WriteLock())
 		{
-			OwlWorkspace workspace = new();
-			_workspaces.Add(workspace);
+			IOwlWorkspace workspace = GetOrCreate(path);
 
-			return workspace;
+			if (workspace.IsRelevantFile(path, out ISourceFile? original))
+				workspace.RemoveFile(original);
+
+			WorkspaceSourceFile source = new(path, text);
+			workspace.AddFile(source);
+			workspace.Analyse();
 		}
 	}
-	public bool TryGetWorkspace(string filePath, [NotNullWhen(true)] out ISourceFile? file, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-	{
-		using (_lock.ReadLock())
-		{
-			foreach (IOwlWorkspace current in _workspaces)
-			{
-				if (current.ContainsFile(filePath, out file))
-				{
-					workspace = current;
-					return true;
-				}
-			}
-
-			file = default;
-			workspace = default;
-
-			return false;
-		}
-	}
-	public bool TryGetWorkspace(ISourceFile file, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-	{
-		using (_lock.ReadLock())
-		{
-			foreach (IOwlWorkspace current in _workspaces)
-			{
-				if (current.ContainsFile(file))
-				{
-					workspace = current;
-					return true;
-				}
-			}
-
-			workspace = default;
-			return false;
-		}
-	}
-	public void RemoveWorkspace(IOwlWorkspace workspace)
+	public void UpdateFile(string path, string text)
 	{
 		using (_lock.WriteLock())
 		{
-			_workspaces.Remove(workspace);
+			IOwlWorkspace workspace = GetOrCreate(path);
+
+			if (workspace.IsRelevantFile(path, out ISourceFile? original))
+			{
+				if (original is WorkspaceSourceFile source)
+				{
+					source.Text = text;
+					workspace.UpdateFile(source);
+				}
+				else
+				{
+					source = new(path, text);
+
+					workspace.RemoveFile(original);
+					workspace.AddFile(source);
+				}
+			}
+			else
+			{
+				WorkspaceSourceFile source = new(path, text);
+				workspace.AddFile(source);
+			}
+
+			workspace.Analyse();
+		}
+	}
+	public void RemoveFile(string path)
+	{
+		using (_lock.WriteLock())
+		{
+			if (TryGet(path, out IOwlWorkspace? workspace))
+			{
+				if (workspace.IsRelevantFile(path, out ISourceFile? source))
+					workspace.RemoveFile(source);
+
+				if (workspace.IsEmpty)
+					_workspaces.Remove(workspace);
+			}
 		}
 	}
 	#endregion
-}
 
-internal static class ILspContextExtensions
-{
-	extension(ILspContext context)
+	#region Helpers
+	public bool TryGet(string filePath, [NotNullWhen(true)] out IOwlWorkspace? workspace)
 	{
-		#region TryGetWorkspace methods
-		public bool TryGetWorkspace(TextDocumentItem document, [NotNullWhen(true)] out ISourceFile? file, [NotNullWhen(true)] out IOwlWorkspace? workspace)
+		foreach (IOwlWorkspace current in _workspaces)
 		{
-			return TryGetWorkspace(context, document.Uri, out file, out workspace);
-		}
-		public bool TryGetWorkspace(TextDocumentIdentifier documentId, [NotNullWhen(true)] out ISourceFile? file, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return TryGetWorkspace(context, documentId.Uri, out file, out workspace);
-		}
-		public bool TryGetWorkspace(DocumentUri uri, [NotNullWhen(true)] out ISourceFile? file, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return TryGetWorkspace(context, uri.Uri, out file, out workspace);
-		}
-		public bool TryGetWorkspace(Uri uri, [NotNullWhen(true)] out ISourceFile? file, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return context.TryGetWorkspace(uri.AbsolutePath, out file, out workspace);
-		}
-
-		public bool TryGetWorkspace(TextDocumentItem document, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return TryGetWorkspace(context, document.Uri, out _, out workspace);
-		}
-		public bool TryGetWorkspace(TextDocumentIdentifier documentId, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return TryGetWorkspace(context, documentId.Uri, out _, out workspace);
-		}
-		public bool TryGetWorkspace(DocumentUri uri, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return TryGetWorkspace(context, uri.Uri, out _, out workspace);
-		}
-		public bool TryGetWorkspace(Uri uri, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return context.TryGetWorkspace(uri.AbsolutePath, out _, out workspace);
-		}
-		#endregion
-
-		#region TryGetTree methods
-		public bool TryGetTree(TextDocumentItem document, [NotNullWhen(true)] out ICodeSyntaxTree? tree, [NotNullWhen(true)] out ISourceFile? file, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return TryGetTree(context, document.Uri.Uri.AbsolutePath, out tree, out file, out workspace);
-		}
-		public bool TryGetTree(TextDocumentIdentifier documentId, [NotNullWhen(true)] out ICodeSyntaxTree? tree, [NotNullWhen(true)] out ISourceFile? file, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return TryGetTree(context, documentId.Uri.Uri.AbsolutePath, out tree, out file, out workspace);
-		}
-		public bool TryGetTree(DocumentUri uri, [NotNullWhen(true)] out ICodeSyntaxTree? tree, [NotNullWhen(true)] out ISourceFile? file, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return TryGetTree(context, uri.Uri.AbsolutePath, out tree, out file, out workspace);
-		}
-		public bool TryGetTree(Uri uri, [NotNullWhen(true)] out ICodeSyntaxTree? tree, [NotNullWhen(true)] out ISourceFile? file, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return TryGetTree(context, uri.AbsolutePath, out tree, out file, out workspace);
-		}
-		public bool TryGetTree(string path, [NotNullWhen(true)] out ICodeSyntaxTree? tree, [NotNullWhen(true)] out ISourceFile? file, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			if (context.TryGetWorkspace(path, out file, out workspace))
+			if (current.IsRelevant(filePath, out _))
 			{
-				if (workspace.TryGetTree(file, out tree))
-					return true;
+				workspace = current;
+				return true;
 			}
-
-			tree = default;
-			file = default;
-			workspace = default;
-
-			return false;
 		}
 
-		public bool TryGetTree(TextDocumentItem document, [NotNullWhen(true)] out ICodeSyntaxTree? tree, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return TryGetTree(context, document.Uri.Uri.AbsolutePath, out tree, out _, out workspace);
-		}
-		public bool TryGetTree(TextDocumentIdentifier documentId, [NotNullWhen(true)] out ICodeSyntaxTree? tree, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return TryGetTree(context, documentId.Uri.Uri.AbsolutePath, out tree, out _, out workspace);
-		}
-		public bool TryGetTree(DocumentUri uri, [NotNullWhen(true)] out ICodeSyntaxTree? tree, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return TryGetTree(context, uri.Uri.AbsolutePath, out tree, out _, out workspace);
-		}
-		public bool TryGetTree(Uri uri, [NotNullWhen(true)] out ICodeSyntaxTree? tree, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return TryGetTree(context, uri.AbsolutePath, out tree, out _, out workspace);
-		}
-		public bool TryGetTree(string path, [NotNullWhen(true)] out ICodeSyntaxTree? tree, [NotNullWhen(true)] out IOwlWorkspace? workspace)
-		{
-			return TryGetTree(context, path, out tree, out _, out workspace);
-		}
-
-		public bool TryGetTree(TextDocumentItem document, [NotNullWhen(true)] out ICodeSyntaxTree? tree)
-		{
-			return TryGetTree(context, document.Uri.Uri.AbsolutePath, out tree, out _, out _);
-		}
-		public bool TryGetTree(TextDocumentIdentifier documentId, [NotNullWhen(true)] out ICodeSyntaxTree? tree)
-		{
-			return TryGetTree(context, documentId.Uri.Uri.AbsolutePath, out tree, out _, out _);
-		}
-		public bool TryGetTree(DocumentUri uri, [NotNullWhen(true)] out ICodeSyntaxTree? tree)
-		{
-			return TryGetTree(context, uri.Uri.AbsolutePath, out tree, out _, out _);
-		}
-		public bool TryGetTree(Uri uri, [NotNullWhen(true)] out ICodeSyntaxTree? tree)
-		{
-			return TryGetTree(context, uri.AbsolutePath, out tree, out _, out _);
-		}
-		public bool TryGetTree(string path, [NotNullWhen(true)] out ICodeSyntaxTree? tree)
-		{
-			return TryGetTree(context, path, out tree, out _, out _);
-		}
-
-		public bool TryGetTree(TextDocumentItem document, [NotNullWhen(true)] out ICodeSyntaxTree? tree, [NotNullWhen(true)] out ISourceFile? file)
-		{
-			return TryGetTree(context, document.Uri.Uri.AbsolutePath, out tree, out file, out _);
-		}
-		public bool TryGetTree(TextDocumentIdentifier documentId, [NotNullWhen(true)] out ICodeSyntaxTree? tree, [NotNullWhen(true)] out ISourceFile? file)
-		{
-			return TryGetTree(context, documentId.Uri.Uri.AbsolutePath, out tree, out file, out _);
-		}
-		public bool TryGetTree(DocumentUri uri, [NotNullWhen(true)] out ICodeSyntaxTree? tree, [NotNullWhen(true)] out ISourceFile? file)
-		{
-			return TryGetTree(context, uri.Uri.AbsolutePath, out tree, out file, out _);
-		}
-		public bool TryGetTree(Uri uri, [NotNullWhen(true)] out ICodeSyntaxTree? tree, [NotNullWhen(true)] out ISourceFile? file)
-		{
-			return TryGetTree(context, uri.AbsolutePath, out tree, out file, out _);
-		}
-		public bool TryGetTree(string path, [NotNullWhen(true)] out ICodeSyntaxTree? tree, [NotNullWhen(true)] out ISourceFile? file)
-		{
-			if (context.TryGetWorkspace(path, out file, out IOwlWorkspace? workspace))
-			{
-				if (workspace.TryGetTree(file, out tree))
-					return true;
-			}
-
-			tree = default;
-			file = default;
-
-			return false;
-		}
-		#endregion
+		workspace = default;
+		return false;
 	}
+	private IOwlWorkspace GetOrCreate(string filePath)
+	{
+		if (TryGet(filePath, out IOwlWorkspace? workspace) is false)
+		{
+			workspace = CreateWorkspace(filePath, out string? directory);
+			Console.Error.WriteLine($"Created new workspace: {directory ?? filePath}");
+
+			_workspaces.Add(workspace);
+		}
+
+		return workspace;
+	}
+	private IOwlWorkspace CreateWorkspace(string filePath, out string? directory)
+	{
+		string? lastPackage = null;
+
+		directory = Path.GetDirectoryName(filePath);
+		while (directory is not null)
+		{
+			string packagePath = Path.Combine(directory, "owl.package");
+			if (File.Exists(packagePath))
+				lastPackage = packagePath;
+
+			string workspacePath = Path.Combine(directory, "owl.workspace");
+			if (File.Exists(workspacePath))
+				return new OwlWorkspace(directory);
+
+			directory = Path.GetDirectoryName(directory);
+		}
+
+		if (lastPackage is not null)
+			return new OwlWorkspace(Path.GetDirectoryName(lastPackage));
+
+		return new OwlWorkspace(null);
+	}
+	#endregion
 }

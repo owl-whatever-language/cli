@@ -24,40 +24,64 @@ internal sealed class DocumentDiagnosticHandler(ILspContext context) : DocumentD
 		RelatedFullDocumentDiagnosticReport full = new() { Diagnostics = [] };
 		DocumentDiagnosticReport report = new(full);
 
-		if (_context.TryGetWorkspace(request.TextDocument, out ISourceFile? file, out IOwlWorkspace? workspace) is false)
+		string path = request.TextDocument.SourcePath;
+
+		if (_context.TryGet(path, out IOwlWorkspace? workspace) is false)
 			return Task.FromResult(report);
 
-		foreach (IDiagnostic current in workspace.LastCodeUpdate?.GetAllDiagnostics().Where(d => d.Source == file) ?? [])
+		if (workspace.IsRelevantFile(path, out ISourceFile? source) is false)
+			return Task.FromResult(report);
+
+		IDiagnosticBag? diagnostics = null;
+
+		// Note(Nightowl): Refactor this to instead have the workspace contain all the diagnostics;
+
+		if (workspace.IsCode(path))
+			diagnostics = workspace.LastCodeUpdate?.GetAllDiagnostics();
+		else if (workspace.IsWorkspace(path))
+			diagnostics = workspace.LastWorkspaceUpdate?.GetAllDiagnostics();
+		else if (workspace.IsPackage(path))
+			diagnostics = workspace.LastPackageUpdate?.GetAllDiagnostics();
+		else if (workspace.IsConfig(path))
+			diagnostics = workspace.LastConfigUpdate?.GetAllDiagnostics();
+
+		foreach (IDiagnostic current in diagnostics?.Where(d => d.Source == source) ?? [])
 		{
-			DiagnosticSeverity severity = DiagnosticSeverity.Hint;
-
-			if (current.Kind >= DiagnosticKind.Error)
-				severity = DiagnosticSeverity.Error;
-			else if (current.Kind >= DiagnosticKind.Warning)
-				severity = DiagnosticSeverity.Warning;
-			else if (current.Kind >= DiagnosticKind.Suggestion)
-				severity = DiagnosticSeverity.Information;
-
-			LspDiagnostic diagnostic = new()
-			{
-				Severity = severity,
-				Range = current.ToLspPosition,
-				Code = current.Id,
-				Source = "OWL",
-				Message = string.Join("\n", current.FullMessage.ToPlainText()),
-				RelatedInformation = [],
-			};
-
-			foreach (IDiagnosticAnnotation annotation in current.Annotations.Skip(1))
-			{
-				if (annotation.Source?.TryGetLocation(annotation.ToLspPosition, out Location location) is true)
-					diagnostic.RelatedInformation.Add(new(location, annotation.Message.ToPlainText()));
-			}
-
+			LspDiagnostic diagnostic = GetDiagnostic(current);
 			full.Diagnostics.Add(diagnostic);
 		}
 
 		return Task.FromResult(report);
+	}
+
+	private LspDiagnostic GetDiagnostic(IDiagnostic diagnostic)
+	{
+		DiagnosticSeverity severity = DiagnosticSeverity.Hint;
+
+		if (diagnostic.Kind >= DiagnosticKind.Error)
+			severity = DiagnosticSeverity.Error;
+		else if (diagnostic.Kind >= DiagnosticKind.Warning)
+			severity = DiagnosticSeverity.Warning;
+		else if (diagnostic.Kind >= DiagnosticKind.Suggestion)
+			severity = DiagnosticSeverity.Information;
+
+		LspDiagnostic lsp = new()
+		{
+			Severity = severity,
+			Range = diagnostic.ToLspPosition,
+			Code = diagnostic.Id,
+			Source = "OWL",
+			Message = string.Join("\n", diagnostic.FullMessage.ToPlainText()),
+			RelatedInformation = [],
+		};
+
+		foreach (IDiagnosticAnnotation annotation in diagnostic.Annotations.Skip(1))
+		{
+			if (annotation.Source?.TryGetLocation(annotation.ToLspPosition, out Location location) is true)
+				lsp.RelatedInformation.Add(new(location, annotation.Message.ToPlainText()));
+		}
+
+		return lsp;
 	}
 	#endregion
 }

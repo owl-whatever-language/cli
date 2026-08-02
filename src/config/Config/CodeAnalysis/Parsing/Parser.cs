@@ -146,12 +146,13 @@ public sealed class Parser : BaseParser<IConcreteToken>
 	#region Document unit methods
 	private IConcreteDocumentUnitSyntax ParseDocumentUnit()
 	{
-		return Source.SimpleName switch
-		{
-			"owl.package" => ParsePackageDocument(),
-			"owl.workspace" => ParseWorkspaceDocument(),
-			_ => ParseConfigDocument()
-		};
+		if (Source.IsPackageFile)
+			return ParsePackageDocument();
+
+		if (Source.IsWorkspaceFile)
+			return ParseWorkspaceDocument();
+
+		return ParseConfigDocument();
 	}
 	private ConcretePackageDocumentUnitSyntax ParsePackageDocument()
 	{
@@ -173,7 +174,7 @@ public sealed class Parser : BaseParser<IConcreteToken>
 	#region Statement methods
 	private SyntaxList<IConcreteStatementSyntax> ParseDocumentStatements()
 	{
-		SyntaxList<IConcreteStatementSyntax> statements = ParseDocumentStatements();
+		SyntaxList<IConcreteStatementSyntax> statements = ParseStatements();
 
 		Debug.Assert(Current is not null);
 		if (Current.Kind != SyntaxKind.EndOfInput)

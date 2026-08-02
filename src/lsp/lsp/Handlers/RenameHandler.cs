@@ -18,8 +18,12 @@ internal sealed class RenameHandler(ILspContext context) : RenameHandlerBase
 	}
 	protected override Task<PrepareRenameResponse> Handle(PrepareRenameParams request, CancellationToken token)
 	{
-		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
-			return Task.FromResult(new PrepareRenameResponse(false));
+		string path = request.TextDocument.SourcePath;
+		if (_context.TryGet(path, out IOwlWorkspace? workspace) is false)
+			return Task.FromResult<PrepareRenameResponse>(new(false));
+
+		if (workspace.IsCode(path, out ICodeSyntaxTree? tree) is false)
+			return Task.FromResult<PrepareRenameResponse>(new(false));
 
 		ISyntaxToken? target = tree.Document.Search<ISyntaxToken>(request.Position, true, token => token.Kind == SyntaxKind.Identifier);
 		if (target is not null && target.Symbol is IDeclaredSymbol && target.Value is string text)
@@ -29,7 +33,11 @@ internal sealed class RenameHandler(ILspContext context) : RenameHandlerBase
 	}
 	protected override Task<WorkspaceEdit?> Handle(RenameParams request, CancellationToken cancellation)
 	{
-		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree, out IOwlWorkspace? workspace) is false)
+		string path = request.TextDocument.SourcePath;
+		if (_context.TryGet(path, out IOwlWorkspace? workspace) is false)
+			return Task.FromResult<WorkspaceEdit?>(null);
+
+		if (workspace.IsCode(path, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult<WorkspaceEdit?>(null);
 
 		ISyntaxToken? target = tree.Document.Search<ISyntaxToken>(request.Position, true, token => token.Kind == SyntaxKind.Identifier);

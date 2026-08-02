@@ -25,10 +25,10 @@ public class WorkspaceSourceFile : ISourceFile
 	#endregion
 
 	#region Constructors
-	public WorkspaceSourceFile(Uri uri, string text)
+	public WorkspaceSourceFile(string path, string text)
 	{
-		Path = uri.AbsolutePath;
-		SimpleName = System.IO.Path.GetFileName(uri.AbsolutePath);
+		Path = path;
+		SimpleName = System.IO.Path.GetFileName(path);
 		Text = text;
 	}
 	#endregion

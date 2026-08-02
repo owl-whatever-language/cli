@@ -19,6 +19,7 @@ public static class IAnalysisContextExtensions
 	extension(IAnalysisContext context)
 	{
 		#region Properties
+		public IReadOnlyCollection<ISourceFile> Sources => context.Bundles.Select(b => b.Source).ToArray();
 		public IReadOnlyCollection<IConcreteSyntaxTree> Trees => context.Bundles.GetAvailableTrees().ToArray();
 		#endregion
 
@@ -79,6 +80,17 @@ public readonly struct AnalysisUpdate
 	{
 		get => field ?? [];
 		init;
+	}
+	public bool IsEmpty
+	{
+		get
+		{
+			return
+				Removed.Count is 0 &&
+				Added.Count is 0 &&
+				Changed.Count is 0
+			;
+		}
 	}
 	#endregion
 }

@@ -26,7 +26,11 @@ internal sealed class SignatureHelpHandler(ILspContext context) : SignatureHelpH
 	{
 		SignatureHelp result = new() { Signatures = [] };
 
-		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree, out ISourceFile? file) is false)
+		string path = request.TextDocument.SourcePath;
+		if (_context.TryGet(path, out IOwlWorkspace? workspace) is false)
+			return Task.FromResult(result);
+
+		if (workspace.IsCode(path, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult(result);
 
 		var target = tree.Document.Search<IAnnotatedFunctionCallExpressionSyntax>(request.Position);

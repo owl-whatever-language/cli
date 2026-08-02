@@ -27,3 +27,4 @@ global using OwlDomain.ParsingTools.Text;
 global using OwlDomain.ParsingTools.Text.Fragments;
 
 global using ICodeSyntaxTree = OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.IConcreteSyntaxTree;
+global using IConfigSyntaxTree = OwlDomain.Owl.Config.CodeAnalysis.Syntax.Concrete.IConcreteSyntaxTree;

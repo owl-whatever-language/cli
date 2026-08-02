@@ -15,7 +15,11 @@ internal sealed class ReferenceHandler(ILspContext context) : ReferenceHandlerBa
 	}
 	protected override Task<ReferenceResponse?> Handle(ReferenceParams request, CancellationToken cancellationToken)
 	{
-		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree, out IOwlWorkspace? workspace) is false)
+		string path = request.TextDocument.SourcePath;
+		if (_context.TryGet(path, out IOwlWorkspace? workspace) is false)
+			return Task.FromResult<ReferenceResponse?>(null);
+
+		if (workspace.IsCode(path, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult<ReferenceResponse?>(null);
 
 		ISyntaxToken? target = tree.Document.Search<ISyntaxToken>(request.Position, true, token => token.Kind == SyntaxKind.Identifier);

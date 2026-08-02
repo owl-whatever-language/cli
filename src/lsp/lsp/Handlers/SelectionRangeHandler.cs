@@ -15,7 +15,11 @@ internal sealed class SelectionRangeHandler(ILspContext context) : SelectionRang
 	}
 	protected override Task<SelectionRangeResponse?> Handle(SelectionRangeParams request, CancellationToken cancellationToken)
 	{
-		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
+		string path = request.TextDocument.SourcePath;
+		if (_context.TryGet(path, out IOwlWorkspace? workspace) is false)
+			return Task.FromResult<SelectionRangeResponse?>(null);
+
+		if (workspace.IsCode(path, out ICodeSyntaxTree? tree) is false)
 			return Task.FromResult<SelectionRangeResponse?>(null);
 
 		List<SelectionRange> ranges = [];

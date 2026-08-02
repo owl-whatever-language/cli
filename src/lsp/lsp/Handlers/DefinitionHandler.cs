@@ -16,15 +16,28 @@ internal sealed class DefinitionHandler(ILspContext context) : DefinitionHandler
 	}
 	protected override Task<DefinitionResponse?> Handle(DefinitionParams request, CancellationToken cancellationToken)
 	{
-		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree))
-		{
-			ISyntaxToken? token = tree.Document.Search<ISyntaxToken>(request.Position, true, token => token.Kind == SyntaxKind.Identifier);
+		DefinitionResponse? response = null;
 
-			if (token?.Symbol is IDeclaredSymbol declared && declared.Declaration.TryGetLocation(out Location location))
-				return Task.FromResult<DefinitionResponse?>(new(location));
+		string path = request.TextDocument.SourcePath;
+		if (_context.TryGet(path, out IOwlWorkspace? workspace))
+		{
+			if (workspace.IsCode(path, out ICodeSyntaxTree? code))
+				response = ForCode(request, code);
 		}
 
-		return Task.FromResult<DefinitionResponse?>(null);
+		return Task.FromResult(response);
+	}
+	#endregion
+
+	#region Code methods
+	private DefinitionResponse? ForCode(DefinitionParams request, ICodeSyntaxTree tree)
+	{
+		ISyntaxToken? token = tree.Document.Search<ISyntaxToken>(request.Position, true, token => token.Kind == SyntaxKind.Identifier);
+
+		if (token?.Symbol is IDeclaredSymbol declared && declared.Declaration.TryGetLocation(out Location location))
+			return new(location);
+
+		return null;
 	}
 	#endregion
 }

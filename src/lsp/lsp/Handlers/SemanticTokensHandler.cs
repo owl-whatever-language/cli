@@ -1,5 +1,6 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.SemanticToken;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
+using OwlDomain.Owl.Config.CodeAnalysis.Classification;
 
 namespace OwlDomain.Owl.LSP.Handlers;
 
@@ -12,6 +13,7 @@ internal sealed class SemanticTokensHandler(ILspContext context) : SemanticToken
 	#region Properties
 	private static Dictionary<ClassificationKind, string> Classifications { get; } = new()
 	{
+		// Note(Nightowl): For code;
 		{ ClassificationKind.Comment, SemanticTokenTypes.Comment },
 		{ ClassificationKind.Keyword, SemanticTokenTypes.Keyword },
 
@@ -28,6 +30,10 @@ internal sealed class SemanticTokensHandler(ILspContext context) : SemanticToken
 		{ ClassificationKind.Label, SemanticTokenTypes.Variable },
 
 		{ ClassificationKind.Type, SemanticTokenTypes.Type},
+
+// Note(Nightowl): For config;
+		{ ClassificationKind.Key, SemanticTokenTypes.Property },
+		{ ClassificationKind.Value, SemanticTokenTypes.String },
 	};
 	private static List<string> TokenTypes { get; } = Classifications.Values.ToList();
 	private static List<string> TokenModifiers { get; } =
@@ -53,11 +59,55 @@ internal sealed class SemanticTokensHandler(ILspContext context) : SemanticToken
 	}
 	protected override Task<SemanticTokens?> Handle(SemanticTokensParams semanticTokensParams, CancellationToken cancellationToken)
 	{
-		if (_context.TryGetTree(semanticTokensParams.TextDocument, out ICodeSyntaxTree? tree) is false)
-			return Task.FromResult<SemanticTokens?>(null);
+		string path = semanticTokensParams.TextDocument.SourcePath;
+		if (_context.TryGet(path, out IOwlWorkspace? workspace))
+		{
+			SemanticTokensBuilder builder = new(TokenTypes, TokenModifiers);
 
-		SemanticTokensBuilder builder = new(TokenTypes, TokenModifiers);
+			if (workspace.IsCode(path, out ICodeSyntaxTree? code))
+				ForCode(builder, code);
+			else if (workspace.IsConfigGroup(path, out IConfigSyntaxTree? config))
+				ForConfig(builder, config);
 
+			return Task.FromResult<SemanticTokens?>(new()
+			{
+				Data = builder.Build()
+			});
+		}
+
+		return Task.FromResult<SemanticTokens?>(null);
+	}
+	protected override Task<SemanticTokensDeltaResponse?> Handle(SemanticTokensDeltaParams semanticTokensDeltaParams, CancellationToken cancellationToken) => throw new NotImplementedException();
+	protected override Task<SemanticTokens?> Handle(SemanticTokensRangeParams semanticTokensRangeParams, CancellationToken cancellationToken) => throw new NotImplementedException();
+
+	private void ForConfig(SemanticTokensBuilder builder, IConfigSyntaxTree tree)
+	{
+		foreach (ISyntaxPart part in tree.Document.ToParts())
+		{
+			if (part.Classification is null)
+				continue;
+
+			Convert(part.Classification.Value, out string? type, out string? modifier);
+
+			if (type is null)
+				continue;
+
+			HashSet<string> modifiers = modifier is null ? [] : [modifier];
+
+			if (part is ISyntaxToken token)
+			{
+				if (token.IsDeclarationName())
+				{
+					modifiers.Add(SemanticTokenModifiers.Declaration);
+					modifiers.Add(SemanticTokenModifiers.Definition);
+				}
+			}
+
+			builder.Push(part.ToLspPosition.Start, part.Position.Length, type, modifiers.ToList());
+		}
+	}
+	private void ForCode(SemanticTokensBuilder builder, ICodeSyntaxTree tree)
+	{
 		foreach (ISyntaxPart part in tree.Document.ToParts())
 		{
 			if (part.Classification is null)
@@ -84,14 +134,7 @@ internal sealed class SemanticTokensHandler(ILspContext context) : SemanticToken
 
 			builder.Push(part.ToLspPosition.Start, part.Position.Length, type, modifiers.ToList());
 		}
-
-		return Task.FromResult<SemanticTokens?>(new()
-		{
-			Data = builder.Build()
-		});
 	}
-	protected override Task<SemanticTokensDeltaResponse?> Handle(SemanticTokensDeltaParams semanticTokensDeltaParams, CancellationToken cancellationToken) => throw new NotImplementedException();
-	protected override Task<SemanticTokens?> Handle(SemanticTokensRangeParams semanticTokensRangeParams, CancellationToken cancellationToken) => throw new NotImplementedException();
 	#endregion
 
 	#region Helpers

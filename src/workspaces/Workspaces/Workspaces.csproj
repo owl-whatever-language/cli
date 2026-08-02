@@ -24,6 +24,7 @@
 		<ProjectReference Include="../../common/parsing_tools/ParsingTools/ParsingTools.csproj" />
 
 		<ProjectReference Include="../../code/Code/Code.csproj" />
+		<ProjectReference Include="../../config/Config/Config.csproj" />
 	</ItemGroup>
 
 </Project>

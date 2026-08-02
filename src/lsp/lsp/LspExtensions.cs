@@ -128,4 +128,29 @@ public static class LspExtensions
 		}
 		#endregion
 	}
+
+	extension(Uri uri)
+	{
+		#region Properties
+		public string SourcePath => uri.AbsolutePath;
+		#endregion
+	}
+	extension(DocumentUri uri)
+	{
+		#region Properties
+		public string SourcePath => uri.Uri.SourcePath;
+		#endregion
+	}
+	extension(TextDocumentItem document)
+	{
+		#region Properties
+		public string SourcePath => document.Uri.SourcePath;
+		#endregion
+	}
+	extension(TextDocumentIdentifier document)
+	{
+		#region Properties
+		public string SourcePath => document.Uri.SourcePath;
+		#endregion
+	}
 }

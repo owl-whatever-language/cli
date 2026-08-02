@@ -1,13 +1,15 @@
 namespace: OwlDomain.Owl.Config.CodeAnalysis.Syntax
 
 # Define the shadowing order
-shadow: concrete
+shadow: concrete declared
 
 # Define what's on each token
 token concrete:
+token declared:
 
 # Define what's on each node in the tree
 tree concrete:
+tree declared:
 
 # Define the root node in the tree
 document: document_unit unit, token end_of_input
@@ -15,6 +17,8 @@ document: document_unit unit, token end_of_input
 ## Document types
 group document_unit
 package document_unit: list<statement> statements
+package @ declared : IPackage package
+
 workspace document_unit: list<statement> statements
 config document_unit: list<statement> statements
 

@@ -1,23 +1,23 @@
 using CommunityToolkit.Diagnostics;
 using EmmyLua.LanguageServer.Framework.Protocol.Message.DocumentSymbol;
-using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions.Declared;
-using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Loops;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Annotated;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Declared;
 
 namespace OwlDomain.Owl.LSP.Handlers;
+
+using CodeDeclared = Code.CodeAnalysis.Syntax.Declared;
+using CodeAnnotated = Code.CodeAnalysis.Syntax.Annotated;
+using CodeSemantics = Code.CodeAnalysis.Semantics;
 
 internal sealed class DocumentSymbolHandler(ILspContext context) : DocumentSymbolHandlerBase
 {
 	#region Nested types
-	private sealed class Visitor : BaseAnnotatedVisitor
+	private sealed class Visitor : CodeAnnotated.BaseAnnotatedVisitor
 	{
 		#region Fields
 		private List<DocumentSymbol> Target { get; set; } = [];
 		#endregion
 
 		#region Functions
-		public static List<DocumentSymbol> GetSymbols(IAnnotatedSyntaxTree tree)
+		public static List<DocumentSymbol> GetSymbols(CodeAnnotated.IAnnotatedSyntaxTree tree)
 		{
 			Visitor visitor = new();
 			visitor.Visit(tree);
@@ -27,7 +27,7 @@ internal sealed class DocumentSymbolHandler(ILspContext context) : DocumentSymbo
 		#endregion
 
 		#region Methods
-		protected override bool VisitGeneral(IAnnotatedSyntaxNode node)
+		protected override bool VisitGeneral(CodeAnnotated.IAnnotatedSyntaxNode node)
 		{
 			if (node.TryGetDeclaredSymbol(out IDeclaredSymbol? declared))
 			{
@@ -68,21 +68,35 @@ internal sealed class DocumentSymbolHandler(ILspContext context) : DocumentSymbo
 	}
 	protected override Task<DocumentSymbolResponse> Handle(DocumentSymbolParams request, CancellationToken cancellation)
 	{
+		DocumentSymbolResponse? response = null;
+
+		string path = request.TextDocument.SourcePath;
+		if (_context.TryGet(path, out IOwlWorkspace? workspace))
+		{
+			if (workspace.IsCode(path, out ICodeSyntaxTree? code))
+				response = ForCode(code);
+		}
+
+		response ??= new([]);
+		return Task.FromResult(response);
+	}
+	#endregion
+
+	#region Code methods
+	private DocumentSymbolResponse ForCode(ICodeSyntaxTree tree)
+	{
 		List<DocumentSymbol> symbols = [];
 		DocumentSymbolResponse response = new(symbols);
 
-		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
-			return Task.FromResult(response);
-
-		if (tree is IAnnotatedSyntaxTree annotated)
+		if (tree is CodeAnnotated.IAnnotatedSyntaxTree annotated)
 		{
 			List<DocumentSymbol> hierarchy = Visitor.GetSymbols(annotated);
 			symbols.AddRange(hierarchy);
 
-			return Task.FromResult(response);
+			return response;
 		}
 
-		foreach (IDeclaredToken token in tree.Document.Flatten<IDeclaredToken>(token => token.IsDeclarationName()))
+		foreach (CodeDeclared.IDeclaredToken token in tree.Document.Flatten<CodeDeclared.IDeclaredToken>(token => token.IsDeclarationName()))
 		{
 			if (string.IsNullOrWhiteSpace(token.Symbol?.Name) || token.Symbol is not IDeclaredSymbol declared)
 				continue;
@@ -91,21 +105,18 @@ internal sealed class DocumentSymbolHandler(ILspContext context) : DocumentSymbo
 			symbols.Add(symbol);
 		}
 
-		return Task.FromResult(response);
+		return response;
 	}
-	#endregion
-
-	#region Helpers
 	private static DocumentSymbol CreateSymbol(IDeclaredSymbol symbol, ISyntaxToken node)
 	{
 		Debug.Assert(symbol.Name is not null);
 
 		SymbolKind kind = symbol switch
 		{
-			IDeclaredFunction => SymbolKind.Function,
-			IDeclaredLocalVariable => SymbolKind.Variable,
-			IDeclaredFunctionParameter => SymbolKind.Variable,
-			IDeclaredLoopLabel => SymbolKind.Variable,
+			CodeSemantics.Functions.Declared.IDeclaredFunction => SymbolKind.Function,
+			CodeSemantics.Functions.Declared.IDeclaredLocalVariable => SymbolKind.Variable,
+			CodeSemantics.Functions.Declared.IDeclaredFunctionParameter => SymbolKind.Variable,
+			CodeSemantics.Loops.IDeclaredLoopLabel => SymbolKind.Variable,
 
 			_ => ThrowHelper.ThrowInvalidOperationException<SymbolKind>($"Unhandled symbol type ({symbol.GetType().Name}).")
 		};

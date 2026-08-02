@@ -23,18 +23,35 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 	{
 		serverCapabilities.CompletionProvider = new()
 		{
-			TriggerCharacters = [".", "(", ",", ":"],
+			TriggerCharacters = [".", "(", ",", ":", "{", "+", "/", "-", "*", "%"],
 		};
+	}
+	protected override Task<CompletionItem> Resolve(CompletionItem item, CancellationToken token)
+	{
+		return Task.FromResult(item);
 	}
 	protected override Task<CompletionResponse?> Handle(CompletionParams request, CancellationToken cancellation)
 	{
-		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
-			return Task.FromResult<CompletionResponse?>(null);
+		CompletionResponse? response = null;
 
+		string path = request.TextDocument.SourcePath;
+		if (_context.TryGet(path, out IOwlWorkspace? workspace))
+		{
+			if (workspace.IsCode(path, out ICodeSyntaxTree? code))
+				response = ForCode(request, code);
+		}
+
+		return Task.FromResult(response);
+	}
+	#endregion
+
+	#region Code methods
+	private CompletionResponse? ForCode(CompletionParams request, ICodeSyntaxTree tree)
+	{
 		ISyntaxNode? target = tree.Document.Search<ISyntaxToken>(request.Position);
 
 		if (target is ISyntaxToken token && token.Kind == SyntaxKind.StringText)
-			return Task.FromResult<CompletionResponse?>(null);
+			return null;
 
 		if (target is not null)
 		{
@@ -45,7 +62,7 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 				if (access.Expression.ResultType.IsNotError)
 					FromTypeAccess(members, access.Expression.ResultType, access);
 
-				return Task.FromResult<CompletionResponse?>(new(members));
+				return new(members);
 			}
 		}
 
@@ -76,15 +93,8 @@ internal sealed class CompletionHandler(ILspContext context) : CompletionHandler
 		if (scope is not null)
 			FromScope(completions, scope);
 
-		return Task.FromResult<CompletionResponse?>(new(completions));
+		return new(completions);
 	}
-	protected override Task<CompletionItem> Resolve(CompletionItem item, CancellationToken token)
-	{
-		return Task.FromResult(item);
-	}
-	#endregion
-
-	#region Helpers
 	private ISymbolScope? TrySelectScope(ISyntaxNode node)
 	{
 		if (node is IDeclaredDocumentSyntax document)

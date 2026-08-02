@@ -19,15 +19,30 @@ internal sealed class DocumentHighlightHandler(ILspContext context) : DocumentHi
 	}
 	protected override Task<DocumentHighlightResponse> Handle(DocumentHighlightParams request, CancellationToken cancellation)
 	{
+		DocumentHighlightResponse? response = null;
+
+		string path = request.TextDocument.SourcePath;
+		if (_context.TryGet(path, out IOwlWorkspace? workspace))
+		{
+			if (workspace.IsCode(path, out ICodeSyntaxTree? code))
+				response = ForCode(request, code);
+		}
+
+
+		response ??= new([]);
+		return Task.FromResult(response);
+	}
+	#endregion
+
+	#region Code methods
+	private DocumentHighlightResponse ForCode(DocumentHighlightParams request, ICodeSyntaxTree tree)
+	{
 		List<DocumentHighlight> highlights = [];
 		DocumentHighlightResponse response = new(highlights);
 
-		if (_context.TryGetTree(request.TextDocument, out ICodeSyntaxTree? tree) is false)
-			return Task.FromResult(response);
-
 		ISyntaxToken? target = tree.Document.Search<ISyntaxToken>(request.Position, true, token => token.Kind == SyntaxKind.Identifier || SyntaxKind.AllKeywords.Contains(token.Kind));
 		if (target is null)
-			return Task.FromResult(response);
+			return response;
 
 		if (target.Parent is IConcreteReturnStatementSyntax @return && @return.Keyword == target)
 		{
@@ -38,11 +53,11 @@ internal sealed class DocumentHighlightHandler(ILspContext context) : DocumentHi
 				highlights.Add(new() { Kind = DocumentHighlightKind.Text, Range = function.Signature.Name.ToLspPosition });
 			}
 
-			return Task.FromResult(response);
+			return response;
 		}
 
 		if (target.Symbol?.IsKnown is not true)
-			return Task.FromResult(response);
+			return response;
 
 		foreach (ISyntaxToken token in tree.Document.ToTokens().Where(t => t.Symbol == target.Symbol))
 		{
@@ -64,7 +79,7 @@ internal sealed class DocumentHighlightHandler(ILspContext context) : DocumentHi
 			});
 		}
 
-		return Task.FromResult(response);
+		return response;
 	}
 	#endregion
 }
