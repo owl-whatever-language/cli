@@ -24,7 +24,7 @@ internal sealed class TextDocumentHandler(ILspContext context) : TextDocumentHan
 	protected override async Task Handle(DidChangeTextDocumentParams request, CancellationToken token)
 	{
 		TextDocumentContentChangeEvent change = request.ContentChanges.Single();
-		_context.UpdateFile(request.TextDocument.SourcePath, change.Text);
+		_context.UpdateFile(request.TextDocument.SourcePath, change.Text, request.TextDocument.Version);
 	}
 	protected override async Task Handle(DidCloseTextDocumentParams request, CancellationToken token)
 	{

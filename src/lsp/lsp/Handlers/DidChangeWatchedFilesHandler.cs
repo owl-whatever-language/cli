@@ -57,7 +57,7 @@ internal sealed class DidChangeWatchedFilesHandler(ILspContext context) : DidCha
 			else if (change.Type is FileChangeType.Changed)
 			{
 				string text = System.IO.File.ReadAllText(path);
-				_context.UpdateFile(path, text);
+				_context.UpdateFile(path, text, null);
 			}
 			else if (change.Type is FileChangeType.Deleted)
 				_context.RemoveFile(path);

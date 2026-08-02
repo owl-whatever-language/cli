@@ -16,6 +16,8 @@ public class WorkspaceSourceFile : ISourceFile
 		}
 	}
 
+	public int? Version { get; set; }
+
 	[AllowNull]
 	public IPositionTranslator PositionTranslator
 	{

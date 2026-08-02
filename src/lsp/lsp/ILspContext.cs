@@ -11,7 +11,7 @@ internal interface ILspContext
 
 	#region Methods
 	void AddFile(string path, string text);
-	void UpdateFile(string path, string text);
+	void UpdateFile(string path, string text, int? version);
 	void RemoveFile(string path);
 	bool TryGet(string path, [NotNullWhen(true)] out IOwlWorkspace? workspace);
 	#endregion
@@ -55,7 +55,7 @@ internal sealed class LspContext : ILspContext
 			PrintAnalysisInfo(workspace);
 		}
 	}
-	public void UpdateFile(string path, string text)
+	public void UpdateFile(string path, string text, int? version)
 	{
 		using (_lock.WriteLock())
 		{
@@ -65,12 +65,16 @@ internal sealed class LspContext : ILspContext
 			{
 				if (original is WorkspaceSourceFile source)
 				{
+					if (ShouldUpdate(source.Version, version) is false)
+						return;
+
 					source.Text = text;
+					source.Version = version;
 					workspace.UpdateFile(source);
 				}
 				else
 				{
-					source = new(path, text);
+					source = new(path, text) { Version = version };
 
 					workspace.RemoveFile(original);
 					workspace.AddFile(source);
@@ -95,11 +99,16 @@ internal sealed class LspContext : ILspContext
 				if (workspace.IsRelevantFile(path, out ISourceFile? source))
 				{
 					workspace.RemoveFile(source);
-					workspace.AddFile(new FileSystemSourceFile(path));
+
+					if (workspace.Directory is not null)
+						workspace.AddFile(new FileSystemSourceFile(path));
 				}
 
 				if (workspace.IsEmpty)
+				{
 					_workspaces.Remove(workspace);
+					Console.Error.WriteLine($"Removed workspace #{workspace.Id:n0}: {workspace.Directory ?? path}.");
+				}
 				else
 				{
 					workspace.Analyse();
@@ -111,6 +120,13 @@ internal sealed class LspContext : ILspContext
 	#endregion
 
 	#region Helpers
+	private bool ShouldUpdate(int? currentVersion, int? newVersion)
+	{
+		if (currentVersion is null || newVersion is null)
+			return true;
+
+		return currentVersion > newVersion;
+	}
 	private void PrintAnalysisInfo(IOwlWorkspace workspace)
 	{
 		int code = workspace.CodeContext.Bundles.Count;
@@ -118,7 +134,7 @@ internal sealed class LspContext : ILspContext
 		int configs = workspace.ConfigContext.Bundles.Count;
 		int packages = workspace.PackageContext.Bundles.Count;
 
-		Console.Error.WriteLine($"Analysed: {code:n0} source(s) {workspaces:n0} workspace(s) {configs:n0} config(s) {packages:n0} package(s)");
+		Console.Error.WriteLine($"Analysed workspace #{workspace.Id}: {code:n0} source(s) {workspaces:n0} workspace(s) {configs:n0} config(s) {packages:n0} package(s)");
 	}
 	public bool TryGet(string filePath, [NotNullWhen(true)] out IOwlWorkspace? workspace)
 	{
@@ -139,7 +155,7 @@ internal sealed class LspContext : ILspContext
 		if (TryGet(filePath, out IOwlWorkspace? workspace) is false)
 		{
 			workspace = CreateWorkspace(filePath, out string? directory);
-			Console.Error.WriteLine($"Created new workspace: {directory ?? filePath}");
+			Console.Error.WriteLine($"Created new workspace #{workspace.Id:n0}: {directory ?? filePath}");
 
 			_workspaces.Add(workspace);
 		}

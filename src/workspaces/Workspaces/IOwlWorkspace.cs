@@ -8,6 +8,8 @@ using ConfigUnit = Config.CodeAnalysis.Syntax.Concrete.DocumentUnits;
 public interface IOwlWorkspace
 {
 	#region Properties
+	string? Directory { get; }
+	int Id { get; }
 	IReadOnlyCollection<ISourceFile> Files { get; }
 	bool IsStale { get; }
 	bool IsEmpty { get; }
@@ -40,7 +42,7 @@ public interface IOwlWorkspace
 public sealed class OwlWorkspace : IOwlWorkspace
 {
 	#region Fields
-	private readonly string? _directory;
+	private static int StaticId;
 	private readonly ReaderWriterLockSlim _lock = new();
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
@@ -63,6 +65,8 @@ public sealed class OwlWorkspace : IOwlWorkspace
 	#endregion
 
 	#region Properties
+	public int Id { get; } = Interlocked.Increment(ref StaticId);
+	public string? Directory { get; }
 	public IReadOnlyCollection<ISourceFile> Files
 	{
 		get
@@ -167,7 +171,7 @@ public sealed class OwlWorkspace : IOwlWorkspace
 	#region Constructors
 	public OwlWorkspace(string? directory)
 	{
-		_directory = directory;
+		Directory = directory;
 
 		_workspaceContext = new();
 		_configContext = new();
@@ -184,10 +188,10 @@ public sealed class OwlWorkspace : IOwlWorkspace
 		if (IsRelevantFile(path, out source))
 			return true;
 
-		if (_directory is null)
+		if (Directory is null)
 			return false;
 
-		string relative = Path.GetRelativePath(_directory, path);
+		string relative = Path.GetRelativePath(Directory, path);
 		if (relative == path)
 			return false;
 
