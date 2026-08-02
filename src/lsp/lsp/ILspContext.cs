@@ -113,7 +113,7 @@ internal sealed class LspContext : ILspContext
 	#region Helpers
 	private void PrintAnalysisInfo(IOwlWorkspace workspace)
 	{
-		int code = workspace.ConfigContext.Bundles.Count;
+		int code = workspace.CodeContext.Bundles.Count;
 		int workspaces = workspace.WorkspaceContext.Bundles.Count;
 		int configs = workspace.ConfigContext.Bundles.Count;
 		int packages = workspace.PackageContext.Bundles.Count;

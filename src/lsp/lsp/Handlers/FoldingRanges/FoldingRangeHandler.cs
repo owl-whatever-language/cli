@@ -1,13 +1,22 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.FoldingRange;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Expressions;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Statements;
 
-namespace OwlDomain.Owl.LSP.Handlers;
+namespace OwlDomain.Owl.LSP.Handlers.FoldingRanges;
 
-internal sealed class FoldingRangeHandler(ILspContext context) : FoldingRangeHandlerBase
+internal sealed partial class FoldingRangeHandler : FoldingRangeHandlerBase
 {
 	#region Fields
-	private readonly ILspContext _context = context;
+	private readonly CustomTreeHandlerBundle<FoldingRangeParams, FoldingRangeResponse> _bundle;
+	#endregion
+
+	#region Constructors
+	public FoldingRangeHandler(ILspContext context)
+	{
+		_bundle = new(context, request => request.TextDocument.SourcePath)
+		{
+			CodeHandler = new CodeHandler(),
+			ConfigHandler = null
+		};
+	}
 	#endregion
 
 	#region Methods
@@ -15,35 +24,10 @@ internal sealed class FoldingRangeHandler(ILspContext context) : FoldingRangeHan
 	{
 		serverCapabilities.FoldingRangeProvider = true;
 	}
-	protected override Task<FoldingRangeResponse> Handle(FoldingRangeParams request, CancellationToken token)
+	protected override async Task<FoldingRangeResponse> Handle(FoldingRangeParams request, CancellationToken cancellationToken)
 	{
-		FoldingRangeResponse? response = null;
-
-		string path = request.TextDocument.SourcePath;
-		if (_context.TryGet(path, out IOwlWorkspace? workspace))
-		{
-			if (workspace.IsCode(path, out ICodeSyntaxTree? code))
-				response = ForCode(code);
-		}
-
-		response ??= new([]);
-		return Task.FromResult(response);
-	}
-	private FoldingRangeResponse ForCode(ICodeSyntaxTree tree)
-	{
-		List<FoldingRange> ranges = [];
-		FoldingRangeResponse response = new(ranges);
-
-		foreach (var block in tree.Document.Flatten<IConcreteBlockStatementSyntax>())
-			TryAdd(ranges, block.Start, block.End);
-
-		foreach (var declaration in tree.Document.Flatten<IConcreteFunctionDeclarationStatementSyntax>())
-			TryAdd(ranges, declaration.Signature.Start, declaration.Signature.End);
-
-		foreach (var call in tree.Document.Flatten<IConcreteFunctionCallExpressionSyntax>())
-			TryAdd(ranges, call.Start, call.End);
-
-		return response;
+		FoldingRangeResponse? response = await _bundle.HandleAsync(request, cancellationToken);
+		return response ?? new([]);
 	}
 	#endregion
 

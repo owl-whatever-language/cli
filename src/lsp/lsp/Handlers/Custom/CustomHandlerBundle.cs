@@ -9,8 +9,8 @@ internal sealed class CustomHandlerBundle<TRequest, TResponse>
 
 	#region Properties
 	public ILspContext Context { get; }
-	public ICustomHandler<TRequest, TResponse>? CodeHandler { get; set; }
-	public ICustomHandler<TRequest, TResponse>? ConfigHandler { get; set; }
+	public required ICustomHandler<TRequest, TResponse>? CodeHandler { get; init; }
+	public required ICustomHandler<TRequest, TResponse>? ConfigHandler { get; init; }
 	#endregion
 
 	#region Constructors
@@ -55,8 +55,8 @@ internal sealed class CustomHandlerBundle<TRequest, TResponse, TResolve>
 
 	#region Properties
 	public ILspContext Context { get; }
-	public ICustomHandler<TRequest, TResponse, TResolve>? CodeHandler { get; set; }
-	public ICustomHandler<TRequest, TResponse, TResolve>? ConfigHandler { get; set; }
+	public required ICustomHandler<TRequest, TResponse, TResolve>? CodeHandler { get; init; }
+	public required ICustomHandler<TRequest, TResponse, TResolve>? ConfigHandler { get; init; }
 	#endregion
 
 	#region Constructors

@@ -9,8 +9,8 @@ internal sealed class CustomTreeHandlerBundle<TRequest, TResponse>
 
 	#region Properties
 	public ILspContext Context { get; }
-	public required ICustomTreeHandler<TRequest, TResponse, ICodeSyntaxTree>? CodeTreeHandler { get; set; }
-	public required ICustomTreeHandler<TRequest, TResponse, IConfigSyntaxTree>? ConfigTreeHandler { get; set; }
+	public required ICustomTreeHandler<TRequest, TResponse, ICodeSyntaxTree>? CodeHandler { get; init; }
+	public required ICustomTreeHandler<TRequest, TResponse, IConfigSyntaxTree>? ConfigHandler { get; init; }
 	#endregion
 
 	#region Constructors
@@ -30,13 +30,13 @@ internal sealed class CustomTreeHandlerBundle<TRequest, TResponse>
 		{
 			if (workspace.IsCode(path, out ICodeSyntaxTree? code))
 			{
-				if (CodeTreeHandler is not null)
-					return await CodeTreeHandler.HandleAsync(new(Context, workspace, request), code, cancellation);
+				if (CodeHandler is not null)
+					return await CodeHandler.HandleAsync(new(Context, workspace, request), code, cancellation);
 			}
 			else if (workspace.IsConfigGroup(path, out IConfigSyntaxTree? config))
 			{
-				if (ConfigTreeHandler is not null)
-					return await ConfigTreeHandler.HandleAsync(new(Context, workspace, request), config, cancellation);
+				if (ConfigHandler is not null)
+					return await ConfigHandler.HandleAsync(new(Context, workspace, request), config, cancellation);
 			}
 		}
 
@@ -55,8 +55,8 @@ internal sealed class CustomTreeHandlerBundle<TRequest, TResponse, TResolve>
 
 	#region Properties
 	public ILspContext Context { get; }
-	public ICustomTreeHandler<TRequest, TResponse, ICodeSyntaxTree, TResolve>? CodeTreeHandler { get; set; }
-	public ICustomTreeHandler<TRequest, TResponse, IConfigSyntaxTree, TResolve>? ConfigTreeHandler { get; set; }
+	public required ICustomTreeHandler<TRequest, TResponse, ICodeSyntaxTree, TResolve>? CodeHandler { get; init; }
+	public required ICustomTreeHandler<TRequest, TResponse, IConfigSyntaxTree, TResolve>? ConfigHandler { get; init; }
 	#endregion
 
 	#region Constructors
@@ -76,13 +76,13 @@ internal sealed class CustomTreeHandlerBundle<TRequest, TResponse, TResolve>
 		{
 			if (workspace.IsCode(path, out ICodeSyntaxTree? code))
 			{
-				if (CodeTreeHandler is not null)
-					return await CodeTreeHandler.HandleAsync(new(Context, workspace, request), code, cancellation);
+				if (CodeHandler is not null)
+					return await CodeHandler.HandleAsync(new(Context, workspace, request), code, cancellation);
 			}
 			else if (workspace.IsConfigGroup(path, out IConfigSyntaxTree? config))
 			{
-				if (ConfigTreeHandler is not null)
-					return await ConfigTreeHandler.HandleAsync(new(Context, workspace, request), config, cancellation);
+				if (ConfigHandler is not null)
+					return await ConfigHandler.HandleAsync(new(Context, workspace, request), config, cancellation);
 			}
 		}
 
@@ -91,16 +91,16 @@ internal sealed class CustomTreeHandlerBundle<TRequest, TResponse, TResolve>
 
 	public async Task<TResolve?> ResolveAsync(TResolve request, CancellationToken cancellation)
 	{
-		if (CodeTreeHandler is not null)
+		if (CodeHandler is not null)
 		{
-			TResolve? result = await CodeTreeHandler.ResolveAsync(new(Context, request), cancellation);
+			TResolve? result = await CodeHandler.ResolveAsync(new(Context, request), cancellation);
 			if (result is not null)
 				return result;
 		}
 
-		if (ConfigTreeHandler is not null)
+		if (ConfigHandler is not null)
 		{
-			TResolve? result = await ConfigTreeHandler.ResolveAsync(new(Context, request), cancellation);
+			TResolve? result = await ConfigHandler.ResolveAsync(new(Context, request), cancellation);
 			if (result is not null)
 				return result;
 		}

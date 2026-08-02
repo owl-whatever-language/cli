@@ -14,8 +14,8 @@ internal sealed partial class SemanticTokensHandler : SemanticTokensHandlerBase
 	{
 		_handlers = new(context, request => request.TextDocument.SourcePath)
 		{
-			CodeTreeHandler = new CodeHandler(this),
-			ConfigTreeHandler = new ConfigHandler(this)
+			CodeHandler = new CodeHandler(this),
+			ConfigHandler = new ConfigHandler(this)
 		};
 	}
 	#endregion

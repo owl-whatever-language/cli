@@ -75,22 +75,22 @@ public static class OwlLsp
 		LspContext context = new(server);
 
 		server.AddHandler(new TextDocumentHandler(context));
-		server.AddHandler(new Handlers.SemanticToken.SemanticTokensHandler(context));
-		server.AddHandler(new InlayHintHandler(context));
-		server.AddHandler(new HoverHandler(context));
-		server.AddHandler(new DocumentDiagnosticHandler(context));
-		server.AddHandler(new DeclarationHandler(context));
-		server.AddHandler(new DefinitionHandler(context));
-		server.AddHandler(new ReferenceHandler(context));
-		server.AddHandler(new DocumentHighlightHandler(context));
-		server.AddHandler(new DocumentSymbolHandler(context));
-		server.AddHandler(new CompletionHandler(context));
-		server.AddHandler(new SignatureHelpHandler(context));
-		server.AddHandler(new SelectionRangeHandler(context));
-		server.AddHandler(new FoldingRangeHandler(context));
-		server.AddHandler(new CodeLensHandler(context));
-		server.AddHandler(new RenameHandler(context));
 		server.AddHandler(new DidChangeWatchedFilesHandler(context));
+		server.AddHandler(new DocumentDiagnosticHandler(context));
+		server.AddHandler(new Handlers.SemanticToken.SemanticTokensHandler(context));
+		server.AddHandler(new Handlers.InlayHints.InlayHintHandler(context));
+		server.AddHandler(new Handlers.Hovers.HoverHandler(context));
+		server.AddHandler(new Handlers.Declarations.DeclarationHandler(context));
+		server.AddHandler(new Handlers.Definitions.DefinitionHandler(context));
+		server.AddHandler(new Handlers.References.ReferenceHandler(context));
+		server.AddHandler(new Handlers.DocumentHighlighting.DocumentHighlightHandler(context));
+		server.AddHandler(new Handlers.DocumentSymbols.DocumentSymbolHandler(context));
+		server.AddHandler(new Handlers.Completions.CompletionHandler(context));
+		server.AddHandler(new Handlers.Signatures.SignatureHelpHandler(context));
+		server.AddHandler(new Handlers.SelectionRanges.SelectionRangeHandler(context));
+		server.AddHandler(new Handlers.FoldingRanges.FoldingRangeHandler(context));
+		server.AddHandler(new Handlers.CodeLenses.CodeLensHandler(context));
+		server.AddHandler(new Handlers.Renames.RenameHandler(context));
 	}
 	#endregion
 }

@@ -1,3 +1,5 @@
+global using CommunityToolkit.Diagnostics;
+
 global using EmmyLua.LanguageServer.Framework.Protocol.Capabilities.Client.ClientCapabilities;
 global using EmmyLua.LanguageServer.Framework.Protocol.Capabilities.Server;
 global using EmmyLua.LanguageServer.Framework.Protocol.Capabilities.Server.Options;
@@ -15,6 +17,7 @@ global using OwlDomain.Owl.Code.CodeAnalysis.Annotation.Symbols;
 global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols;
 global using OwlDomain.Owl.LSP.Handlers;
 global using OwlDomain.Owl.LSP.Handlers.Custom;
+global using OwlDomain.Owl.Config.CodeAnalysis;
 global using OwlDomain.Owl.Workspaces;
 global using OwlDomain.ParsingTools;
 global using OwlDomain.ParsingTools.Classification;
