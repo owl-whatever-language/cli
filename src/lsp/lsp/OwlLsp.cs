@@ -75,7 +75,7 @@ public static class OwlLsp
 		LspContext context = new(server);
 
 		server.AddHandler(new TextDocumentHandler(context));
-		server.AddHandler(new SemanticTokensHandler(context));
+		server.AddHandler(new Handlers.SemanticToken.SemanticTokensHandler(context));
 		server.AddHandler(new InlayHintHandler(context));
 		server.AddHandler(new HoverHandler(context));
 		server.AddHandler(new DocumentDiagnosticHandler(context));

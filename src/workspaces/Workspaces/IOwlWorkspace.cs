@@ -390,6 +390,7 @@ public static class IOwlWorkspaceExtensions
 			tree = default;
 			return false;
 		}
+		public bool IsConfigGroup(string path) => IsConfigGroup(workspace, path, out Config.Syntax.ISyntaxTreeBundle? _);
 
 		public bool IsWorkspace(string path, [NotNullWhen(true)] out Config.Syntax.ISyntaxTreeBundle? bundle)
 		{

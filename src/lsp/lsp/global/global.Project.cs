@@ -14,6 +14,7 @@ global using OwlDomain.Owl.Code.CodeAnalysis.Annotation.Flags;
 global using OwlDomain.Owl.Code.CodeAnalysis.Annotation.Symbols;
 global using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Symbols;
 global using OwlDomain.Owl.LSP.Handlers;
+global using OwlDomain.Owl.LSP.Handlers.Custom;
 global using OwlDomain.Owl.Workspaces;
 global using OwlDomain.ParsingTools;
 global using OwlDomain.ParsingTools.Classification;
@@ -28,3 +29,4 @@ global using OwlDomain.ParsingTools.Text.Fragments;
 
 global using ICodeSyntaxTree = OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.IConcreteSyntaxTree;
 global using IConfigSyntaxTree = OwlDomain.Owl.Config.CodeAnalysis.Syntax.Concrete.IConcreteSyntaxTree;
+

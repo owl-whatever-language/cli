@@ -1,13 +1,23 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.SemanticToken;
-using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
 using OwlDomain.Owl.Config.CodeAnalysis.Classification;
 
-namespace OwlDomain.Owl.LSP.Handlers;
+namespace OwlDomain.Owl.LSP.Handlers.SemanticToken;
 
-internal sealed class SemanticTokensHandler(ILspContext context) : SemanticTokensHandlerBase
+internal sealed partial class SemanticTokensHandler : SemanticTokensHandlerBase
 {
 	#region Fields
-	private readonly ILspContext _context = context;
+	private readonly CustomTreeHandlerBundle<SemanticTokensParams, SemanticTokens> _handlers;
+	#endregion
+
+	#region Constructors
+	public SemanticTokensHandler(ILspContext context)
+	{
+		_handlers = new(context, request => request.TextDocument.SourcePath)
+		{
+			CodeTreeHandler = new CodeHandler(this),
+			ConfigTreeHandler = new ConfigHandler(this)
+		};
+	}
 	#endregion
 
 	#region Properties
@@ -57,87 +67,17 @@ internal sealed class SemanticTokensHandler(ILspContext context) : SemanticToken
 			Full = true,
 		};
 	}
-	protected override Task<SemanticTokens?> Handle(SemanticTokensParams semanticTokensParams, CancellationToken cancellationToken)
+	protected override async Task<SemanticTokens?> Handle(SemanticTokensParams semanticTokensParams, CancellationToken cancellationToken)
 	{
-		string path = semanticTokensParams.TextDocument.SourcePath;
-		if (_context.TryGet(path, out IOwlWorkspace? workspace))
-		{
-			SemanticTokensBuilder builder = new(TokenTypes, TokenModifiers);
-
-			if (workspace.IsCode(path, out ICodeSyntaxTree? code))
-				ForCode(builder, code);
-			else if (workspace.IsConfigGroup(path, out IConfigSyntaxTree? config))
-				ForConfig(builder, config);
-
-			return Task.FromResult<SemanticTokens?>(new()
-			{
-				Data = builder.Build()
-			});
-		}
-
-		return Task.FromResult<SemanticTokens?>(null);
+		return await _handlers.HandleAsync(semanticTokensParams, cancellationToken);
 	}
 	protected override Task<SemanticTokensDeltaResponse?> Handle(SemanticTokensDeltaParams semanticTokensDeltaParams, CancellationToken cancellationToken) => throw new NotImplementedException();
 	protected override Task<SemanticTokens?> Handle(SemanticTokensRangeParams semanticTokensRangeParams, CancellationToken cancellationToken) => throw new NotImplementedException();
 
-	private void ForConfig(SemanticTokensBuilder builder, IConfigSyntaxTree tree)
-	{
-		foreach (ISyntaxPart part in tree.Document.ToParts())
-		{
-			if (part.Classification is null)
-				continue;
-
-			Convert(part.Classification.Value, out string? type, out string? modifier);
-
-			if (type is null)
-				continue;
-
-			HashSet<string> modifiers = modifier is null ? [] : [modifier];
-
-			if (part is ISyntaxToken token)
-			{
-				if (token.IsDeclarationName())
-				{
-					modifiers.Add(SemanticTokenModifiers.Declaration);
-					modifiers.Add(SemanticTokenModifiers.Definition);
-				}
-			}
-
-			builder.Push(part.ToLspPosition.Start, part.Position.Length, type, modifiers.ToList());
-		}
-	}
-	private void ForCode(SemanticTokensBuilder builder, ICodeSyntaxTree tree)
-	{
-		foreach (ISyntaxPart part in tree.Document.ToParts())
-		{
-			if (part.Classification is null)
-				continue;
-
-			Convert(part.Classification.Value, out string? type, out string? modifier);
-
-			if (type is null)
-				continue;
-
-			HashSet<string> modifiers = modifier is null ? [] : [modifier];
-
-			if (part is ISyntaxToken token)
-			{
-				if (token.IsDeclarationName())
-				{
-					modifiers.Add(SemanticTokenModifiers.Declaration);
-					modifiers.Add(SemanticTokenModifiers.Definition);
-				}
-
-				if (token.Symbol is ITypeProperty)
-					modifiers.Add(SemanticTokenModifiers.Readonly);
-			}
-
-			builder.Push(part.ToLspPosition.Start, part.Position.Length, type, modifiers.ToList());
-		}
-	}
 	#endregion
 
 	#region Helpers
+	private SemanticTokensBuilder GetBuilder() => new(TokenTypes, TokenModifiers);
 	private static void Convert(ClassificationKind classification, out string? type, out string? modifier)
 	{
 		modifier = null;
