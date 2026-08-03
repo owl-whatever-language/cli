@@ -1,6 +1,7 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.FoldingRange;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Expressions;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Statements;
+using OwlDomain.ParsingTools.Trivia;
 
 namespace OwlDomain.Owl.LSP.Handlers.FoldingRanges;
 
@@ -23,6 +24,20 @@ partial class FoldingRangeHandler
 
 			foreach (var call in tree.Document.Flatten<IConcreteFunctionCallExpressionSyntax>())
 				TryAdd(ranges, call.Start, call.End);
+
+			foreach (ISyntaxToken token in tree.Document.Flatten<ISyntaxToken>())
+			{
+				if (token.LeadingTrivia.All(t => t.Kind == SyntaxKind.Indentation || t.Kind == SyntaxKind.WhiteSpace || t.Kind == SyntaxKind.Comment || t.Kind == SyntaxKind.LineBreak) is false)
+					continue;
+
+				ISyntaxTrivia? start = token.LeadingTrivia.FirstOrDefault(t => t.Kind == SyntaxKind.Comment);
+				ISyntaxTrivia? last = token.LeadingTrivia.LastOrDefault(t => t.Kind == SyntaxKind.Comment);
+
+				if (start is null || last is null)
+					continue;
+
+				TryAdd(ranges, start, last, FoldingRangeKind.Comment);
+			}
 
 			return response;
 		}

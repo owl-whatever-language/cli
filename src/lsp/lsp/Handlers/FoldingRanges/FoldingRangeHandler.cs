@@ -32,9 +32,9 @@ internal sealed partial class FoldingRangeHandler : FoldingRangeHandlerBase
 	#endregion
 
 	#region Helpers
-	private static void TryAdd(List<FoldingRange> ranges, ISyntaxToken start, ISyntaxToken end, FoldingRangeKind? kind = null)
+	private static void TryAdd(List<FoldingRange> ranges, ISyntaxPart start, ISyntaxPart end, FoldingRangeKind? kind = null)
 	{
-		kind ??= FoldingRangeKind.Region;
+		kind ??= new("block");
 
 		if (start.IsFabricated || end.IsFabricated)
 			return;
@@ -45,11 +45,10 @@ internal sealed partial class FoldingRangeHandler : FoldingRangeHandlerBase
 
 		ranges.Add(GetRange(kind.Value, range));
 	}
-	private static DocumentRange GetRange(ISyntaxToken startToken, ISyntaxToken endToken)
+	private static DocumentRange GetRange(ISyntaxPart startToken, ISyntaxPart endToken)
 	{
-		// Use end of start, and start of end to hopefully exclude the tokens from being folded?
-		Position start = startToken.ToLspPosition.End;
-		Position end = endToken.ToLspPosition.Start;
+		Position start = startToken.ToLspPosition.Start;
+		Position end = endToken.ToLspPosition.End;
 
 		return new(start, end);
 	}
