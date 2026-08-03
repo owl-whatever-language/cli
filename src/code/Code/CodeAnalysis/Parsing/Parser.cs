@@ -448,6 +448,9 @@ public sealed class Parser : BaseParser<IConcreteToken>
 				else
 				{
 					comma = Fabricate(SyntaxKind.Comma, ClassificationKind.Punctuation, value: null);
+					nodes.Add(comma);
+					separators.Add(comma);
+
 					ReportExpected(comma, ",", "separate the function parameters");
 				}
 			}
