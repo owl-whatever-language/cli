@@ -194,7 +194,7 @@ internal sealed class LspContext : ILspContext
 		if (currentVersion is null || newVersion is null)
 			return true;
 
-		return currentVersion > newVersion;
+		return currentVersion < newVersion;
 	}
 	private void PrintAnalysisInfo(IOwlWorkspace workspace)
 	{

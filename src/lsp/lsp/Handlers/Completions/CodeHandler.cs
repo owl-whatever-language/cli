@@ -1,13 +1,14 @@
 using EmmyLua.LanguageServer.Framework.Protocol.Message.Completion;
+using EmmyLua.LanguageServer.Framework.Protocol.Model.Kind;
 using OwlDomain.Owl.Code.CodeAnalysis.Parsing;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions;
-using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Loops;
+using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Functions.Callable;
 using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types;
-using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Callable;
-using OwlDomain.Owl.Code.CodeAnalysis.Semantics.Types.Members;
+using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Expressions;
+using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Concrete.Statements;
 using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.Expressions;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.FunctionArguments;
-using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Declared.Nodes;
+using OwlDomain.Owl.Code.CodeAnalysis.Syntax.Semantic.Statements;
+using OwlDomain.ParsingTools.Positioning;
 
 namespace OwlDomain.Owl.LSP.Handlers.Completions;
 
@@ -19,142 +20,235 @@ partial class CompletionHandler
 		#region Methods
 		protected override CompletionResponse? Handle(HandlerRequest<CompletionParams> request, ICodeSyntaxTree tree, CancellationToken cancellation)
 		{
-			ISyntaxNode? target = tree.Document.Search<ISyntaxToken>(request.Request.Position);
-
-			if (target is ISyntaxToken token && token.Kind == SyntaxKind.StringText)
+			ISyntaxToken? target = SelectTarget(tree, request.Request.Position);
+			if (target is null || ShouldIgnore(target))
 				return null;
 
-			if (target is not null)
-			{
-				if (target.Parent is ISemanticMemberAccessExpressionSyntax access && (target == access.Dot || target == access.Name))
-				{
-					List<CompletionItem> members = [];
+			Console.Error.WriteLine($"Completion target: {target.Kind.Name}");
 
-					if (access.Expression.ResultType.IsNotError)
-						FromTypeAccess(members, access.Expression.ResultType, access);
+			List<CompletionItem> items = [];
+			CompletionList list = new() { Items = items };
 
-					return new(members);
-				}
-			}
+			TryAddCompletions(items, target);
 
-			List<CompletionItem> completions = [];
-
-			if (target?.Parent is ISemanticFunctionCallExpressionSyntax or ISemanticFunctionArgumentSyntax)
-			{
-				var call = target.GetParent<ISemanticFunctionCallExpressionSyntax>();
-				if (call?.Callable is not null)
-					AddParameterNames(completions, call.Callable);
-				else if (call?.Expression is ISemanticGetExpressionSyntax get)
-				{
-					foreach (ISymbol candidate in get.Candidates)
-					{
-						if (candidate is ICallableType callable)
-							AddParameterNames(completions, callable);
-						else if (candidate is IFunction function)
-							AddParameterNames(completions, function.AsCallable);
-					}
-				}
-			}
-
-			ISyntaxNode? contextNode = target ?? tree.Document.Search(request.Request.Position);
-			ISymbolScope? scope = contextNode.GetChain().Select(TrySelectScope).FirstOrDefault(scope => scope is not null);
-
-			AddKeywords(completions);
-
-			if (scope is not null)
-				FromScope(completions, scope);
-
-			if (completions.Any())
-				return new(completions);
-
-			return null;
+			return items.Any() ? new(list) : null;
+		}
+		private void TryAddCompletions(List<CompletionItem> items, ISyntaxToken target)
+		{
+			TryAddKeyword(items, target);
+			TryAddForFunctionCall(items, target);
 		}
 		#endregion
 
-		#region Helpers
-		private ISymbolScope? TrySelectScope(ISyntaxNode node)
+		#region Function methods
+		private void TryAddForFunctionCall(List<CompletionItem> items, ISyntaxToken target)
 		{
-			if (node is IDeclaredDocumentSyntax document)
-				return document.Scope;
-
-			return node.TryGetDeclaredScope();
-		}
-		private void AddParameterNames(List<CompletionItem> items, ICallableType callable)
-		{
-			foreach (ICallableTypeParameter parameter in callable.Parameters)
+			if (IsArgument(target, out IConcreteFunctionCallExpressionSyntax? call))
 			{
-				if (string.IsNullOrWhiteSpace(parameter.Name))
-					continue;
-
-				string label = $"{parameter.Name}:";
-
-				if (items.Any(i => i.Label == label))
-					continue;
-
-				items.Add(new()
+				List<IFunction> functions = [];
+				if (call is ISemanticFunctionCallExpressionSyntax semantic)
 				{
-					Kind = CompletionItemKind.Reference,
-					Label = label,
-					Detail = parameter.GetDebugText().ToPlainText()
-				});
+					if (semantic.Callable is ICallableFunction callable)
+						functions.Add(callable.Function);
+					else if (semantic.Expression is ISemanticGetExpressionSyntax get)
+						functions.AddRange(get.Candidates.OfType<IFunction>());
+				}
+
+				IEnumerable<IFunctionParameter> parameters = functions
+					.SelectMany(f => f.Parameters)
+					.Where(p => string.IsNullOrWhiteSpace(p.Name) is false)
+					.DistinctBy(p => p.Name);
+
+				foreach (IGrouping<string?, IFunctionParameter> group in functions.SelectMany(f => f.Parameters).GroupBy(p => p.Name))
+				{
+					if (string.IsNullOrWhiteSpace(group.Key))
+						continue;
+
+					IType? type = group.Select(p => p.Type).Distinct().SingleOrDefault();
+
+					CompletionItem item = new()
+					{
+						Kind = CompletionItemKind.Reference,
+						Label = group.Key,
+						InsertText = $"{group.Key}: ",
+						Detail = type?.GetDebugText().ToPlainText()
+					};
+
+					int count = group.Count();
+					if (count > 1)
+						item.LabelDetails = new() { Detail = $"{count} definitions" };
+
+					items.Add(item);
+				}
 			}
 		}
-		private void AddKeywords(List<CompletionItem> items)
+		private bool IsArgument(ISyntaxToken target, [NotNullWhen(true)] out IConcreteFunctionCallExpressionSyntax? call)
 		{
-			foreach (SyntaxKind keyword in SyntaxKind.AllKeywords)
+			call = target.GetChain().OfType<IConcreteFunctionCallExpressionSyntax>().FirstOrDefault();
+			if (call is null)
+				return false;
+
+			if (target == call.Start || call.Arguments.Separators.Contains(target))
+				return true;
+
+			return false;
+		}
+		#endregion
+
+		#region Keyword methods
+		private static bool ShouldAddElse(ISyntaxToken target)
+		{
+			if ((target.Kind == SyntaxKind.CloseBrace || target.Kind == SyntaxKind.Semicolon) && target.Parent?.Parent is IConcreteIfStatementSyntax or IConcreteIfElseStatementSyntax)
+				return true;
+
+			return false;
+		}
+		private void TryAddKeyword(List<CompletionItem> items, ISyntaxToken target)
+		{
+			if (IsStatement(target) is false)
+				return;
+
+			items.Add(new()
+			{
+				Kind = CompletionItemKind.Keyword,
+				Label = "if",
+				Detail = "if (...)",
+				InsertText = "if ($1) $0",
+				InsertTextFormat = InsertTextFormat.Snippet,
+				Documentation = new MarkupContent()
+				{
+					Kind = MarkupKind.Markdown,
+					Value = "The `if` and `else` keywords are used for controlling *if* code should run, based on a condition that you give it."
+				}
+			});
+
+			if (ShouldAddElse(target))
 			{
 				items.Add(new()
 				{
 					Kind = CompletionItemKind.Keyword,
-					Label = keyword.Name
+					Label = "else",
+					InsertText = "else",
+					InsertTextFormat = InsertTextFormat.Snippet,
+					Documentation = new MarkupContent()
+					{
+						Kind = MarkupKind.Markdown,
+						Value = "The `if` and `else` keywords are used for controlling *if* code should run, based on a condition that you give it."
+					}
+				});
+			}
+
+			items.Add(new()
+			{
+				Kind = CompletionItemKind.Keyword,
+				Label = "fun",
+				Detail = "fun <name>()",
+				InsertText = "fun ${1:functionName}($2)${3:: void}\n{\n\t$0\n}",
+				InsertTextFormat = InsertTextFormat.Snippet,
+				Documentation = new MarkupContent()
+				{
+					Kind = MarkupKind.Markdown,
+					Value = "The `fun` keyword is used to declared a new function."
+				}
+			});
+
+			items.Add(new()
+			{
+				Label = "while",
+				Detail = "while (...)",
+				InsertText = "while ($1) $0",
+				InsertTextFormat = InsertTextFormat.Snippet,
+				Documentation = new MarkupContent()
+				{
+					Kind = MarkupKind.Markdown,
+					Value = "The `while` keyword is used for repeatedly executing a block of code, as long as a condition you give it continues to be true."
+				}
+			});
+
+			if (IsInFunction(target, out IConcreteFunctionDeclarationStatementSyntax? function))
+			{
+				bool hasReturn = (function as ISemanticFunctionDeclarationStatementSyntax)?.Signature.Return?.Type.IsNotVoid ?? function.Signature.Return is not null;
+
+				items.Add(new()
+				{
+					Kind = CompletionItemKind.Keyword,
+					Label = hasReturn ? "return <value>" : "return",
+					InsertText = hasReturn ? "return $0;" : "return;",
+					InsertTextFormat = InsertTextFormat.Snippet,
+					Documentation = new MarkupContent()
+					{
+						Kind = MarkupKind.Markdown,
+						Value = "The `return` keyword is used to return from a function *(optionally with a value).*"
+					}
 				});
 			}
 		}
-		private void FromScope(List<CompletionItem> completions, ISymbolScope scope)
+		#endregion
+
+		#region Helpers
+		private static bool IsInFunction(ISyntaxToken target, [NotNullWhen(true)] out IConcreteFunctionDeclarationStatementSyntax? function)
 		{
-			foreach (IGrouping<string?, ISymbol> group in scope.GetNamed().All.GroupBy(s => s.Name))
+			function = target.GetChain().OfType<IConcreteFunctionDeclarationStatementSyntax>().FirstOrDefault();
+			return function is not null;
+		}
+		private static bool IsStatement(ISyntaxToken target)
+		{
+			bool isEndOfStatement =
+				target.Kind == SyntaxKind.Semicolon ||
+				target.Kind == SyntaxKind.OpenBrace ||
+				target.Kind == SyntaxKind.CloseBrace ||
+				target.Kind == SyntaxKind.CloseBracket;
+
+			if (isEndOfStatement is false)
+				return false;
+
+			if (target.Kind == SyntaxKind.Semicolon && target.Parent is not IConcreteStatementSyntax)
+				return false;
+
+			if (target.GetChain().Any(n => n is ISyntaxDocument or IConcreteFunctionDeclarationStatementSyntax) is false)
+				return false;
+
+			return true;
+		}
+		private bool ShouldIgnore(ISyntaxToken token)
+		{
+			if (token.Kind == SyntaxKind.StringStart || token.Kind == SyntaxKind.StringText)
+				return true;
+
+			if (token.Kind == SyntaxKind.Integer || token.Kind == SyntaxKind.IntegerBase)
+				return true;
+
+			return false;
+		}
+		private static ISyntaxToken? SelectTarget(ICodeSyntaxTree tree, Position position)
+		{
+			LinePosition target = tree.Source.PositionTranslator.Convert(new(position.Line + 1, position.Character + 1), PositionKind.Utf16, PositionKind.Grapheme);
+			return SelectTarget(tree, target);
+		}
+		private static ISyntaxToken? SelectTarget(ICodeSyntaxTree tree, LinePosition position)
+		{
+			ISyntaxToken? last = null;
+
+			foreach (ISyntaxToken token in tree.Document.Flatten<ISyntaxToken>())
 			{
-				if (string.IsNullOrWhiteSpace(group.Key))
+				if (token.IsFabricated)
 					continue;
 
-				CompletionItem completion = GetCompletion(group.First());
-				completions.Add(completion);
+				if (token.Position.Length is 1)
+				{
+					if (token.Position.End.Position == position)
+						return token;
+				}
+				else if (token.Position.WithoutIndex.Contains(position))
+					return token;
+
+				if (token.Position.End.Position > position)
+					return last;
+
+				last = token;
 			}
-		}
-		private void FromTypeAccess(List<CompletionItem> completions, IType type, ISemanticMemberAccessExpressionSyntax access)
-		{
-			foreach (ITypeMember member in type.Members)
-			{
-				if (string.IsNullOrWhiteSpace(member.Name))
-					continue;
 
-				CompletionItem completion = GetCompletion(member);
-				completions.Add(completion);
-			}
-		}
-		private CompletionItem GetCompletion(ISymbol symbol)
-		{
-			Debug.Assert(symbol.Name is not null);
-
-			CompletionItemKind kind = symbol switch
-			{
-				ITypeMethod => CompletionItemKind.Method,
-				ITypeProperty => CompletionItemKind.Property,
-				ILocalVariable => CompletionItemKind.Variable,
-				IFunctionParameter => CompletionItemKind.Variable,
-				IFunction => CompletionItemKind.Function,
-				IType => CompletionItemKind.Class,
-				ILoopLabel => CompletionItemKind.Reference,
-
-				_ => ThrowHelper.ThrowArgumentException<CompletionItemKind>($"Unhandled symbol type ({symbol.GetType().Name}).")
-			};
-
-			return new()
-			{
-				Kind = kind,
-				Label = symbol.Name,
-				Detail = symbol.GetDebugText().ToPlainText()
-			};
+			return last;
 		}
 		#endregion
 	}

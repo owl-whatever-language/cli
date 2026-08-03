@@ -24,7 +24,7 @@ internal sealed partial class CompletionHandler : CompletionHandlerBase
 	{
 		serverCapabilities.CompletionProvider = new()
 		{
-			TriggerCharacters = [".", "(", ",", ":", "{", "+", "/", "-", "*", "%", "<", ">", "=", "!"],
+			TriggerCharacters = [".", "(", ",", ":", "{", "}", ")", "+", "/", "-", "*", "%", "<", ">", "=", "!"],
 		};
 	}
 	protected override async Task<CompletionItem> Resolve(CompletionItem item, CancellationToken token)
