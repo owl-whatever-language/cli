@@ -73,6 +73,22 @@ public static class OperatorKindExtensions
 	extension(OperatorKind kind)
 	{
 		#region Properties
+		public bool CanBeCompound
+		{
+			get
+			{
+				foreach (KeyValuePair<SyntaxKind, OperatorKind> pair in Operators)
+				{
+					if (pair.Value != kind)
+						continue;
+
+					if (CompoundAssignments.Contains(pair.Key))
+						return true;
+				}
+
+				return false;
+			}
+		}
 		public string Operator
 		{
 			get
@@ -97,6 +113,35 @@ public static class OperatorKindExtensions
 
 					OperatorKind.LogicalAnd => "&&",
 					OperatorKind.LogicalOr => "||",
+
+					_ => ThrowHelper.ThrowInvalidOperationException<string>($"Unknown operator kind ({kind}).")
+				};
+			}
+		}
+		public string Name
+		{
+			get
+			{
+				return kind switch
+				{
+					OperatorKind.Equal => "equal",
+					OperatorKind.NotEqual => "not equal",
+
+					OperatorKind.LessThan => "less than",
+					OperatorKind.LessThanOrEqual => "less than / equal to",
+
+					OperatorKind.GreaterThan => "greater than",
+					OperatorKind.GreaterThanOrEqual => "greater than / equal to",
+
+					OperatorKind.Add => "add",
+					OperatorKind.Subtract => "subtract",
+
+					OperatorKind.Multiply => "multiply",
+					OperatorKind.Divide => "divide",
+					OperatorKind.Modulo => "modulo",
+
+					OperatorKind.LogicalAnd => "and",
+					OperatorKind.LogicalOr => "or",
 
 					_ => ThrowHelper.ThrowInvalidOperationException<string>($"Unknown operator kind ({kind}).")
 				};

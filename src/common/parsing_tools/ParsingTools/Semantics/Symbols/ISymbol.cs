@@ -39,17 +39,25 @@ public static class Symbol
 		#endregion
 	}
 
+
+	extension(IEnumerable<ISymbol> symbols)
+	{
+		#region Methods
+		public ClassificationKind? GetSharedClassification() => symbols.Select(s => s.Classification).Distinct().IfSingleOrDefault();
+		#endregion
+	}
 	extension(IReadOnlyCollection<ISymbol> symbols)
 	{
 		#region Methods
-		public ClassificationKind? GetSharedClassification() => symbols.Select(s => s.Classification).Distinct().SingleOrDefault();
+		public ClassificationKind? GetSharedClassification() => symbols.Select(s => s.Classification).Distinct().IfSingleOrDefault();
 		#endregion
 	}
+
 
 	extension<T>(IReadOnlyCollection<T> symbols) where T : notnull, ISymbol
 	{
 		#region Methods
-		public ClassificationKind? GetSharedClassification() => symbols.Select(s => s.Classification).Distinct().SingleOrDefault();
+		public ClassificationKind? GetSharedClassification() => symbols.Select(s => s.Classification).Distinct().IfSingleOrDefault();
 		#endregion
 	}
 }

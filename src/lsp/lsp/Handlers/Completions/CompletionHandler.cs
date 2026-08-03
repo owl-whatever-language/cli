@@ -22,9 +22,20 @@ internal sealed partial class CompletionHandler : CompletionHandlerBase
 	#region Methods
 	public override void RegisterCapability(ServerCapabilities serverCapabilities, ClientCapabilities clientCapabilities)
 	{
+		const string alphabet = "abcdefghijklmnopqrstuvwxyz";
+
+		HashSet<string> characters =
+		[
+			".", "(", ",", ":", "{", "}", ")", "+", "/", "-", "*", "%", "<", ">", "=", "!", " ",
+			"$", "_",
+
+			..alphabet.Select(c => c.ToString()),
+			..alphabet.ToUpper().Select(c => c.ToString()),
+		];
+
 		serverCapabilities.CompletionProvider = new()
 		{
-			TriggerCharacters = [".", "(", ",", ":", "{", "}", ")", "+", "/", "-", "*", "%", "<", ">", "=", "!"],
+			TriggerCharacters = characters.ToList(),
 		};
 	}
 	protected override async Task<CompletionItem> Resolve(CompletionItem item, CancellationToken token)

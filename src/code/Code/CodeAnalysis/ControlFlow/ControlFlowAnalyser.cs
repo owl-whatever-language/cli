@@ -435,7 +435,7 @@ public sealed class ControlFlowAnalyser : AnalysisPass.PerTree, IDiagnosticProvi
 			{
 				IControlFlowStatementBlock statement => statement.Statements.Any() ? statement.Statements[^1] : graph.Node.Flatten().LastOrDefault() ?? graph.Node,
 				IControlFlowExpressionBlock expression => expression.Expression,
-				IControlFlowEndBlock end => graph.Node.Flatten().LastOrDefault() ?? graph.Node,
+				IControlFlowEndBlock or IControlFlowStartBlock => graph.Node.Flatten().LastOrDefault() ?? graph.Node,
 
 				_ => ThrowHelper.ThrowInvalidOperationException<ISyntaxNode>($"Unsupported control flow block type ({block.GetType().Name}).")
 			};
