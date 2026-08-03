@@ -77,6 +77,7 @@ public static class OwlLsp
 		server.AddHandler(new TextDocumentHandler(context));
 		server.AddHandler(new DidChangeWatchedFilesHandler(context));
 		server.AddHandler(new DocumentDiagnosticHandler(context));
+		server.AddHandler(new WorkspaceFolderHandler(context));
 		server.AddHandler(new Handlers.SemanticToken.SemanticTokensHandler(context));
 		server.AddHandler(new Handlers.InlayHints.InlayHintHandler(context));
 		server.AddHandler(new Handlers.Hovers.HoverHandler(context));

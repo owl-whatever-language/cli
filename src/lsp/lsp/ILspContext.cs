@@ -1,4 +1,7 @@
 using System.IO;
+using EmmyLua.LanguageServer.Framework.Protocol.Message.Client.Registration;
+using EmmyLua.LanguageServer.Framework.Protocol.Message.WorkspaceWatchedFile;
+using EmmyLua.LanguageServer.Framework.Protocol.Message.WorkspaceWatchedFile.Watch;
 
 namespace OwlDomain.Owl.LSP;
 
@@ -14,12 +17,16 @@ internal interface ILspContext
 	void UpdateFile(string path, string text, int? version);
 	void RemoveFile(string path);
 	bool TryGet(string path, [NotNullWhen(true)] out IOwlWorkspace? workspace);
+	void WatchWorkspace(string path);
+	void StopWatchingWorkspace(string path);
 	#endregion
 }
 
 internal sealed class LspContext : ILspContext
 {
 	#region Fields
+	private readonly Dictionary<string, Registration> _workspaceWatchRegistrations = [];
+
 	private readonly ReaderWriterLockSlim _lock = new();
 
 	[DebuggerBrowsable(DebuggerBrowsableState.Never)]
@@ -117,6 +124,68 @@ internal sealed class LspContext : ILspContext
 			}
 		}
 	}
+	public void WatchWorkspace(string path)
+	{
+		lock (_workspaceWatchRegistrations)
+		{
+			if (_workspaceWatchRegistrations.ContainsKey(path))
+				return;
+
+			DidChangeWatchedFilesRegistrationOptions watchers = new()
+			{
+				Watchers =
+				[
+					new()
+					{
+						GlobalPattern = "**/owl.{workspace,package,config}",
+						Kind = WatchKind.Create | WatchKind.Change | WatchKind.Delete
+					},
+					new()
+					{
+						GlobalPattern = "**/*.owl",
+						Kind = WatchKind.Create | WatchKind.Change | WatchKind.Delete
+					},
+				]
+			};
+
+			Registration registration = new()
+			{
+				Method = "workspace/didChangeWatchedFiles",
+				Id = Guid.NewGuid().ToString(),
+				RegisterOptions = watchers
+			};
+
+			Server.Client.DynamicRegisterCapability(new()
+			{
+				Registrations = [registration]
+			});
+
+			Console.Error.WriteLine($"Watching workspace: {path}");
+			_workspaceWatchRegistrations.Add(path, registration);
+		}
+	}
+	public void StopWatchingWorkspace(string path)
+	{
+		lock (_workspaceWatchRegistrations)
+		{
+			if (_workspaceWatchRegistrations.Remove(path, out Registration? registration) is false)
+				return;
+
+			Server.Client.DynamicUnregisterCapability(new()
+			{
+				Unregisterations =
+				[
+					new()
+					{
+						Method = "workspace/didChangeWatchedFiles",
+						Id = registration.Id
+					}
+				]
+			});
+
+			Console.Error.WriteLine($"No longer watching workspace: {path}");
+		}
+	}
 	#endregion
 
 	#region Helpers
@@ -201,6 +270,7 @@ internal sealed class LspContext : ILspContext
 		}
 
 		OwlWorkspace workspace = new(directory);
+		WatchWorkspace(directory);
 
 		IReadOnlyCollection<string> files = GetFiles("*.owl", "owl.workspace", "owl.config", "owl.package");
 
@@ -230,6 +300,9 @@ internal sealed class LspContext : ILspContext
 		foreach (IOwlWorkspace current in inlined)
 		{
 			_workspaces.Remove(current);
+
+			if (current.Directory is not null)
+				StopWatchingWorkspace(current.Directory);
 
 			foreach (WorkspaceSourceFile source in current.Files.OfType<WorkspaceSourceFile>())
 			{
